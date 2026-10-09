@@ -1,0 +1,26 @@
+# Tracked template. Copy to config.local.yaml and fill in your credentials.
+# One service handles both public and admin APIs on the same HTTP listener.
+app:
+  name: peptide-site
+
+server:
+  http:
+    addr: 127.0.0.1:8080
+    timeout: 30s
+    read_header_timeout: 10s
+    read_timeout: 60s
+    write_timeout: 90s
+    idle_timeout: 120s
+
+data:
+  database:
+    dsn: "host=127.0.0.1 user=peptide password=REPLACE_WITH_DATABASE_PASSWORD dbname=peptide port=5432 sslmode=disable"
+    max_open_conns: 10
+    max_idle_conns: 5
+    conn_max_lifetime: 30m
+  storage:
+    upload_dir: ./storage/uploads
+
+auth:
+  # Local HTTP only. Set true for production HTTPS.
+  cookie_secure: false

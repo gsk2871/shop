@@ -1,0 +1,16 @@
+**/node_modules/
+**/dist/
+**/.umi/
+**/.umi-production/
+**/.env
+**/.env.local
+backend/bin/
+.DS_Store
+
+backend/storage/
+website/.next/
+**/tsconfig.tsbuildinfo
+
+# Runtime YAML stays local; only configuration templates are tracked.
+/backend/configs/*
+!/backend/configs/*.example.yaml

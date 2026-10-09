@@ -1,0 +1,9 @@
+# Private runtime configuration; templates remain eligible for Git.
+/configs/*
+!/configs/*.example.yaml
+/bin/
+/storage/
+.env
+*.test
+*.out
+.DS_Store
