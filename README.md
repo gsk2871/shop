@@ -1,6 +1,6 @@
-# 多肽外贸展示与询盘系统
+# 外贸展示与询盘系统
 
-三个独立目录：`backend/` 单个 Go 服务，`admin-fe/` 管理后台，`website/` 英文官网。每个站独立部署、独立数据库。参考 kpclive 的 Kratos、Wire、GORM 与 PostgreSQL；后台沿用 admin-fe 的 React、Umi Max、Ant Design。官网使用 Next.js 服务端渲染。
+三个独立目录：`backend/` 单个 Go 服务，`admin-fe/` 管理后台，`website/` 英文官网。每个站独立部署、独立数据库。使用 Kratos、Wire、GORM 与 PostgreSQL；后台沿用 admin-fe 的 React、Umi Max、Ant Design。官网使用 Next.js 服务端渲染。
 
 ## 已实现范围
 
@@ -28,7 +28,7 @@ docker compose up -d postgres
 
 修改根目录 `.env` 的 PG 密码时，同步修改 `backend/configs/config.local.yaml` 的 `data.database.dsn`，将模板中的 `REPLACE_WITH_DATABASE_PASSWORD` 替换为实际密码。已有数据卷不会自动改变 PG 用户密码。
 
-后端参考 kpclive 的分层结构，但只保留一个服务入口 `backend/cmd/server`。官网 API、管理 API、健康检查和素材访问共用一个 HTTP 服务。
+后端采用分层结构，只保留一个服务入口 `backend/cmd/server`。官网 API、管理 API、健康检查和素材访问共用一个 HTTP 服务。
 
 ```text
 backend/

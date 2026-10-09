@@ -6,6 +6,7 @@
 **/.env.local
 backend/bin/
 .DS_Store
+/docs/local/
 
 backend/storage/
 website/.next/

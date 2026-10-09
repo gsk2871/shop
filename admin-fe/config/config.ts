@@ -1,11 +1,11 @@
 import { defineConfig } from "@umijs/max";
 
 export default defineConfig({
-	title: "多肽站管理后台",
+	title: "管理后台",
 	hash: true,
 	esbuildMinifyIIFE: true,
 	antd: {},
-	layout: { title: "多肽站管理后台" },
+	layout: { title: "管理后台" },
 	request: {},
 	routes: [
 		{ path: "/login", component: "./Login", layout: false },
