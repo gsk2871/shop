@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-export default function CookieNotice() {
+export default function CookieNotice({ title, content }: { title: string; content: string }) {
 	const [show, setShow] = useState(false);
 	useEffect(() => {
 		try {
@@ -15,14 +15,11 @@ export default function CookieNotice() {
 		} catch {}
 		setShow(false);
 	}
-	return show ? (
+	return show && (title || content) ? (
 		<aside className="cookie" aria-label="Cookie preferences">
 			<div>
-				<strong>Your privacy matters.</strong>
-				<p>
-					We use essential storage for your preferences. Optional analytics are
-					currently disabled.
-				</p>
+				<strong>{title}</strong>
+				<p>{content}</p>
 			</div>
 			<button className="outline" onClick={() => choose("essential")}>
 				Essential only

@@ -41,9 +41,7 @@ export default async function ProductDetail({
       <ContactButton productName={result.data.name}>
         Enquire about this product ↗
       </ContactButton>
-      <aside className="article-disclaimer">
-        For laboratory research use only.
-      </aside>
+
     </section>
   );
 }

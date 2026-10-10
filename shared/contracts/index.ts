@@ -157,6 +157,19 @@ export interface Theme {
   onPrimary: string;
 }
 export interface Settings {
+  brandMark: string;
+  homeTitle: string;
+  homeContent: string;
+  aboutTitle: string;
+  aboutContent: string;
+  privacyTitle: string;
+  privacyContent: string;
+  productsTitle: string;
+  researchTitle: string;
+  newsTitle: string;
+  cookieTitle: string;
+  cookieContent: string;
+
   brand: string;
   logoMediaId: string;
   logo: string;

@@ -10,19 +10,22 @@ export default function SettingsPage() {
   const editable = allows(initialState?.identity, "site.update");
   const [form] = Form.useForm<Settings>();
   const [version, setVersion] = useState(1);
+  const [savedSettings, setSavedSettings] = useState<Settings>();
   const [busy, setBusy] = useState(false);
   const [msg, context] = message.useMessage();
+  const brand = Form.useWatch("brand", form);
   const theme = Form.useWatch("theme", form) || defaultTheme;
   useEffect(() => {
     api<Settings>("settings")
       .then((s) => {
         setVersion(s.version);
+        setSavedSettings(s);
         form.setFieldsValue(s);
       })
       .catch((e) => msg.error(e.message));
   }, []);
   return (
-    <Card title="品牌与主题">
+    <Card title="品牌、主题与官网内容">
       {context}
       <Form
         form={form}
@@ -32,10 +35,12 @@ export default function SettingsPage() {
           setBusy(true);
           try {
             const saved = await api<Settings>("settings", "PUT", {
+              ...savedSettings,
               ...values,
               expectedVersion: version,
             });
             setVersion(saved.version);
+            setSavedSettings(saved);
             msg.success("已保存，官网下次请求生效");
           } catch (e) {
             msg.error((e as Error).message);
@@ -49,6 +54,9 @@ export default function SettingsPage() {
           label="英文品牌名称"
           rules={[{ required: true, max: 100 }]}
         >
+          <Input />
+        </Form.Item>
+        <Form.Item name="brandMark" label="品牌文字标记（未设置 Logo 时显示，如 R·）" rules={[{ max: 200 }]}>
           <Input />
         </Form.Item>
         <Form.Item name="logoMediaId" label="Logo 图片">
@@ -84,7 +92,7 @@ export default function SettingsPage() {
             marginBottom: 24,
           }}
         >
-          <h3>Research Supply</h3>
+          <h3>{brand}</h3>
           <p style={{ color: theme.muted }}>主题预览 · 辅助文字</p>
           <div style={{ background: theme.surface, padding: 16 }}>
             内容区域 <span style={{ color: theme.accent }}>强调内容</span>
@@ -109,12 +117,26 @@ export default function SettingsPage() {
         <Form.Item name="description" label="英文公司介绍">
           <Input.TextArea maxLength={5000} />
         </Form.Item>
-        <Form.Item name="disclaimer" label="英文科研声明">
-          <Input.TextArea maxLength={500} />
-        </Form.Item>
+        <p>Home 主视觉在「Banner 投放」的 home_hero 配置。Products 数据来自「产品管理」；News 展示「文章管理」中已发布的文章，页头使用 research_header 投放位。页面正文为纯文本，保留换行；留空不展示。</p>
+        {([
+          ["homeTitle", "Home 介绍标题", 200],
+          ["homeContent", "Home 介绍正文", 20000],
+          ["aboutTitle", "About 标题", 200],
+          ["aboutContent", "About 正文", 20000],
+          ["productsTitle", "Products 标题", 200],
+          ["newsTitle", "News 标题", 200],
+          ["privacyTitle", "隐私页面标题", 200],
+          ["privacyContent", "隐私页面正文", 20000],
+          ["cookieTitle", "Cookie 提示标题", 200],
+          ["cookieContent", "Cookie 提示正文", 20000],
+        ] as const).map(([name, label, max]) => (
+          <Form.Item key={name} name={name} label={label} rules={[{ max }]}>
+            {max > 200 ? <Input.TextArea rows={6} maxLength={max} /> : <Input maxLength={max} />}
+          </Form.Item>
+        ))}
         {editable && (
           <Button type="primary" htmlType="submit" loading={busy}>
-            保存品牌与主题
+            保存官网配置
           </Button>
         )}
       </Form>

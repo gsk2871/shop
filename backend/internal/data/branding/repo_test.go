@@ -65,6 +65,16 @@ func TestUnlimitedSchedulingThemeAndReferences(t *testing.T) {
 	if e != nil {
 		t.Fatal(e)
 	}
+	s.Brand = "Configured brand"
+	s.BrandMark = "C·"
+	s.HomeTitle = "Home from CMS"
+	s.HomeContent = "First line\nSecond line"
+	s.AboutTitle = "About from CMS"
+	s.AboutContent = "Configured company details"
+	s.PrivacyContent = "Configured privacy details"
+	s.NewsTitle = "Company news"
+	s.ResearchTitle = "Research articles"
+	s.CookieContent = "Configured storage notice"
 	s.LogoMediaID = mediaID
 	s.Theme.Primary = "#112233"
 	s.ExpectedVersion = s.Version
@@ -76,7 +86,7 @@ func TestUnlimitedSchedulingThemeAndReferences(t *testing.T) {
 		t.Fatal("stale theme accepted")
 	}
 	s, e = r.Settings(ctx)
-	if e != nil || s.Theme.Primary != "#112233" {
+	if e != nil || s.Theme.Primary != "#112233" || s.BrandMark != "C·" || s.AboutContent != "Configured company details" || s.HomeContent != "First line\nSecond line" || s.PrivacyContent != "Configured privacy details" || s.NewsTitle != "Company news" || s.CookieContent != "Configured storage notice" {
 		t.Fatal(e, s)
 	}
 	if e = r.Media.Delete(ctx, asset.ID); e == nil {

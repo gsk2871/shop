@@ -20,9 +20,9 @@ export default function Navigation() {
         aria-label="Main navigation"
       >
         {[
-          ["/products", "Catalogue"],
-          ["/reports", "Documentation"],
-          ["/research", "Research"],
+          ["/", "Home"],
+          ["/products", "Products"],
+          ["/news", "News"],
           ["/about", "About"],
         ].map(([path, name]) => (
           <Link href={path} key={path} onClick={() => setOpen(false)}>

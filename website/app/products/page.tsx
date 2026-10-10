@@ -1,8 +1,11 @@
 import Link from "next/link";
 import Hero from "../../components/Hero";
-import { contentResult, banners } from "../../lib/content";
+import { contentResult, banners, settings } from "../../lib/content";
 import type { Page, ProductSummary } from "../../lib/contracts";
-export const metadata = { title: "Research catalogue" };
+export async function generateMetadata() {
+  const s = await settings();
+  return { title: s.productsTitle || "Products" };
+}
 export default async function Products({
   searchParams,
 }: {
@@ -18,13 +21,12 @@ export default async function Products({
     `products?page=${page}&pageSize=20&q=${encodeURIComponent(query)}`,
   );
   const data = result.data;
-  const slides = await banners("products_header");
+  const [slides, s] = await Promise.all([banners("products_header"), settings()]);
   return (
     <>
       <Hero banners={slides} />
       <section className="section">
-        <span className="eyebrow">RESEARCH CATALOGUE</span>
-        <h1>Explore our catalogue.</h1>
+        <h1>{s.productsTitle || "Products"}</h1>
         <form action="/products" className="catalogue-search">
           <label htmlFor="product-search">Search products</label>
           <input
@@ -54,7 +56,7 @@ export default async function Products({
                   href={`/products/${product.slug}`}
                 >
                   <span className="eyebrow">
-                    {product.category || "RESEARCH MATERIAL"}
+                    {product.category}
                   </span>
                   <h2>{product.name}</h2>
                   <p>{product.summary}</p>

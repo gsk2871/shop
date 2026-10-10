@@ -32,7 +32,7 @@ Go 定义位于 backend/internal/service/contract，TypeScript 的唯一公共�
 | 配置状态 | 无 | GET config/status，config.read | 版本与加载状态 | 公共内容请求及媒体请求适配资源切换 |
 | 媒体 | GET/POST media，GET/HEAD /uploads/{name} | 详情、重命名、删除、references、upload-policy，按媒体动作授权 | 分页、预览、选库、限制刷新 | 媒体播放和 Range 请求 |
 | 产品 | GET/POST/PUT products、DELETE products/{id} | PUT products/{id}、状态 PATCH、SKU 改价、POST products/preview；发布和改价另验权限 | 规格、SKU、富文本、预览 | 分页搜索、规格选择、价格与详情 |
-| 新闻 | GET/POST/PUT articles、DELETE articles/{id} | PUT articles/{id}、状态 PATCH、POST articles/preview；发布另验权限 | 共用编辑器及媒体选择 | /research 列表和详情富文本 |
+| 新闻 | GET/POST/PUT articles、DELETE articles/{id} | PUT articles/{id}、状态 PATCH、POST articles/preview；发布另验权限 | 共用编辑器及媒体选择 | /news 列表和详情富文本 |
 | 主题 | GET/PUT settings | version、主题和 logo_media_id，site.read/update | 主题及 Logo 配置 | 所有业务色消费主题变量 |
 | Banner | site_config 内数组 | banner-slots、banners、banners/{id}/enabled；不限条数 | 分位置配置、排序、排期 | 按位置获取全部在线内容 |
 | 金额 | 无 | GET currencies、SKU 价格，product.price.update | 字符串输入 | 显示后端起价和选中 SKU 价格 |
@@ -116,11 +116,11 @@ Go 定义位于 backend/internal/service/contract，TypeScript 的唯一公共�
 
 | 方法与完整路径 | 返回目标 | 官网页面及要求 |
 | --- | --- | --- |
-| GET /api/v1/site | 品牌、解析后 Logo URL、主题、公司介绍及联系方式 | layout、首页、about、contact；不返回后台 version、操作者或种子信息 |
+| GET /api/v1/site | 品牌与文字标记、解析后 Logo URL、主题、公司介绍、官网页面标题与正文、Cookie 提示及兼容联系方式 | layout、首页、about、privacy、products、news；不返回后台 version、操作者或种子信息 |
 | GET /api/v1/products | Page<产品摘要>，含服务端 fromPrice | /products，q 搜索，published 且有有效定价 SKU |
 | GET /api/v1/products/{slug} | 产品公开详情、specs、有效 skus、detail | /products/[slug]，下架 404；无图库和管理字段 |
-| GET /api/v1/articles | Page<新闻摘要> | /research，只读 published，置顶、sort、首次发布时间、ID 稳定排序 |
-| GET /api/v1/articles/{slug} | 新闻公开详情、净化 body、封面 URL、SEO | /research/[slug]，草稿或下线 404 |
+| GET /api/v1/articles | Page<新闻摘要> | /news，只读 published，置顶、sort、首次发布时间、ID 稳定排序 |
+| GET /api/v1/articles/{slug} | 新闻公开详情、净化 body、封面 URL、SEO | /news/[slug]，草稿或下线 404 |
 | GET /api/v1/banners?slot={code} | {items:在线 Banner[]} | home_hero、products_header、research_header；此位置读取特意不分页，不截断 |
 | GET/HEAD /uploads/{storageRoot}/{storageKey} | 文件字节及 Range 206 | 稳定 root ID 与文件 key 解析，不拼接当前目录；两端代理保留路径和 Range |
 

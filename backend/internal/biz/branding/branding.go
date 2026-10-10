@@ -20,6 +20,19 @@ type Theme struct {
 	OnPrimary  string `json:"onPrimary"`
 }
 type Settings struct {
+	BrandMark      string `json:"brandMark"`
+	HomeTitle      string `json:"homeTitle"`
+	HomeContent    string `json:"homeContent"`
+	AboutTitle     string `json:"aboutTitle"`
+	AboutContent   string `json:"aboutContent"`
+	PrivacyTitle   string `json:"privacyTitle"`
+	PrivacyContent string `json:"privacyContent"`
+	ProductsTitle  string `json:"productsTitle"`
+	ResearchTitle  string `json:"researchTitle"`
+	NewsTitle      string `json:"newsTitle"`
+	CookieTitle    string `json:"cookieTitle"`
+	CookieContent  string `json:"cookieContent"`
+
 	Brand           string `json:"brand"`
 	LogoMediaID     string `json:"logoMediaId"`
 	Logo            string `json:"logo"`
@@ -33,7 +46,7 @@ type Settings struct {
 }
 
 func Default() Settings {
-	return Settings{Brand: "Research Supply", Theme: Theme{"#174e42", "#f6f5ef", "#ffffff", "#1c2825", "#65706b", "#d9ddd4", "#d39d49", "#ffffff"}, Description: "Materials and documentation for laboratory research.", Disclaimer: "For laboratory and research use only. Not for human or clinical consumption.", Version: 1}
+	return Settings{Theme: Theme{"#174e42", "#f6f5ef", "#ffffff", "#1c2825", "#65706b", "#d9ddd4", "#d39d49", "#ffffff"}, Version: 1}
 }
 
 var color = regexp.MustCompile(`^#[0-9a-fA-F]{6}$`)
@@ -42,6 +55,16 @@ var phone = regexp.MustCompile(`^$|^[0-9]{7,15}$`)
 func (s Settings) Validate() error {
 	if strings.TrimSpace(s.Brand) == "" || len(s.Brand) > 100 || len(s.Description) > 5000 || len(s.Disclaimer) > 500 || !phone.MatchString(s.WhatsApp) {
 		return errdef.Invalid()
+	}
+	for _, title := range []string{s.BrandMark, s.HomeTitle, s.AboutTitle, s.PrivacyTitle, s.ProductsTitle, s.ResearchTitle, s.NewsTitle, s.CookieTitle} {
+		if len(title) > 200 {
+			return errdef.Invalid()
+		}
+	}
+	for _, body := range []string{s.HomeContent, s.AboutContent, s.PrivacyContent, s.CookieContent} {
+		if len(body) > 20000 {
+			return errdef.Invalid()
+		}
 	}
 	if s.Email != "" {
 		a, e := mail.ParseAddress(s.Email)

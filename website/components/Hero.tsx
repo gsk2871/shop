@@ -10,22 +10,19 @@ export default function Hero({ banners }: { banners: Banner[] }) {
   return (
     <section className="hero">
       <div className="hero-copy">
-        <span className="eyebrow">LABORATORY RESEARCH · B2B SUPPLY</span>
         <h1>{b.title}</h1>
         <p>{b.subtitle}</p>
         <div className="actions">
-          {!b.link ||
-          b.link === "/contact" ||
-          /^(mailto:|https:\/\/wa\.me\/)/i.test(b.link) ? (
-            <ContactButton>{b.ctaText || "Make an enquiry"} ↗</ContactButton>
-          ) : (
-            <Link className="button" href={b.link}>
-              {b.ctaText || "Explore"} ↗
-            </Link>
-          )}
-          <Link className="text-link" href="/research">
-            Explore research →
-          </Link>
+          {b.ctaText &&
+            (!b.link ||
+            b.link === "/contact" ||
+            /^(mailto:|https:\/\/wa\.me\/)/i.test(b.link) ? (
+              <ContactButton>{b.ctaText} ↗</ContactButton>
+            ) : (
+              <Link className="button" href={b.link}>
+                {b.ctaText} ↗
+              </Link>
+            ))}
         </div>
         {banners.length > 1 && (
           <div className="dots" aria-label="Banner navigation">
@@ -50,29 +47,7 @@ export default function Hero({ banners }: { banners: Banner[] }) {
             )}
             <img loading="lazy" src={b.image} alt={b.title} />
           </picture>
-        ) : (
-          <>
-            <div className="orbit orbit-one" />
-            <div className="orbit orbit-two" />
-            <div className="vial">
-              <div className="vial-cap" />
-              <div className="vial-body">
-                <span>
-                  RESEARCH
-                  <br />
-                  SUPPLY
-                </span>
-                <hr />
-                <small>
-                  LABORATORY
-                  <br />
-                  USE ONLY
-                </small>
-              </div>
-            </div>
-            <span className="art-caption">A FOUNDATION FOR DISCOVERY</span>
-          </>
-        )}
+        ) : null}
       </div>
     </section>
   );

@@ -6,15 +6,27 @@ export type {
   PublicBanner as Banner,
 } from "./contracts";
 export const defaults: Settings = {
-  brand: "Research Supply",
+  brand: "",
+  brandMark: "",
+  homeTitle: "",
+  homeContent: "",
+  aboutTitle: "",
+  aboutContent: "",
+  privacyTitle: "",
+  privacyContent: "",
+  productsTitle: "",
+  researchTitle: "",
+  newsTitle: "",
+  cookieTitle: "",
+  cookieContent: "",
+
   logo: "",
   logoMediaId: "",
   theme: defaultTheme,
-  description: "Materials and documentation for laboratory research.",
+  description: "",
   email: "",
   whatsapp: "",
-  disclaimer:
-    "For laboratory and research use only. Not for human or clinical consumption.",
+  disclaimer: "",
   version: 1,
 };
 export interface ContentError {
@@ -60,7 +72,8 @@ export async function content<T>(path: string): Promise<T | null> {
   return (await contentResult<T>(path)).data;
 }
 export async function settings() {
-  return (await content<Settings>("site")) || defaults;
+  const s = await content<Settings>("site");
+  return { ...defaults, ...s, theme: { ...defaultTheme, ...s?.theme } };
 }
 
 export async function banners(slot: string) {

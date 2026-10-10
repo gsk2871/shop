@@ -57,7 +57,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			if public {
-				admin.Reply(w, 200, map[string]any{"brand": s.Brand, "logo": s.Logo, "theme": s.Theme, "description": s.Description, "email": s.Email, "whatsapp": s.WhatsApp, "disclaimer": s.Disclaimer})
+				admin.Reply(w, 200, map[string]any{"brand": s.Brand, "logo": s.Logo, "theme": s.Theme, "description": s.Description, "email": s.Email, "whatsapp": s.WhatsApp, "disclaimer": s.Disclaimer, "brandMark": s.BrandMark, "homeTitle": s.HomeTitle, "homeContent": s.HomeContent, "aboutTitle": s.AboutTitle, "aboutContent": s.AboutContent, "privacyTitle": s.PrivacyTitle, "privacyContent": s.PrivacyContent, "productsTitle": s.ProductsTitle, "researchTitle": s.ResearchTitle, "newsTitle": s.NewsTitle, "cookieTitle": s.CookieTitle, "cookieContent": s.CookieContent})
 			} else {
 				admin.Reply(w, 200, s)
 			}

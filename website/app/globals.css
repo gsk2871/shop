@@ -864,3 +864,5 @@ button:disabled {
     flex-wrap: wrap;
   }
 }
+
+.configured-copy { white-space: pre-line; overflow-wrap: anywhere; }

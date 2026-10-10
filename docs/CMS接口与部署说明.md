@@ -22,7 +22,7 @@
 
 Banner 位仅种子 home_hero、products_header、research_header。投放字段为位置、英文标题／副标题、桌面图片 ID、可选手机图片 ID、英文 CTA、站内或 HTTPS 链接、sort、enabled、startsAt、endsAt 和 version。管理列表分页，公共 `GET /banners?slot=...` 返回全部在线投放，不设置条数上限；开始含边界、结束不含边界，数据库按 UTC 判断，后台按 Asia/Shanghai 编辑。手机图片缺失使用桌面图片。
 
-品牌配置含 brand、logoMediaId、theme、description、email、whatsapp、disclaimer 和 version。theme 的 primary/background/surface/text/muted/border/accent/onPrimary 均为 #RRGGBB，官网主要区域使用统一 CSS 变量。后台支持颜色预览及恢复默认值。email 与 whatsapp 为历史兼容字段，官网不读取它们作为联系入口，品牌编辑界面不再显示这两项。无投放时首页使用英文默认主视觉，内页省略投放区。
+品牌配置含 brand、logoMediaId、theme、description、email、whatsapp、disclaimer 和 version。theme 的 primary/background/surface/text/muted/border/accent/onPrimary 均为 #RRGGBB，官网主要区域使用统一 CSS 变量。后台支持颜色预览及恢复默认值。email 与 whatsapp 为历史兼容字段，官网不读取它们作为联系入口，品牌编辑界面不再显示这两项。无投放时省略投放区，首页不使用写死的默认主视觉。
 
 ## 媒体
 
@@ -74,3 +74,13 @@ server -conf /path/config.yaml -recover-totp-user admin -recover-reason '经过�
 ## WhatsApp 客服入口
 
 客服配置、美国默认种子、国家数据库、IP 请求头、官网入口代理及 H5 验收见 [WhatsApp 国家客服分配](WHATSAPP_ROUTING.md)。本地官网使用 pnpm dev 的 3000 可信入口；生产必须在官网入口覆盖 X-Client-IP 并限制后端 trusted_proxies。
+
+## 官网导航与内容配置
+
+官网导航为 Home、Products、News、About。旧 /reports 和 /research 地址重定向到 /news；旧 /research/{slug} 重定向到 /news/{slug}。News 展示已发布文章，正文及封面在「文章管理」维护；列表按现有置顶、排序和发布时间规则展示，页头沿用 research_header 投放位。
+
+- Home 的主视觉使用「Banner 投放」中的 home_hero；Products 页头使用 products_header。CTA 仅在投放配置了 ctaText 时展示，图片、标题、副标题和跳转地址均来自投放配置。
+- 「品牌、主题与官网内容」维护 brand（站点名称及 SEO 标题）、brandMark（无 Logo 时的文字标记）、logoMediaId、description（SEO 简介及页脚）、theme。
+- 同一设置页面维护 homeTitle/homeContent、aboutTitle/aboutContent、productsTitle、newsTitle、privacyTitle/privacyContent、cookieTitle/cookieContent。正文为纯文本，保留换行，HTML 按文本显示；正文和品牌标记留空时不展示，不补写示例宣传内容。Cookie 标题和正文均留空时不弹出提示。
+- 设置仍由 GET/PUT /admin/api/v1/settings 管理，公共 GET /api/v1/site 返回上述展示字段。沿用 site_config.payload JSON 存储及版本冲突校验，无需数据库结构迁移。旧配置缺失新增字段时使用空值；升级后请在后台填写所需正文。
+- 官网不再展示 disclaimer、固定科研声明及 DB-IP 链接；disclaimer 保留为兼容字段。导航、搜索、分页、联系按钮和错误提示属于界面操作文字。

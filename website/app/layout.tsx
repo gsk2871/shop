@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 export async function generateMetadata(): Promise<Metadata> {
   const s = await settings();
   return {
-    title: { default: s.brand, template: `%s | ${s.brand}` },
+    title: s.brand ? { default: s.brand, template: `%s | ${s.brand}` } : "Home",
     description: s.description,
   };
 }
@@ -30,16 +30,13 @@ export default async function Layout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <body style={style}>
-        <div className="notice">{s.disclaimer}</div>
         <header className="header">
-          <Link className="brand" href="/">
+          <Link className="brand" href="/" aria-label={s.brand || "Home"}>
             {s.logo ? (
               <img src={s.logo} alt={s.brand} />
-            ) : (
-              <span className="brand-symbol">
-                R<span>·</span>
-              </span>
-            )}
+            ) : s.brandMark ? (
+              <span className="brand-symbol">{s.brandMark}</span>
+            ) : null}
             <span>{s.brand}</span>
           </Link>
           <Navigation />
@@ -48,31 +45,27 @@ export default async function Layout({ children }: { children: ReactNode }) {
         <main>{children}</main>
         <footer>
           <div>
-            <Link className="footer-brand" href="/">
+            <Link className="footer-brand" href="/" aria-label={s.brand || "Home"}>
               {s.brand}
             </Link>
             <p>{s.description}</p>
           </div>
           <div>
             <span className="eyebrow">EXPLORE</span>
-            <Link href="/products">Catalogue</Link>
-            <Link href="/research">Research library</Link>
-            <Link href="/reports">Documentation</Link>
+            <Link href="/">Home</Link>
+            <Link href="/products">Products</Link>
+            <Link href="/news">News</Link>
           </div>
           <div>
             <span className="eyebrow">GET IN TOUCH</span>
             <ContactButton className="footer-contact">
               Contact on WhatsApp ↗
             </ContactButton>
-            <a href="https://db-ip.com" target="_blank" rel="noreferrer">
-              IP Geolocation by DB-IP
-            </a>
             <Link href="/privacy">Privacy & cookies</Link>
           </div>
-          <p className="footer-note">{s.disclaimer}</p>
         </footer>
         <ContactButton className="whatsapp">WhatsApp ↗</ContactButton>
-        <CookieNotice />
+        <CookieNotice title={s.cookieTitle} content={s.cookieContent} />
       </body>
     </html>
   );
