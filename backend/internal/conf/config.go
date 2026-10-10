@@ -8,8 +8,11 @@ import (
 	"io"
 	"net"
 	"os"
+	"reflect"
+	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"gopkg.in/yaml.v3"
@@ -20,10 +23,34 @@ const DefaultPath = "configs/config.local.yaml"
 
 // Config groups settings by infrastructure responsibility.
 type Config struct {
-	App    App    `yaml:"app"`
-	Server Server `yaml:"server"`
-	Data   Data   `yaml:"data"`
-	Auth   Auth   `yaml:"auth"`
+	App     App     `yaml:"app"`
+	Server  Server  `yaml:"server"`
+	Data    Data    `yaml:"data"`
+	Auth    Auth    `yaml:"auth"`
+	Reload  Reload  `yaml:"reload"`
+	Log     Log     `yaml:"log"`
+	Seed    Seed    `yaml:"seed"`
+	Product Product `yaml:"product"`
+}
+
+type Product struct {
+	DefaultCurrency   string   `yaml:"default_currency"`
+	AllowedCurrencies []string `yaml:"allowed_currencies"`
+}
+
+type Seed struct {
+	SuperAdmin SuperAdmin `yaml:"super_admin"`
+}
+type SuperAdmin struct {
+	Username string `yaml:"username"`
+	Password string `yaml:"password"`
+}
+
+type Reload struct {
+	Interval time.Duration `yaml:"interval"`
+}
+type Log struct {
+	Level string `yaml:"level"`
 }
 
 // App identifies the one deployed service.
@@ -62,20 +89,42 @@ type Database struct {
 
 // Storage configures the local upload directory.
 type Storage struct {
-	UploadDir string `yaml:"upload_dir"`
+	UploadDir        string        `yaml:"upload_dir"`
+	MaxImageBytes    int64         `yaml:"max_image_bytes"`
+	MaxVideoBytes    int64         `yaml:"max_video_bytes"`
+	MaxDocumentBytes int64         `yaml:"max_document_bytes"`
+	AllowedTypes     []string      `yaml:"allowed_types"`
+	CleanupInterval  time.Duration `yaml:"cleanup_interval"`
+}
+
+type TOTP struct {
+	Issuer      string            `yaml:"issuer"`
+	ActiveKeyID string            `yaml:"active_key_id"`
+	Keys        map[string]string `yaml:"keys"`
 }
 
 // Auth contains administrator session cookie settings.
 type Auth struct {
-	CookieSecure bool `yaml:"cookie_secure"`
+	CookieSecure   bool          `yaml:"cookie_secure"`
+	SessionTTL     time.Duration `yaml:"session_ttl"`
+	OnboardingTTL  time.Duration `yaml:"onboarding_ttl"`
+	MFATicketTTL   time.Duration `yaml:"mfa_ticket_ttl"`
+	MFAMaxAttempts int           `yaml:"mfa_max_attempts"`
+	LoginLimit     int           `yaml:"login_limit"`
+	TrustedProxies []string      `yaml:"trusted_proxies"`
+	TOTP           TOTP          `yaml:"totp"`
 }
 
 func defaults() Config {
 	return Config{
-		App:    App{Name: "peptide-site"},
-		Server: Server{HTTP: HTTP{Addr: "127.0.0.1:8080", Timeout: 30 * time.Second, ReadHeaderTimeout: 10 * time.Second, ReadTimeout: 60 * time.Second, WriteTimeout: 90 * time.Second, IdleTimeout: 120 * time.Second}},
-		Data:   Data{Database: Database{MaxOpenConns: 10, MaxIdleConns: 5, ConnMaxLifetime: 30 * time.Minute}, Storage: Storage{UploadDir: "./storage/uploads"}},
-		Auth:   Auth{CookieSecure: true},
+		Product: Product{DefaultCurrency: "USD", AllowedCurrencies: []string{"USD"}},
+		Seed:    Seed{SuperAdmin: SuperAdmin{Username: "admin"}},
+		Reload:  Reload{Interval: 5 * time.Second},
+		Log:     Log{Level: "info"},
+		App:     App{Name: "peptide-site"},
+		Server:  Server{HTTP: HTTP{Addr: "127.0.0.1:8080", Timeout: 30 * time.Second, ReadHeaderTimeout: 10 * time.Second, ReadTimeout: 60 * time.Second, WriteTimeout: 90 * time.Second, IdleTimeout: 120 * time.Second}},
+		Data:    Data{Database: Database{MaxOpenConns: 10, MaxIdleConns: 5, ConnMaxLifetime: 30 * time.Minute}, Storage: Storage{UploadDir: "./storage/uploads", MaxImageBytes: 20 << 20, MaxVideoBytes: 200 << 20, MaxDocumentBytes: 20 << 20, AllowedTypes: []string{"image/jpeg", "image/png", "image/webp", "image/gif", "video/mp4", "video/webm", "application/pdf"}, CleanupInterval: time.Minute}},
+		Auth:    Auth{CookieSecure: true, SessionTTL: 8 * time.Hour, OnboardingTTL: 15 * time.Minute, MFATicketTTL: 5 * time.Minute, MFAMaxAttempts: 5, LoginLimit: 5, TOTP: TOTP{Issuer: "Research Supply Admin"}},
 	}
 }
 
@@ -85,13 +134,73 @@ func Load() (Config, error) { return load(DefaultPath, true) }
 // LoadFile requires the explicitly selected configuration file to exist.
 func LoadFile(path string) (Config, error) { return load(path, false) }
 
-func load(path string, optional bool) (Config, error) {
-	c := defaults()
+// Loader captures environment overrides once. File reload never reads a changed process environment.
+type Loader struct {
+	overrides map[string]string
+	mu        sync.Mutex
+	sources   map[string]string
+}
+
+func NewLoader() *Loader {
+	l := &Loader{overrides: map[string]string{}}
+	for _, name := range []string{"HTTP_ADDRESS", "DATABASE_DSN", "UPLOAD_DIR", "COOKIE_SECURE", "SEED_ADMIN_PASSWORD"} {
+		if v, ok := os.LookupEnv(name); ok {
+			l.overrides[name] = v
+		}
+	}
+	return l
+}
+func (l *Loader) Sources() map[string]string {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	r := map[string]string{}
+	for k, v := range l.sources {
+		r[k] = v
+	}
+	return r
+}
+func configLeaves(v reflect.Value, prefix string, result map[string]string) {
+	for i := 0; i < v.NumField(); i++ {
+		field := v.Type().Field(i)
+		path := field.Tag.Get("yaml")
+		if prefix != "" {
+			path = prefix + "." + path
+		}
+		value := v.Field(i)
+		if value.Kind() == reflect.Struct {
+			configLeaves(value, path, result)
+		} else {
+			result[path] = "default"
+		}
+	}
+}
+func yamlLeaves(values map[string]any, prefix string, result map[string]string) {
+	for name, value := range values {
+		path := name
+		if prefix != "" {
+			path = prefix + "." + name
+		}
+		if child, ok := value.(map[string]any); ok {
+			yamlLeaves(child, path, result)
+		} else {
+			result[path] = "yaml"
+		}
+	}
+}
+func load(path string, optional bool) (Config, error) { return NewLoader().Load(path, optional) }
+func (l *Loader) Load(path string, optional bool) (Config, error) {
 	body, err := os.ReadFile(path)
-	if err != nil && !(optional && errors.Is(err, os.ErrNotExist)) {
+	if err != nil {
+		if optional && errors.Is(err, os.ErrNotExist) {
+			return l.Decode(nil)
+		}
 		return Config{}, fmt.Errorf("cannot read configuration file %q", path)
 	}
-	if err == nil {
+	return l.Decode(body)
+}
+func (l *Loader) Decode(body []byte) (Config, error) {
+	c := defaults()
+	if len(body) > 0 {
 		d := yaml.NewDecoder(bytes.NewReader(body))
 		d.KnownFields(true)
 		if err := d.Decode(&c); err != nil {
@@ -101,12 +210,13 @@ func load(path string, optional bool) (Config, error) {
 			return Config{}, errors.New("configuration must contain one YAML document")
 		}
 	}
-	for name, target := range map[string]*string{"HTTP_ADDRESS": &c.Server.HTTP.Addr, "DATABASE_DSN": &c.Data.Database.DSN, "UPLOAD_DIR": &c.Data.Storage.UploadDir} {
-		if v := os.Getenv(name); v != "" {
+	for name, target := range map[string]*string{"HTTP_ADDRESS": &c.Server.HTTP.Addr, "DATABASE_DSN": &c.Data.Database.DSN, "UPLOAD_DIR": &c.Data.Storage.UploadDir, "SEED_ADMIN_PASSWORD": &c.Seed.SuperAdmin.Password} {
+		if v := l.overrides[name]; v != "" {
 			*target = v
 		}
 	}
-	if v, ok := os.LookupEnv("COOKIE_SECURE"); ok {
+	if v, ok := l.overrides["COOKIE_SECURE"]; ok {
+		var err error
 		c.Auth.CookieSecure, err = strconv.ParseBool(v)
 		if err != nil {
 			return Config{}, errors.New("COOKIE_SECURE must be true or false")
@@ -115,11 +225,74 @@ func load(path string, optional bool) (Config, error) {
 	if err := Validate(c); err != nil {
 		return Config{}, err
 	}
+	sources := map[string]string{}
+	configLeaves(reflect.ValueOf(c), "", sources)
+	if len(body) > 0 {
+		var values map[string]any
+		_ = yaml.Unmarshal(body, &values)
+		yamlLeaves(values, "", sources)
+	}
+	for name, path := range map[string]string{"HTTP_ADDRESS": "server.http.addr", "DATABASE_DSN": "data.database.dsn", "UPLOAD_DIR": "data.storage.upload_dir", "COOKIE_SECURE": "auth.cookie_secure", "SEED_ADMIN_PASSWORD": "seed.super_admin.password"} {
+		if v, ok := l.overrides[name]; ok && (v != "" || name == "COOKIE_SECURE") {
+			sources[path] = "environment:" + name
+		}
+	}
+	l.mu.Lock()
+	l.sources = sources
+	l.mu.Unlock()
 	return c, nil
 }
 
 // Validate rejects invalid settings without including database credentials.
 func Validate(c Config) error {
+	currencyAllowed := false
+	codes := map[string]bool{}
+	for _, code := range c.Product.AllowedCurrencies {
+		if !regexp.MustCompile(`^[A-Z]{3}$`).MatchString(code) || codes[code] {
+			return errors.New("invalid allowed currency")
+		}
+		codes[code] = true
+		if code == c.Product.DefaultCurrency {
+			currencyAllowed = true
+		}
+	}
+	if !currencyAllowed {
+		return errors.New("default currency must be allowed")
+	}
+
+	storage := c.Data.Storage
+	if storage.MaxImageBytes <= 0 || storage.MaxVideoBytes <= 0 || storage.MaxDocumentBytes <= 0 || storage.MaxImageBytes > 1<<40 || storage.MaxVideoBytes > 1<<40 || storage.MaxDocumentBytes > 1<<40 || storage.CleanupInterval < 100*time.Millisecond || storage.CleanupInterval > time.Hour || len(storage.AllowedTypes) == 0 {
+		return errors.New("invalid storage upload policy")
+	}
+	allowed := map[string]bool{"image/jpeg": true, "image/png": true, "image/webp": true, "image/gif": true, "video/mp4": true, "video/webm": true, "application/pdf": true}
+	seen := map[string]bool{}
+	for _, mime := range storage.AllowedTypes {
+		if !allowed[mime] || seen[mime] {
+			return errors.New("invalid or duplicate storage type")
+		}
+		seen[mime] = true
+	}
+
+	if c.Auth.SessionTTL <= 0 || c.Auth.SessionTTL > 24*time.Hour || c.Auth.OnboardingTTL <= 0 || c.Auth.OnboardingTTL > time.Hour || c.Auth.MFATicketTTL <= 0 || c.Auth.MFATicketTTL > 15*time.Minute || c.Auth.MFAMaxAttempts < 1 || c.Auth.MFAMaxAttempts > 20 || c.Auth.LoginLimit < 1 || c.Auth.TOTP.Issuer == "" {
+		return errors.New("invalid authentication policy")
+	}
+	for _, p := range c.Auth.TrustedProxies {
+		if _, _, err := net.ParseCIDR(p); err != nil {
+			return errors.New("auth.trusted_proxies requires CIDR prefixes")
+		}
+	}
+
+	if !regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9_.-]{2,99}$`).MatchString(c.Seed.SuperAdmin.Username) {
+		return errors.New("seed.super_admin.username is required and must not exceed 100 bytes")
+	}
+	if c.Reload.Interval < 100*time.Millisecond || c.Reload.Interval > time.Hour {
+		return errors.New("reload.interval must be between 100ms and 1h")
+	}
+	switch c.Log.Level {
+	case "debug", "info", "warn", "error":
+	default:
+		return errors.New("log.level must be debug, info, warn or error")
+	}
 	if strings.TrimSpace(c.App.Name) == "" {
 		return errors.New("app.name is required")
 	}

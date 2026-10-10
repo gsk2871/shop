@@ -7,29 +7,31 @@
 package main
 
 import (
-	"github.com/go-kratos/kratos/v2/transport/http"
 	"peptide-site/internal/biz"
 	"peptide-site/internal/conf"
 	"peptide-site/internal/data"
-	"peptide-site/internal/data/cms"
+	"peptide-site/internal/pkg/configreload"
 	"peptide-site/internal/server"
 	"peptide-site/internal/service"
-	cms2 "peptide-site/internal/service/cms"
+	"peptide-site/internal/service/cms"
 )
 
 // Injectors from wire.go:
 
-func initializeServer(c conf.Config) (*http.Server, func(), error) {
+func initializeServer(c conf.Config) (*configreload.Resource, func(), error) {
 	dataData, cleanup, err := data.NewData(c)
 	if err != nil {
 		return nil, nil, err
 	}
 	system := biz.NewSystem(dataData)
 	serviceSystem := service.NewSystem(system)
-	repo := cms.NewRepo(dataData)
-	handler := cms2.NewHandler(repo, c)
-	httpServer := server.NewHTTPServer(c, serviceSystem, handler)
-	return httpServer, func() {
+	handler := cms.NewHandler(c)
+	resource, err := server.NewResources(c, dataData, serviceSystem, handler)
+	if err != nil {
+		cleanup()
+		return nil, nil, err
+	}
+	return resource, func() {
 		cleanup()
 	}, nil
 }

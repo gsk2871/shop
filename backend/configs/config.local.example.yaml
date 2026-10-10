@@ -14,13 +14,44 @@ server:
 
 data:
   database:
-    dsn: "host=127.0.0.1 user=peptide password=REPLACE_WITH_DATABASE_PASSWORD dbname=peptide port=5432 sslmode=disable"
+    dsn: "host=127.0.0.1 user=admin password=REPLACE_WITH_DATABASE_PASSWORD dbname=peptide port=5432 sslmode=disable"
     max_open_conns: 10
     max_idle_conns: 5
     conn_max_lifetime: 30m
   storage:
     upload_dir: ./storage/uploads
+    max_image_bytes: 20971520
+    max_video_bytes: 209715200
+    max_document_bytes: 20971520
+    allowed_types: [image/jpeg, image/png, image/webp, image/gif, application/pdf, video/mp4, video/webm]
+    cleanup_interval: 1m
 
 auth:
   # Local HTTP only. Set true for production HTTPS.
   cookie_secure: false
+  session_ttl: 8h
+  onboarding_ttl: 15m
+  mfa_ticket_ttl: 5m
+  mfa_max_attempts: 5
+  login_limit: 5
+  trusted_proxies: [] # specify actual proxy CIDRs for HTTPS termination
+  totp:
+    issuer: Research Supply Admin
+    active_key_id: "" # required for run, optional for migrate/seed
+    keys: {} # inject private base64 encoded 32-byte keys in protected YAML
+
+# Backend YAML fields are applied as one resource generation.
+reload:
+  interval: 5s
+log:
+  level: info
+
+# Explicit -seed reads these values; reload does not reset any account.
+seed:
+  super_admin:
+    username: admin
+    password: "" # inject SEED_ADMIN_PASSWORD, or use protected private YAML
+
+product:
+  default_currency: USD
+  allowed_currencies: [USD]

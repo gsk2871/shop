@@ -1,0 +1,8 @@
+{
+  "name": "@shop/contracts",
+  "version": "0.1.2",
+  "private": true,
+  "type": "module",
+  "main": "index.ts",
+  "types": "index.ts"
+}

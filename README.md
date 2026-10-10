@@ -1,138 +1,93 @@
-# 外贸展示与询盘系统
+# 管理后台与英文官网
 
-三个独立目录：`backend/` 单个 Go 服务，`admin-fe/` 管理后台，`website/` 英文官网。每个站独立部署、独立数据库。使用 Kratos、Wire、GORM 与 PostgreSQL；后台沿用 admin-fe 的 React、Umi Max、Ant Design。官网使用 Next.js 服务端渲染。
+单个 Go 服务提供公共 API、管理 API 和本地媒体；PostgreSQL 存储用户、角色、会话、内容及媒体引用。后台使用 React / Umi Max / Ant Design，固定中文；官网使用 Next.js，固定英文。三端共用 `shared/contracts` 和 `shared/content`，需要一起安装、构建和发布。
 
-## 已实现范围
+已实现用户与角色权限树、密码加 TOTP 登录、首次改密绑定、敏感操作再认证、操作审计、媒体流式上传和引用保护、自定义规格与 SKU、USD 精确金额、产品和文章富文本、未保存内容预览、官网搜索与分页、三个不限条数 Banner 位、品牌 Logo 与主题、完整 YAML 热加载。产品不含颜色、独立图库、库存或交易。
 
-- 系统管理：单管理员登录、退出、修改密码、最近操作日志。密码 bcrypt 哈希；8 小时数据库会话；修改密码使所有会话失效。
-- 素材库：上传、列表、图片预览、复制引用地址。支持 JPG、PNG、WebP、GIF、PDF、MP4、WebM，单文件最大 20MB。无转码、VOD、字幕或回调业务。
-- 文章管理：新增、编辑、删除；草稿、直接发布、下线；英文标题、Slug、摘要、正文、封面、SEO 字段。当前正文为纯文本，不是原项目富文本编辑器的完整迁移。
-- 商品管理：新增、编辑、删除、草稿、上下架；名称、Slug、分类、别名、CAS、分子式、分子量、序列、纯度、规格、储存与溶解说明、摘要、详情和 SEO；最多 20 张共享商品图片，第一张为主图，无颜色与图片绑定。支持名称、别名、CAS、序列、分类搜索，列表最多返回 200 条。
-- 官网配置：品牌名称、Logo、主色、背景色、公司介绍、邮箱、默认 WhatsApp、科研声明、最多 3 张 Banner。图片从素材库选取。
-- 官网：首页、多 Banner 切换、文章列表及详情、公司介绍、联系页、科研声明、Cookie 偏好提示、响应式布局。只显示已发布文章。
-
-官网产品展示页与搜索界面、报告业务列表、询盘表单和按国家 WhatsApp 分流尚未实现。商品后台和公共商品 API 已实现；其他未实现的后台入口仍为占位页，官网产品和报告页仍显示待完善状态。当前联系按钮使用后台配置的默认号码。Cookie 偏好保存在浏览器，尚无分析脚本及 Google Consent Mode 集成。隐私页为开发说明，正式发布前需要补充经营主体与数据处理信息。
+检测报告业务、询盘表单、按国家 WhatsApp 分流及分析脚本不在本次范围。联系页使用品牌配置中的默认联系方式，报告页提供文档询问入口。
 
 ## 本地启动
 
-要求 Go 1.25+、Node.js 20.9+、pnpm 9.15、PostgreSQL（示例使用 Docker Compose 启动 PG 17）。
-
-从项目根目录运行：
+需要 Go 1.25+、Node.js 20.9+、pnpm 9.15 和 PostgreSQL 17。
 
 ```sh
 cp .env.example .env
 cp backend/configs/config.local.example.yaml backend/configs/config.local.yaml
 cp website/.env.example website/.env.local
+cp admin-fe/.env.example admin-fe/.env.local
 docker compose up -d postgres
 ```
 
-修改根目录 `.env` 的 PG 密码时，同步修改 `backend/configs/config.local.yaml` 的 `data.database.dsn`，将模板中的 `REPLACE_WITH_DATABASE_PASSWORD` 替换为实际密码。已有数据卷不会自动改变 PG 用户密码。
+修改 `.env` 的数据库密码，同时填写后端私有 YAML 的 DSN。后端不会自动读取 `.env`，配置模板也不会自动用作运行配置。运行 YAML 不进入 Git。
 
-后端采用分层结构，只保留一个服务入口 `backend/cmd/server`。官网 API、管理 API、健康检查和素材访问共用一个 HTTP 服务。
-
-```text
-backend/
-├── cmd/server/              # 单服务入口、Wire 装配
-├── configs/
-│   ├── config.local.example.yaml  # Git 提交模板，密码为占位符
-│   └── config.local.yaml          # 本地实际配置，Git 忽略
-└── internal/
-    ├── conf/                # app/server/data/auth 配置类型、加载与校验
-    ├── pkg/bootstrap/       # 配置加载、迁移、管理员初始化与服务启动
-    ├── server/              # HTTP 服务、超时和路由装配
-    ├── service/             # HTTP 接口
-    ├── biz/                 # 业务模型、校验和仓储接口
-    └── data/                # PostgreSQL、仓储及增量迁移
-```
-
-从后端目录启动时默认加载 `configs/config.local.yaml`，不会自动读取模板或 `.env`。配置按 `app / server / data / auth` 分组，包含服务名称、HTTP 超时、数据库连接池、上传目录及会话 Cookie。环境变量 `HTTP_ADDRESS`、`DATABASE_DSN`、`UPLOAD_DIR`、`COOKIE_SECURE` 优先于 YAML；未提供本地文件时可仅使用环境变量部署。生产指定独立配置：`go run ./cmd/server -conf /absolute/path/config.prod.yaml`，初始化和迁移同样支持 `-conf`。运行时 YAML 全部被 Git 忽略，仅 `*.example.yaml` 模板可提交。
-
-也可在后端目录运行 `make init-config` 创建本地配置（不会覆盖已有文件），编辑后执行 `make migrate`、`make init-admin`、`make run`。通过 `make run CONF=/absolute/path/config.prod.yaml` 切换配置。
-
-初始化数据库：
+为 `auth.totp.keys` 生成一个 32 字节密钥，并设置相应 `active_key_id`；本地 HTTP 使用 `cookie_secure: false`。密钥存入权限为 0600 的私有配置，和数据库、媒体目录配套备份。
 
 ```sh
+openssl rand -base64 32
 cd backend
 go run ./cmd/server -migrate
-```
-
-创建管理员。密码不得少于 12 字节或超过 72 字节；通过交互读取，不写入仓库或命令行历史：
-
-```sh
-export ADMIN_USERNAME=admin
-read -s ADMIN_PASSWORD
-export ADMIN_PASSWORD
-go run ./cmd/server -init-admin
-unset ADMIN_PASSWORD
+read -s SEED_ADMIN_PASSWORD
+export SEED_ADMIN_PASSWORD
+go run ./cmd/server -seed
+unset SEED_ADMIN_PASSWORD
 go run ./cmd/server
 ```
 
-后端命令共用本地 YAML 配置；管理员账号与密码仍通过环境变量传入。`-init-admin` 不覆盖已有账户。
+`-conf /absolute/path/config.yaml` 可用于以上全部命令；`make migrate`、`make seed`、`make run` 支持 `CONF`。种子只创建权限树、缺失默认角色及授权、首位超管、USD 和 Banner 位。重复执行不重置现有密码、MFA、角色授权或账号状态，不生成演示产品、文章或投放。
 
-分别在其他终端运行：
+首次登录进入安全中心：修改初始密码 → 重新输入新密码 → 扫描本地生成的验证器二维码并确认 → 重新执行密码和验证码登录。登录票据只保存在页面内存；完整会话使用 HttpOnly、SameSite=Strict Cookie。超级管理员创建其他用户时，用户也需完成首次设置。
+
+在另外两个终端分别启动：
 
 ```sh
 cd admin-fe
 pnpm install --frozen-lockfile
-pnpm dev
+pnpm run dev
 ```
 
 ```sh
 cd website
 pnpm install --frozen-lockfile
-pnpm dev
+pnpm run dev
 ```
 
-- 管理后台：`http://localhost:8000`
-- 官网：`http://127.0.0.1:3000`
-- 后端：`http://127.0.0.1:8080`
+后台默认 `http://127.0.0.1:8000`，官网 `http://127.0.0.1:3000`，后端 `http://127.0.0.1:8080`。后台 `/backend` 代理保持原 Host；官网服务端读取 `BACKEND_URL`，公共请求不携带管理 Cookie。
 
-先登录后台上传 Logo/Banner，再保存官网配置并发布文章，刷新官网即可看到新内容。未连接后端时，官网显示默认品牌文案和内容不可用提示，不伪造产品和文章。
-
-## 构建与测试
+## 验证
 
 ```sh
 cd backend
 make wire
 go test ./...
 go vet ./...
-make build
+go build ./cmd/server
+```
+
+真实 PostgreSQL 验证须显式指定 `TEST_DATABASE_DSN`，测试账号需要创建／删除测试数据库的权限。测试为每个场景建立唯一临时数据库并清理，禁止指定生产实例。
+
+```sh
+TEST_DATABASE_DSN='host=127.0.0.1 port=5432 user=shop_test dbname=postgres sslmode=disable' go test -race ./...
 ```
 
 ```sh
 cd admin-fe
 pnpm run setup
-pnpm typecheck
-pnpm build
+pnpm run typecheck
+pnpm run build
 ```
 
 ```sh
 cd website
-pnpm build
-pnpm typecheck
-pnpm start
+pnpm run typecheck
+pnpm run build
 ```
 
-Next.js 构建后可用 `pnpm start` 启动正式官网服务。管理后台构建产物在 `admin-fe/dist/`，由 Nginx 提供静态文件；官网运行独立 Node.js 服务。
+根目录验证权限种子：`python3 scripts/check_permission_seed.py`、`python3 -m unittest discover -s scripts -p test_check_permission_seed.py`。
 
-## 数据与部署
+## 部署与配置
 
-- `backend/internal/data/migration/000001_cms.up.sql` 为初始结构；对应 down 文件用于撤销，撤销会删除业务数据，勿对有效数据直接执行。
-- `-migrate` 按文件名顺序执行所有内嵌 `.up.sql`，使用 `schema_migration` 记录已执行文件，事务与数据库锁防止重复执行。已有初始数据库可直接再次运行 `-migrate` 补建商品表。新增结构使用增量文件；没有自动执行 down 的命令。
-- 不执行 AutoMigrate。Wire 已生成。业务 proto、OpenAPI、GORM Gen 尚未接入，不能把 `backend/api/` 当成已有接口契约。
-- `UPLOAD_DIR` 默认为后端工作目录下的 `storage/uploads`。素材文件当前保存在本地磁盘，数据库仅保存元数据；迁移或备份必须同时处理两者。阿里 OSS / 腾讯 COS / AWS S3 尚未接入。
-- 官网通过服务端 `BACKEND_URL` 获取配置与文章，并将 `/uploads/` 转发到后端。该变量不可指向管理后台静态服务。
-- 后台开发代理 `/backend/`；生产代理示例在 `admin-fe/nginx.conf`，部署到不同主机时修改上游地址，并设置 `client_max_body_size`。
-- `COOKIE_SECURE` 默认为开启，示例本地 HTTP 配置关闭。生产 HTTPS 必须设置 `COOKIE_SECURE=true`；管理 API 不开放跨域，写请求需要专用请求头和有效会话。
-- 登录限流每 IP 每分钟 5 次，记录容量有上限。应用位于代理后面时当前使用代理连接 IP，需在明确可信代理列表后再实现真实访客 IP。
-- 素材上传后可公开访问，只上传用于官网展示的公开资料。
+后端逐版准备独立数据库池、目录及监听；全部校验成功才发布。新请求使用新版本，在途请求和事务固定旧版本，旧资源排空后释放。修改失败保留最后可用版本，运行配置页可查看版本、成功时间、失败原因及字段来源；页面不返回密钥或数据库凭据。DSN 只允许切换到相同站点身份及相同 schema 的数据库。
 
-## 故障排查
+环境覆盖在启动时固定捕获：`HTTP_ADDRESS`、`DATABASE_DSN`、`UPLOAD_DIR`、`COOKIE_SECURE`、`SEED_ADMIN_PASSWORD`。被覆盖的 YAML 字段不会取代环境值。需要运行时轮换的密钥放在受保护 YAML 文件中。
 
-- 后端缺少 DSN：从 `backend/` 目录启动以加载 `configs/config.local.yaml`，或用 `-conf` 指定配置，也可导出 `DATABASE_DSN`。程序不自动读取 `.env`。
-- 登录后仍返回 401：本地 HTTP 设置 `COOKIE_SECURE=false`，生产通过 HTTPS 访问。
-- 找不到数据表：先执行 `-migrate`。
-- 登录账号不存在：执行 `-init-admin`；无内置默认管理员。
-- 上传返回 413：检查 Nginx 或其他入口代理的上传大小限制。
-- 官网默认内容：检查后端是否启动、PG 连接是否可用、`BACKEND_URL` 是否正确。
-- 文章不显示：确认状态为 `published`，Slug 合法且唯一。
+部署顺序、Nginx、密钥轮换、MFA 恢复及配套备份见 [CMS 接口与部署说明](docs/CMS接口与部署说明.md)。完整字段及实效证据见 [配置矩阵](docs/CONFIG_RELOAD_MATRIX.md)，接口规则见 [实施契约](docs/IMPLEMENTATION_CONTRACT.md)，本次验收见 [验收记录](docs/IMPLEMENTATION_ACCEPTANCE.md)。

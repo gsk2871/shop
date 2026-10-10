@@ -1,21 +1,18 @@
 package data
 
 import (
-	"context"
 	"embed"
-	"fmt"
-	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 	"io/fs"
 	"sort"
 )
 
 //go:embed migration/*.up.sql
-var schema embed.FS
+var embeddedMigrations embed.FS
 
 // Migrate applies embedded migrations once, serializing concurrent runs.
 func Migrate(d *Data) error {
-	names, err := fs.Glob(schema, "migration/*.up.sql")
+	names, err := fs.Glob(embeddedMigrations, "migration/*.up.sql")
 	if err != nil {
 		return err
 	}
@@ -35,7 +32,7 @@ func Migrate(d *Data) error {
 			if count > 0 {
 				continue
 			}
-			sql, err := schema.ReadFile(name)
+			sql, err := embeddedMigrations.ReadFile(name)
 			if err != nil {
 				return err
 			}
@@ -48,23 +45,4 @@ func Migrate(d *Data) error {
 		}
 		return nil
 	})
-}
-
-// InitAdmin creates the one administrator without overwriting an existing account.
-func InitAdmin(ctx context.Context, d *Data, user, password string) error {
-	if len(user) == 0 || len(user) > 100 || len(password) < 12 || len(password) > 72 {
-		return fmt.Errorf("username required and password must be 12 to 72 bytes")
-	}
-	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	if err != nil {
-		return err
-	}
-	result := d.DB.WithContext(ctx).Exec("INSERT INTO admin_account(id,username,password_hash) VALUES(1,?,?) ON CONFLICT(id) DO NOTHING", user, string(hash))
-	if result.Error != nil {
-		return result.Error
-	}
-	if result.RowsAffected == 0 {
-		return fmt.Errorf("administrator already exists")
-	}
-	return nil
 }

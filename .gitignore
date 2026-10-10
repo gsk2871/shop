@@ -8,6 +8,10 @@ backend/bin/
 .DS_Store
 /docs/local/
 
+# Project-local skills are installed locally and must not be committed.
+/.claude/skills/
+/.agents/skills
+
 backend/storage/
 website/.next/
 **/tsconfig.tsbuildinfo
@@ -15,3 +19,6 @@ website/.next/
 # Runtime YAML stays local; only configuration templates are tracked.
 /backend/configs/*
 !/backend/configs/*.example.yaml
+
+**/__pycache__/
+**/*.pyc

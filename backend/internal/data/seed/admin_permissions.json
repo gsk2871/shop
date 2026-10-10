@@ -1,0 +1,876 @@
+{
+  "schemaVersion": 1,
+  "purpose": "全新项目权限目录树及默认角色种子，步骤03由种子加载器导入数据库",
+  "nodes": [
+    {
+      "code": "menu.overview",
+      "parentCode": null,
+      "name": "工作台",
+      "type": "menu",
+      "sort": 10,
+      "route": "/overview",
+      "permissionCode": null,
+      "apis": [],
+      "visibility": "authenticated"
+    },
+    {
+      "code": "directory.content",
+      "parentCode": null,
+      "name": "内容管理",
+      "type": "directory",
+      "sort": 20,
+      "route": null,
+      "permissionCode": null,
+      "apis": []
+    },
+    {
+      "code": "directory.site",
+      "parentCode": null,
+      "name": "官网管理",
+      "type": "directory",
+      "sort": 30,
+      "route": null,
+      "permissionCode": null,
+      "apis": []
+    },
+    {
+      "code": "directory.system",
+      "parentCode": null,
+      "name": "系统管理",
+      "type": "directory",
+      "sort": 40,
+      "route": null,
+      "permissionCode": null,
+      "apis": []
+    },
+    {
+      "code": "menu.media",
+      "parentCode": "directory.content",
+      "name": "媒体库",
+      "type": "menu",
+      "sort": 10,
+      "route": "/media",
+      "permissionCode": "media.read",
+      "apis": [
+        {
+          "method": "GET",
+          "path": "/admin/api/v1/media"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/api/v1/media/{id}"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/api/v1/media/{id}/references"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/api/v1/media/upload-policy"
+        }
+      ]
+    },
+    {
+      "code": "menu.product",
+      "parentCode": "directory.content",
+      "name": "产品管理",
+      "type": "menu",
+      "sort": 20,
+      "route": "/products",
+      "permissionCode": "product.read",
+      "apis": [
+        {
+          "method": "GET",
+          "path": "/admin/api/v1/products"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/api/v1/products/{id}"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/api/v1/currencies"
+        }
+      ]
+    },
+    {
+      "code": "menu.article",
+      "parentCode": "directory.content",
+      "name": "新闻管理",
+      "type": "menu",
+      "sort": 30,
+      "route": "/articles",
+      "permissionCode": "article.read",
+      "apis": [
+        {
+          "method": "GET",
+          "path": "/admin/api/v1/articles"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/api/v1/articles/{id}"
+        }
+      ]
+    },
+    {
+      "code": "menu.site",
+      "parentCode": "directory.site",
+      "name": "品牌与主题",
+      "type": "menu",
+      "sort": 40,
+      "route": "/settings",
+      "permissionCode": "site.read",
+      "apis": [
+        {
+          "method": "GET",
+          "path": "/admin/api/v1/settings"
+        }
+      ]
+    },
+    {
+      "code": "menu.banner",
+      "parentCode": "directory.site",
+      "name": "Banner 管理",
+      "type": "menu",
+      "sort": 50,
+      "route": "/banners",
+      "permissionCode": "banner.read",
+      "apis": [
+        {
+          "method": "GET",
+          "path": "/admin/api/v1/banner-slots"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/api/v1/banners"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/api/v1/banners/{id}"
+        }
+      ]
+    },
+    {
+      "code": "menu.user",
+      "parentCode": "directory.system",
+      "name": "用户管理",
+      "type": "menu",
+      "sort": 60,
+      "route": "/system/users",
+      "permissionCode": "user.read",
+      "apis": [
+        {
+          "method": "GET",
+          "path": "/admin/api/v1/users"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/api/v1/users/{id}"
+        }
+      ]
+    },
+    {
+      "code": "menu.role",
+      "parentCode": "directory.system",
+      "name": "角色与权限",
+      "type": "menu",
+      "sort": 70,
+      "route": "/system/roles",
+      "permissionCode": "role.read",
+      "apis": [
+        {
+          "method": "GET",
+          "path": "/admin/api/v1/roles"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/api/v1/roles/{id}"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/api/v1/permissions"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/api/v1/roles/{id}/permissions"
+        }
+      ]
+    },
+    {
+      "code": "menu.audit",
+      "parentCode": "directory.system",
+      "name": "操作日志",
+      "type": "menu",
+      "sort": 80,
+      "route": "/system/audit",
+      "permissionCode": "audit.read",
+      "apis": [
+        {
+          "method": "GET",
+          "path": "/admin/api/v1/audit"
+        }
+      ]
+    },
+    {
+      "code": "menu.config",
+      "parentCode": "directory.system",
+      "name": "运行配置状态",
+      "type": "menu",
+      "sort": 90,
+      "route": "/system/config",
+      "permissionCode": "config.read",
+      "apis": [
+        {
+          "method": "GET",
+          "path": "/admin/api/v1/config/status"
+        }
+      ]
+    },
+    {
+      "code": "action.media.upload",
+      "parentCode": "menu.media",
+      "name": "上传",
+      "type": "action",
+      "sort": 10,
+      "route": null,
+      "permissionCode": "media.upload",
+      "apis": [
+        {
+          "method": "POST",
+          "path": "/admin/api/v1/media"
+        }
+      ]
+    },
+    {
+      "code": "action.media.update",
+      "parentCode": "menu.media",
+      "name": "重命名",
+      "type": "action",
+      "sort": 20,
+      "route": null,
+      "permissionCode": "media.update",
+      "apis": [
+        {
+          "method": "PATCH",
+          "path": "/admin/api/v1/media/{id}"
+        }
+      ]
+    },
+    {
+      "code": "action.media.delete",
+      "parentCode": "menu.media",
+      "name": "删除",
+      "type": "action",
+      "sort": 30,
+      "route": null,
+      "permissionCode": "media.delete",
+      "apis": [
+        {
+          "method": "DELETE",
+          "path": "/admin/api/v1/media/{id}"
+        }
+      ]
+    },
+    {
+      "code": "action.product.create",
+      "parentCode": "menu.product",
+      "name": "新增",
+      "type": "action",
+      "sort": 10,
+      "route": null,
+      "permissionCode": "product.create",
+      "apis": [
+        {
+          "method": "POST",
+          "path": "/admin/api/v1/products"
+        }
+      ]
+    },
+    {
+      "code": "action.product.update",
+      "parentCode": "menu.product",
+      "name": "编辑",
+      "type": "action",
+      "sort": 20,
+      "route": null,
+      "permissionCode": "product.update",
+      "apis": [
+        {
+          "method": "PUT",
+          "path": "/admin/api/v1/products/{id}"
+        }
+      ]
+    },
+    {
+      "code": "action.product.preview",
+      "parentCode": "menu.product",
+      "name": "预览",
+      "type": "action",
+      "sort": 30,
+      "route": null,
+      "permissionCode": "product.preview",
+      "apis": [
+        {
+          "method": "POST",
+          "path": "/admin/api/v1/products/preview"
+        }
+      ]
+    },
+    {
+      "code": "action.product.publish",
+      "parentCode": "menu.product",
+      "name": "上下架",
+      "type": "action",
+      "sort": 40,
+      "route": null,
+      "permissionCode": "product.publish",
+      "apis": [
+        {
+          "method": "PATCH",
+          "path": "/admin/api/v1/products/{id}/status"
+        }
+      ]
+    },
+    {
+      "code": "action.product.delete",
+      "parentCode": "menu.product",
+      "name": "删除",
+      "type": "action",
+      "sort": 50,
+      "route": null,
+      "permissionCode": "product.delete",
+      "apis": [
+        {
+          "method": "DELETE",
+          "path": "/admin/api/v1/products/{id}"
+        }
+      ]
+    },
+    {
+      "code": "action.product.price.update",
+      "parentCode": "menu.product",
+      "name": "SKU 改价",
+      "type": "action",
+      "sort": 60,
+      "route": null,
+      "permissionCode": "product.price.update",
+      "apis": [
+        {
+          "method": "PATCH",
+          "path": "/admin/api/v1/products/{id}/skus/{skuId}/price"
+        }
+      ]
+    },
+    {
+      "code": "action.article.create",
+      "parentCode": "menu.article",
+      "name": "新增",
+      "type": "action",
+      "sort": 10,
+      "route": null,
+      "permissionCode": "article.create",
+      "apis": [
+        {
+          "method": "POST",
+          "path": "/admin/api/v1/articles"
+        }
+      ]
+    },
+    {
+      "code": "action.article.update",
+      "parentCode": "menu.article",
+      "name": "编辑",
+      "type": "action",
+      "sort": 20,
+      "route": null,
+      "permissionCode": "article.update",
+      "apis": [
+        {
+          "method": "PUT",
+          "path": "/admin/api/v1/articles/{id}"
+        }
+      ]
+    },
+    {
+      "code": "action.article.preview",
+      "parentCode": "menu.article",
+      "name": "预览",
+      "type": "action",
+      "sort": 30,
+      "route": null,
+      "permissionCode": "article.preview",
+      "apis": [
+        {
+          "method": "POST",
+          "path": "/admin/api/v1/articles/preview"
+        }
+      ]
+    },
+    {
+      "code": "action.article.publish",
+      "parentCode": "menu.article",
+      "name": "发布与下线",
+      "type": "action",
+      "sort": 40,
+      "route": null,
+      "permissionCode": "article.publish",
+      "apis": [
+        {
+          "method": "PATCH",
+          "path": "/admin/api/v1/articles/{id}/status"
+        }
+      ]
+    },
+    {
+      "code": "action.article.delete",
+      "parentCode": "menu.article",
+      "name": "删除",
+      "type": "action",
+      "sort": 50,
+      "route": null,
+      "permissionCode": "article.delete",
+      "apis": [
+        {
+          "method": "DELETE",
+          "path": "/admin/api/v1/articles/{id}"
+        }
+      ]
+    },
+    {
+      "code": "action.site.update",
+      "parentCode": "menu.site",
+      "name": "修改品牌与主题",
+      "type": "action",
+      "sort": 10,
+      "route": null,
+      "permissionCode": "site.update",
+      "apis": [
+        {
+          "method": "PUT",
+          "path": "/admin/api/v1/settings"
+        }
+      ]
+    },
+    {
+      "code": "action.banner.create",
+      "parentCode": "menu.banner",
+      "name": "新增",
+      "type": "action",
+      "sort": 10,
+      "route": null,
+      "permissionCode": "banner.create",
+      "apis": [
+        {
+          "method": "POST",
+          "path": "/admin/api/v1/banners"
+        }
+      ]
+    },
+    {
+      "code": "action.banner.update",
+      "parentCode": "menu.banner",
+      "name": "编辑",
+      "type": "action",
+      "sort": 20,
+      "route": null,
+      "permissionCode": "banner.update",
+      "apis": [
+        {
+          "method": "PUT",
+          "path": "/admin/api/v1/banners/{id}"
+        }
+      ]
+    },
+    {
+      "code": "action.banner.publish",
+      "parentCode": "menu.banner",
+      "name": "上下线",
+      "type": "action",
+      "sort": 30,
+      "route": null,
+      "permissionCode": "banner.publish",
+      "apis": [
+        {
+          "method": "PATCH",
+          "path": "/admin/api/v1/banners/{id}/enabled"
+        }
+      ]
+    },
+    {
+      "code": "action.banner.delete",
+      "parentCode": "menu.banner",
+      "name": "删除",
+      "type": "action",
+      "sort": 40,
+      "route": null,
+      "permissionCode": "banner.delete",
+      "apis": [
+        {
+          "method": "DELETE",
+          "path": "/admin/api/v1/banners/{id}"
+        }
+      ]
+    },
+    {
+      "code": "action.user.create",
+      "parentCode": "menu.user",
+      "name": "新增",
+      "type": "action",
+      "sort": 10,
+      "route": null,
+      "permissionCode": "user.create",
+      "apis": [
+        {
+          "method": "POST",
+          "path": "/admin/api/v1/users"
+        }
+      ]
+    },
+    {
+      "code": "action.user.update",
+      "parentCode": "menu.user",
+      "name": "编辑",
+      "type": "action",
+      "sort": 20,
+      "route": null,
+      "permissionCode": "user.update",
+      "apis": [
+        {
+          "method": "PUT",
+          "path": "/admin/api/v1/users/{id}"
+        }
+      ]
+    },
+    {
+      "code": "action.user.disable",
+      "parentCode": "menu.user",
+      "name": "启用与停用",
+      "type": "action",
+      "sort": 30,
+      "route": null,
+      "permissionCode": "user.disable",
+      "apis": [
+        {
+          "method": "PATCH",
+          "path": "/admin/api/v1/users/{id}/status"
+        }
+      ]
+    },
+    {
+      "code": "action.user.delete",
+      "parentCode": "menu.user",
+      "name": "删除",
+      "type": "action",
+      "sort": 40,
+      "route": null,
+      "permissionCode": "user.delete",
+      "apis": [
+        {
+          "method": "DELETE",
+          "path": "/admin/api/v1/users/{id}"
+        }
+      ]
+    },
+    {
+      "code": "action.user.reset_password",
+      "parentCode": "menu.user",
+      "name": "重置密码",
+      "type": "action",
+      "sort": 50,
+      "route": null,
+      "permissionCode": "user.reset_password",
+      "apis": [
+        {
+          "method": "POST",
+          "path": "/admin/api/v1/users/{id}/reset-password"
+        }
+      ]
+    },
+    {
+      "code": "action.user.reset_totp",
+      "parentCode": "menu.user",
+      "name": "重置二次验证",
+      "type": "action",
+      "sort": 60,
+      "route": null,
+      "permissionCode": "user.reset_totp",
+      "apis": [
+        {
+          "method": "POST",
+          "path": "/admin/api/v1/users/{id}/reset-totp"
+        }
+      ]
+    },
+    {
+      "code": "action.role.create",
+      "parentCode": "menu.role",
+      "name": "新增",
+      "type": "action",
+      "sort": 10,
+      "route": null,
+      "permissionCode": "role.create",
+      "apis": [
+        {
+          "method": "POST",
+          "path": "/admin/api/v1/roles"
+        }
+      ]
+    },
+    {
+      "code": "action.role.update",
+      "parentCode": "menu.role",
+      "name": "编辑",
+      "type": "action",
+      "sort": 20,
+      "route": null,
+      "permissionCode": "role.update",
+      "apis": [
+        {
+          "method": "PUT",
+          "path": "/admin/api/v1/roles/{id}"
+        }
+      ]
+    },
+    {
+      "code": "action.role.delete",
+      "parentCode": "menu.role",
+      "name": "删除",
+      "type": "action",
+      "sort": 30,
+      "route": null,
+      "permissionCode": "role.delete",
+      "apis": [
+        {
+          "method": "DELETE",
+          "path": "/admin/api/v1/roles/{id}"
+        }
+      ]
+    },
+    {
+      "code": "action.role.grant",
+      "parentCode": "menu.role",
+      "name": "分配权限",
+      "type": "action",
+      "sort": 40,
+      "route": null,
+      "permissionCode": "role.grant",
+      "apis": [
+        {
+          "method": "PUT",
+          "path": "/admin/api/v1/roles/{id}/permissions"
+        }
+      ]
+    },
+    {
+      "code": "menu.security",
+      "parentCode": null,
+      "name": "个人安全中心",
+      "type": "menu",
+      "sort": 50,
+      "route": "/system/security",
+      "permissionCode": null,
+      "apis": [],
+      "visibility": "authenticated_self_service"
+    }
+  ],
+  "roles": [
+    {
+      "code": "super_admin",
+      "name": "超级管理员",
+      "isSuper": true,
+      "permissions": [
+        "media.read",
+        "product.read",
+        "article.read",
+        "site.read",
+        "banner.read",
+        "user.read",
+        "role.read",
+        "audit.read",
+        "config.read",
+        "media.upload",
+        "media.update",
+        "media.delete",
+        "product.create",
+        "product.update",
+        "product.preview",
+        "product.publish",
+        "product.delete",
+        "product.price.update",
+        "article.create",
+        "article.update",
+        "article.preview",
+        "article.publish",
+        "article.delete",
+        "site.update",
+        "banner.create",
+        "banner.update",
+        "banner.publish",
+        "banner.delete",
+        "user.create",
+        "user.update",
+        "user.disable",
+        "user.delete",
+        "user.reset_password",
+        "user.reset_totp",
+        "role.create",
+        "role.update",
+        "role.delete",
+        "role.grant"
+      ]
+    },
+    {
+      "code": "content_admin",
+      "name": "内容管理员",
+      "isSuper": false,
+      "permissions": [
+        "media.read",
+        "product.read",
+        "article.read",
+        "site.read",
+        "banner.read",
+        "media.upload",
+        "media.update",
+        "media.delete",
+        "product.create",
+        "product.update",
+        "product.preview",
+        "product.publish",
+        "product.delete",
+        "product.price.update",
+        "article.create",
+        "article.update",
+        "article.preview",
+        "article.publish",
+        "article.delete",
+        "site.update",
+        "banner.create",
+        "banner.update",
+        "banner.publish",
+        "banner.delete"
+      ]
+    },
+    {
+      "code": "viewer",
+      "name": "只读查看者",
+      "isSuper": false,
+      "permissions": [
+        "media.read",
+        "product.read",
+        "article.read",
+        "site.read",
+        "banner.read"
+      ]
+    }
+  ],
+  "selfService": [
+    {
+      "code": "self.me",
+      "name": "当前账号",
+      "apis": [
+        {
+          "method": "GET",
+          "path": "/admin/api/v1/me"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/api/v1/me/permissions"
+        }
+      ],
+      "allowedScopes": [
+        "full",
+        "onboarding",
+        "password_change"
+      ]
+    },
+    {
+      "code": "self.password",
+      "name": "修改密码",
+      "apis": [
+        {
+          "method": "POST",
+          "path": "/admin/api/v1/password"
+        }
+      ],
+      "allowedScopes": [
+        "full",
+        "onboarding",
+        "password_change"
+      ]
+    },
+    {
+      "code": "self.totp.setup",
+      "name": "生成绑定信息",
+      "apis": [
+        {
+          "method": "POST",
+          "path": "/admin/api/v1/totp/setup"
+        }
+      ],
+      "allowedScopes": [
+        "full",
+        "onboarding"
+      ]
+    },
+    {
+      "code": "self.totp.activate",
+      "name": "激活二次验证",
+      "apis": [
+        {
+          "method": "POST",
+          "path": "/admin/api/v1/totp/activate"
+        }
+      ],
+      "allowedScopes": [
+        "full",
+        "onboarding"
+      ]
+    },
+    {
+      "code": "self.logout",
+      "name": "退出",
+      "apis": [
+        {
+          "method": "POST",
+          "path": "/admin/api/v1/logout"
+        }
+      ],
+      "allowedScopes": [
+        "full",
+        "onboarding",
+        "password_change"
+      ]
+    },
+    {
+      "code": "self.reauth",
+      "name": "近期身份验证",
+      "apis": [
+        {
+          "method": "POST",
+          "path": "/admin/api/v1/me/reauth"
+        }
+      ],
+      "allowedScopes": [
+        "full"
+      ]
+    }
+  ],
+  "anonymousApis": [
+    {
+      "method": "POST",
+      "path": "/admin/api/v1/login"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/api/v1/login/totp"
+    }
+  ],
+  "enforcementRules": [
+    "未登记管理业务路由默认拒绝",
+    "公开官网 API 单独注册，不受后台角色授权树控制",
+    "目录可见性自下而上推导，保留有权限子节点的父目录",
+    "个人自助 API 始终校验当前用户身份及 scope，不由普通角色授权",
+    "整份产品或新闻写入涉及价格或发布变化时额外校验对应动作权限",
+    "产品与新闻预览使用独立 preview 权限，创建角色一并获得预览权限"
+  ]
+}

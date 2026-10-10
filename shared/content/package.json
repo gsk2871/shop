@@ -1,0 +1,18 @@
+{
+  "name": "@shop/content",
+  "version": "0.1.2",
+  "private": true,
+  "type": "module",
+  "main": "index.tsx",
+  "types": "index.tsx",
+  "exports": {
+    ".": "./index.tsx",
+    "./styles.css": "./styles.css"
+  },
+  "peerDependencies": {
+    "react": ">=19"
+  },
+  "dependencies": {
+    "@shop/contracts": "file:../contracts"
+  }
+}

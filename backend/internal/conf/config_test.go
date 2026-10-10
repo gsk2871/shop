@@ -3,6 +3,7 @@ package conf
 import (
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -133,5 +134,22 @@ func TestDefaultUsesLocalFile(t *testing.T) {
 	c, err := Load()
 	if err != nil || c.Data.Database.DSN != "local-dsn" {
 		t.Fatal("default did not load private local settings")
+	}
+}
+
+func TestConfigFieldsDocumented(t *testing.T) {
+	body, err := os.ReadFile("../../../docs/CONFIG_RELOAD_MATRIX.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	fields := map[string]string{}
+	configLeaves(reflect.ValueOf(defaults()), "", fields)
+	for field := range fields {
+		if !strings.Contains(string(body), "| "+field+" |") {
+			t.Errorf("configuration field has no consumer registration: %s", field)
+		}
+	}
+	if len(fields) != 33 {
+		t.Fatalf("configuration field count changed; update matrix and consumer tests: %d", len(fields))
 	}
 }

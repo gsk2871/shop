@@ -5,32 +5,36 @@ import (
 	"context"
 	"flag"
 	"log"
-	"os"
 
 	"github.com/go-kratos/kratos/v2"
-	khttp "github.com/go-kratos/kratos/v2/transport/http"
+	"peptide-site/internal/pkg/configreload"
 
 	"peptide-site/internal/conf"
 	"peptide-site/internal/data"
+	adminData "peptide-site/internal/data/admin"
 )
 
 // Run loads settings, runs maintenance commands or starts the wired server.
-func Run(version string, factory func(conf.Config) (*khttp.Server, func(), error)) {
+func Run(version string, factory func(conf.Config) (*configreload.Resource, func(), error)) {
 	configPath := flag.String("conf", "", "YAML configuration path (default configs/config.local.yaml)")
 	migrate := flag.Bool("migrate", false, "apply database schema")
-	initAdmin := flag.Bool("init-admin", false, "create administrator from ADMIN_USERNAME and ADMIN_PASSWORD")
+	initAdmin := flag.Bool("init-admin", false, "alias for -seed")
+	recoverUser := flag.String("recover-totp-user", "", "server-only MFA recovery username")
+	recoverReason := flag.String("recover-reason", "", "required reason for MFA recovery")
+	seed := flag.Bool("seed", false, "initialize permissions, roles and first administrator")
 	flag.Parse()
+	explicitConfig := *configPath != ""
+	loader := conf.NewLoader()
+	if *configPath == "" {
+		*configPath = conf.DefaultPath
+	}
 	var config conf.Config
 	var err error
-	if *configPath == "" {
-		config, err = conf.Load()
-	} else {
-		config, err = conf.LoadFile(*configPath)
-	}
+	config, err = loader.Load(*configPath, !explicitConfig)
 	if err != nil {
 		log.Fatal(err)
 	}
-	if *migrate || *initAdmin {
+	if *migrate || *initAdmin || *seed || *recoverUser != "" {
 		d, cleanup, err := data.NewData(config)
 		if err != nil {
 			log.Fatal("database unavailable")
@@ -41,18 +45,42 @@ func Run(version string, factory func(conf.Config) (*khttp.Server, func(), error
 				log.Fatal("schema migration failed")
 			}
 		}
-		if *initAdmin {
-			if err := data.InitAdmin(context.Background(), d, os.Getenv("ADMIN_USERNAME"), os.Getenv("ADMIN_PASSWORD")); err != nil {
+		if *initAdmin || *seed {
+			if err := adminData.Seed(context.Background(), d, config.Seed); err != nil {
 				log.Fatal(err)
+			}
+		}
+		if *recoverUser != "" {
+			repo, err := adminData.NewRepo(d, config)
+			if err != nil {
+				log.Fatal("MFA configuration invalid")
+			}
+			if err := repo.Recover(context.Background(), *recoverUser, *recoverReason); err != nil {
+				log.Fatal("MFA recovery failed")
 			}
 		}
 		return
 	}
-	server, cleanup, err := factory(config)
+
+	manager, err := configreload.New(context.Background(), *configPath, config, loader, func(ctx context.Context, c conf.Config) (*configreload.Resource, error) {
+		resource, cleanup, err := factory(c)
+		if err != nil {
+			return nil, err
+		}
+		resourceClose := resource.Close
+		resource.Close = func() {
+			if resourceClose != nil {
+				resourceClose()
+			}
+			cleanup()
+		}
+		return resource, nil
+	})
 	if err != nil {
-		log.Fatal("backend initialization failed; check database connectivity and configuration")
+		log.Fatal("backend resource preparation failed; check schema, database and storage")
 	}
-	defer cleanup()
+	manager.ConfigureLogging()
+	server := configreload.NewHTTP(manager)
 	app := kratos.New(kratos.Name(config.App.Name), kratos.Version(version), kratos.Server(server))
 	if err := app.Run(); err != nil {
 		log.Fatal(err)

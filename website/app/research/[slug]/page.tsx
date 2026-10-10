@@ -1,40 +1,42 @@
 import { notFound } from "next/navigation";
-import { content, type Article } from "../../../lib/content";
+import { ArticleView } from "@shop/content";
+import { contentResult } from "../../../lib/content";
+import type { PublicArticle } from "../../../lib/contracts";
 export async function generateMetadata({
-	params,
+  params,
 }: {
-	params: Promise<{ slug: string }>;
+  params: Promise<{ slug: string }>;
 }) {
-	const { slug } = await params;
-	const a = await content<Article>(`articles/${encodeURIComponent(slug)}`);
-	return {
-		title: a?.seoTitle || a?.title || "Article",
-		description: a?.seoDescription || a?.summary,
-	};
+  const { slug } = await params;
+  const result = await contentResult<PublicArticle>(
+    `articles/${encodeURIComponent(slug)}`,
+  );
+  return {
+    title: result.data?.seoTitle || result.data?.title || "Article",
+    description: result.data?.seoDescription || result.data?.summary,
+    robots: result.error ? { index: false, follow: false } : undefined,
+  };
 }
 export default async function ArticlePage({
-	params,
+  params,
 }: {
-	params: Promise<{ slug: string }>;
+  params: Promise<{ slug: string }>;
 }) {
-	const { slug } = await params;
-	const a = await content<Article>(`articles/${encodeURIComponent(slug)}`);
-	if (!a) notFound();
-	return (
-		<article className="section prose">
-			<span className="eyebrow">SCIENTIFIC RESEARCH REFERENCE</span>
-			<h1>{a.title}</h1>
-			<p className="intro">{a.summary}</p>
-			{a.cover && <img className="cover" src={a.cover} alt="" />}
-			{a.body.split(/\n\s*\n/).map((p, i) => (
-				<p key={i} style={{ whiteSpace: "pre-wrap" }}>
-					{p}
-				</p>
-			))}
-			<aside className="article-disclaimer">
-				This article is for scientific research reference only. Compounds
-				discussed are strictly for laboratory analysis.
-			</aside>
-		</article>
-	);
+  const { slug } = await params;
+  const result = await contentResult<PublicArticle>(
+    `articles/${encodeURIComponent(slug)}`,
+  );
+  if (result.error?.status === 404) notFound();
+  if (!result.data)
+    return (
+      <section className="section">
+        <h1>Article temporarily unavailable.</h1>
+        <p>Please try again later.</p>
+      </section>
+    );
+  return (
+    <section className="section">
+      <ArticleView article={result.data} />
+    </section>
+  );
 }

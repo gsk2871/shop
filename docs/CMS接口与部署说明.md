@@ -1,47 +1,72 @@
-# CMS 接口与部署说明
+# CMS 接口与首次部署
 
-管理 API 前缀 `/admin/api/v1`；公共内容 API 前缀 `/api/v1`。管理后台通过 `/backend` 代理访问 Go 服务。官网在服务端使用 `BACKEND_URL` 访问公共接口。
+管理接口前缀为 `/admin/api/v1`，公共接口前缀为 `/api/v1`。后台通过 `/backend` 代理访问；公共媒体路径为 `/uploads/{rootId}/{storageKey}`。所有实体 BIGINT ID 对前端使用十进制字符串；错误固定为 `{code,message,requestId}`，不返回 SQL、密码或连接串。
 
-| 方法与路径 | 行为 |
-|---|---|
-| POST /admin/api/v1/login | username、password 登录，返回 HttpOnly 会话 Cookie |
-| GET /admin/api/v1/me | 当前管理员 username |
-| POST /admin/api/v1/logout | 撤销当前会话 |
-| POST /admin/api/v1/password | current、password 改密，撤销所有会话 |
-| GET /admin/api/v1/audit | 最近 100 条操作日志 |
-| GET /admin/api/v1/media | 最新 200 条素材 |
-| POST /admin/api/v1/media | multipart 的 file 字段上传，最大 20MB |
-| GET /admin/api/v1/articles | 最新 200 条文章（含草稿、下线） |
-| POST /admin/api/v1/articles | 创建文章，id 为 0 |
-| PUT /admin/api/v1/articles | 更新文章，id 为已有文章 ID |
-| DELETE /admin/api/v1/articles/{id} | 删除指定文章 |
-| GET /admin/api/v1/settings | 读取官网配置 |
-| PUT /admin/api/v1/settings | 保存整份配置 |
-| GET /admin/api/v1/products?q=关键词 | 最新 200 条商品，含草稿与下架，搜索名称、别名、CAS、序列、分类 |
-| POST /admin/api/v1/products | 新建商品，id 为 0 |
-| PUT /admin/api/v1/products | 更新商品，id 为已有商品 ID；通过 status 上下架 |
-| DELETE /admin/api/v1/products/{id} | 删除商品 |
-| GET /api/v1/products?q=关键词 | 最新 200 条已上架商品，可搜索 |
-| GET /api/v1/products/{slug} | 指定已上架商品；草稿与下架返回 404 |
-| GET /api/v1/site | 公共官网配置，无私密管理数据 |
-| GET /api/v1/articles | 最新 200 条已发布文章 |
-| GET /api/v1/articles/{slug} | 指定已发布文章 |
-| GET /uploads/{filename} | 读取公开素材 |
+## 身份与权限
 
-除登录外的管理接口需要有效 `admin_session` Cookie。登录以及所有管理写请求需要 `X-Requested-With: peptide-admin` 请求头；不设置开放跨域策略。管理写入返回错误时不会把数据库报错或连接串交给浏览器。
+`POST /login` 接收 username/password。未完成设置者只得到受限 Cookie；已绑定者得到短期 ticket，不签发完整 Cookie。`POST /login/totp` 接收 ticket/code，一次性消费票据及验证码时间步后才签发完整会话。`GET /me` 返回用户、角色、scope、授权及供后台直接消费的菜单树。
 
-文章字段：id、title、slug、summary、body、cover、status、seoTitle、seoDescription、updatedAt。正文以纯文本存储和渲染，status 为 draft / published / offline。
+自助接口为 `POST /logout`、`POST /password`、`POST /totp/setup`、`POST /totp/activate` 和 `POST /me/reauth`。初始化二维码在本地生成。受限 scope 不能调用业务接口；改密、停用、角色修改、重置 MFA 均撤销相关会话和票据。重置他人密码／MFA 要求 5 分钟内的密码加新验证码再认证和操作原因。并发操作不能移除最后一位有效超管。
 
-商品字段：id、name、slug、category、aliases、cas、formula、molecularWeight、sequence、purity、specifications、storage、solubility、summary、description、images、status、seoTitle、seoDescription、updatedAt。images 为最多 20 个图片地址的数组，第一张为主图，全部属于商品，不绑定颜色。status 为 draft / published / offline；正文为纯文本；不含价格或支付字段。Slug 唯一，小写英文、数字和连字符；q 最长 200 字节。分类在商品表单直接填写，独立分类管理仍待实现。
+完整路由与权限映射以 `backend/internal/data/seed/admin_permissions.json` 为唯一来源。包含 43 个节点、38 个业务权限、super_admin / content_admin / viewer 三种默认角色。未登记的业务路径默认拒绝；整份内容 PUT 也不能绕过独立的发布或价格权限。所有管理写请求要求 `X-Requested-With: peptide-admin`，并校验同源 Origin；仅信任配置中的代理 CIDR。
 
-配置字段：brand、logo、primaryColor、backgroundColor、description、email、whatsapp、disclaimer、banners。Banner 子项为 title、subtitle、image、link；最多 3 项。颜色为 #RRGGBB；URL 仅接受站内绝对路径或 HTTPS。Logo 与 Banner 图片通过素材库引用。
+## 内容契约
 
-素材上传本地目录必须持久化和备份。MP4/WebM 仅保留原文件，不生成封面、切片或自适应流。所有上传资料公开可访问，不适合私密报告。
+列表使用 `{items,total,page,pageSize}`，页码从 1 开始，单页 1–100；产品与媒体支持 q 搜索。详情返回单对象；创建 POST 返回 201；更新返回 200；删除返回 `{ok:true}`。产品、文章、Banner 和品牌设置修改要求 expectedVersion；冲突返回 409 VERSION_CONFLICT，页面需刷新重新编辑。
 
-当前列表有固定最大条数，尚未实现服务端分页；商品支持搜索，其他列表不支持搜索；素材删除、重命名与分组也未实现。会话、文章、配置和素材元数据存放于 PG；登录限流状态为单进程内存。
+产品由基本信息、specs、values、skus、价格及 detail 组成。规格维度不超过 6 个，每维不超过 20 值，SKU 不超过 500 个；同产品组合不能重复，每个 SKU 必须从每维选择一个值，无规格产品使用一个默认 SKU。更新保留已有实体 ID，并校验规格／值／SKU 属于当前产品。产品状态单独 PATCH `/products/{id}/status`，SKU 价格 PATCH `/products/{id}/skus/{skuId}/price`。价格输入为 salePrice 十进制字符串，后端按 currency.minor_unit 转为整数，并返回格式化 price 和 fromPrice；首期种子仅 USD，不换汇，不使用浮点。
 
-初始化命令与密码设置见根目录 README。生产需将官网流量反向代理到 3000，将管理后台静态资源及 `/backend/` 分别代理至前端文件与 Go 服务；后端 8080、PG 5432 不应直接开放公网。上传入口设置至少 21MB 请求上限。
+产品 detail 和文章 body 为 `{html,mediaIds}`。HTML 只保留段落、h2–h4、强调、列表、引用、安全链接和受控图片／视频。媒体节点含 `data-media-id`，必须对应可用素材及后端生成的 URL；正文 ID 集合必须一致。脚本、iframe、SVG、事件属性和外部媒体会被删除或拒绝。`POST /products/preview`、`POST /articles/preview` 对当前表单进行同一套净化，返回公共 DTO，不保存、发布或创建持久引用。后台预览和官网共用 `@shop/content`。
 
-后端配置：默认加载工作目录下 `configs/config.local.yaml`，可用 `-conf` 指定文件，环境变量覆盖 YAML。`-migrate` 按顺序执行内嵌增量迁移并记录版本，可用于升级已有数据库。
+文章保存、发布、删除与正文／封面引用在同一事务完成。首次发布后保持 firstPublishedAt；公共列表按置顶、sort、首次发布时间及 ID 稳定排序，草稿、下线、软删除返回 404。公共产品只返回已发布且有启用定价组合的内容；公共 DTO 排除版本、状态、编辑者和 SKU 管理字段。
 
-配置模板 `backend/configs/config.local.example.yaml` 可提交到 Git；本地文件 `backend/configs/config.local.yaml` 以及其他实际运行 YAML 被 `.gitignore` 排除。复制模板后填写 `data.database.dsn`。分组为 app（服务名）、server.http（监听与超时）、data.database（PG 与连接池）、data.storage（上传目录）、auth（Cookie）。单服务入口 `cmd/server` 调用 `internal/pkg/bootstrap`，统一装配官网与管理接口。
+Banner 位仅种子 home_hero、products_header、research_header。投放字段为位置、英文标题／副标题、桌面图片 ID、可选手机图片 ID、英文 CTA、站内或 HTTPS 链接、sort、enabled、startsAt、endsAt 和 version。管理列表分页，公共 `GET /banners?slot=...` 返回全部在线投放，不设置条数上限；开始含边界、结束不含边界，数据库按 UTC 判断，后台按 Asia/Shanghai 编辑。手机图片缺失使用桌面图片。
+
+品牌配置含 brand、logoMediaId、theme、description、email、whatsapp、disclaimer 和 version。theme 的 primary/background/surface/text/muted/border/accent/onPrimary 均为 #RRGGBB，官网主要区域使用统一 CSS 变量。后台支持颜色预览及恢复默认值。无投放时首页使用英文默认主视觉，内页省略投放区。
+
+## 媒体
+
+`POST /media` 使用 multipart 的 file 字段，流式写入临时文件；内容嗅探、图片解码或视频容器校验成功后原子改名，最后事务写元数据和审计。默认图片／PDF 20 MiB、视频 200 MiB，可通过私有 YAML 和 `/media/upload-policy` 更新。支持 JPEG、PNG、WebP、GIF、PDF、MP4、WebM，不转码。`GET /media/{id}/references` 显示引用；PATCH 重命名；DELETE 检查引用并加锁，使用中返回 MEDIA_IN_USE。逻辑删除立即禁止公共访问，物理删除失败由任务重试。24 小时后的崩溃临时文件或无元数据文件会清理，在途上传路径受保护。
+
+公共 GET/HEAD 支持视频 Range/206，校验素材可用性，设置 nosniff 与 sandbox CSP。上传目录改变后，历史 root 注册仍保留；文件不会自动搬迁。上传内容公开可访问。数据库、全部 storage_root.path 目录和历史加密密钥必须配套备份。
+
+## 首次部署
+
+1. 配套构建 backend、admin-fe、website，使用锁文件安装，保留 shared 两个包。使用 `backend/configs/config.local.example.yaml` 配置私有运行文件，填写 DSN、持久目录、TOTP active key 和 keyring，权限 0600。
+2. 执行 `server -conf /path/config.yaml -migrate`，然后通过 SEED_ADMIN_PASSWORD 注入初始密码，执行 `-seed`。再执行 `server -conf /path/config.yaml`；运行不会自动 seed 或 reset。
+3. 后端仅内网监听，官网 Next 服务端使用 BACKEND_URL；后台构建前设置 UMI_APP_WEBSITE_URL 为官网地址；生产 cookie_secure=true，并填写实际反向代理 CIDR。后台浏览器与其 `/backend` 代理保持同源，Nginx 传递 Host、X-Forwarded-For 和 X-Forwarded-Proto。
+4. 超管完成首次改密及 MFA，再创建运营和查看者账号。检查 readyz、运行配置版本和上传策略；创建业务内容之前官网显示默认品牌及英文空状态。
+5. 官网 output=standalone，生产运行 `.next/standalone/server.js`，并将 `.next/static`、public（若存在）复制到对应位置；后台 dist 静态发布，未知前端路径回退 index.html。
+
+后端上传默认视频上限为 200 MiB，Nginx 上传入口至少允许 201 MiB multipart 请求，并匹配实际配置的读取／代理超时。例如以下后台代理片段；官网 `/uploads/` 同样代理后端以保持 Range。
+
+```nginx
+location /backend/ {
+    client_max_body_size 201m;
+    proxy_read_timeout 100s;
+    proxy_send_timeout 100s;
+    proxy_set_header Host $http_host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_pass http://127.0.0.1:8080/;
+}
+location /uploads/ {
+    proxy_pass http://127.0.0.1:8080;
+}
+```
+
+Nginx、前端环境变量和官网 BACKEND_URL 使用各自发布机制，后端 watcher 不修改这些外部服务。实际生产发布不包含在本次改造中。
+
+## 密钥与恢复
+
+轮换先增加新密钥，保留所有旧密钥，再切换 active_key_id。新绑定使用新密钥；已有绑定继续读取原密钥。移除密钥前必须确认没有对应用户／待绑定密文，也没有使用该密钥的在途旧版本；否则整版热加载拒绝。当前不自动重加密全部账号，可通过受控重绑逐步迁移。
+
+无法使用验证器时，在受控服务终端运行：
+
+```sh
+server -conf /path/config.yaml -recover-totp-user admin -recover-reason '经过身份核对的恢复原因'
+```
+
+命令撤销该用户会话和票据、清除绑定，并记录系统审计及原因；用户重新登录并绑定。无需修改源码、写入明文密钥或关闭 MFA。
+
+配套恢复流程：停止后端写入 → pg_dump 自定义格式备份 → 备份每个媒体根目录及私有配置／全部历史密钥 → 在独立数据库 pg_restore → 将文件恢复到原注册路径（或受控调整注册目录后核对所有历史 root）→ 保留 site_identity → 验证 seed 幂等和启动 schema 检查 → 验证登录、旧文件、Range、已发布内容和加载状态。不要在文件未恢复时启动清理任务。down SQL 仅用于受控开发回退，不能代替配套备份恢复。

@@ -5,9 +5,12 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/stdlib"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
+	"time"
 
 	"peptide-site/internal/conf"
 )
@@ -17,9 +20,18 @@ type Data struct{ DB *gorm.DB }
 
 // NewData opens PostgreSQL and returns a cleanup function.
 func NewData(c conf.Config) (*Data, func(), error) {
-	db, err := gorm.Open(postgres.Open(c.Data.Database.DSN), &gorm.Config{Logger: logger.Default.LogMode(logger.Silent)})
+	connection, err := pgx.ParseConfig(c.Data.Database.DSN)
 	if err != nil {
-		return nil, nil, fmt.Errorf("connect postgres: %w", err)
+		return nil, nil, fmt.Errorf("invalid database configuration")
+	}
+	if connection.ConnectTimeout == 0 || connection.ConnectTimeout > 10*time.Second {
+		connection.ConnectTimeout = 10 * time.Second
+	}
+	sqlPool := stdlib.OpenDB(*connection)
+	db, err := gorm.Open(postgres.New(postgres.Config{Conn: sqlPool}), &gorm.Config{Logger: logger.Default.LogMode(logger.Silent)})
+	if err != nil {
+		_ = sqlPool.Close()
+		return nil, nil, fmt.Errorf("database connection unavailable")
 	}
 	pool, err := db.DB()
 	if err != nil {
