@@ -11,12 +11,18 @@ export async function getInitialState(): Promise<InitialState> {
 function menus(nodes: PermissionNode[]): unknown[] {
   return nodes
     .filter((node) => node.type !== "action")
-    .map((node) => ({
-      key: node.code,
-      name: node.name,
-      path: node.route || undefined,
-      children: node.children.length ? menus(node.children) : undefined,
-    }));
+    .flatMap((node) =>
+      node.type === "directory"
+        ? menus(node.children)
+        : [
+            {
+              key: node.code,
+              name: node.name,
+              path: node.route || undefined,
+              children: node.children.length ? menus(node.children) : undefined,
+            },
+          ],
+    );
 }
 export const layout = ({ initialState }: { initialState?: InitialState }) => ({
   logo: false,
