@@ -18,6 +18,7 @@ import { api } from "../../services/cms";
 import { allows } from "../../services/auth";
 import type {
   Page,
+  PublicCategory,
   Product,
   ProductSpec,
   ProductSKU,
@@ -141,6 +142,7 @@ export default function Products() {
     product: Product;
     sku: ProductSKU;
   }>();
+  const [categories, setCategories] = useState<PublicCategory[]>([]);
   const [query, setQuery] = useState("");
   const [busy, setBusy] = useState(false);
   const [currencies, setCurrencies] = useState<{
@@ -173,6 +175,9 @@ export default function Products() {
   }, []);
   async function edit(id?: string) {
     try {
+      setCategories(
+        (await api<{ items: PublicCategory[] }>("categories/options")).items,
+      );
       const product = id ? await api<Product>(`products/${id}`) : null;
       setEditing(product);
       form.resetFields();
@@ -322,6 +327,11 @@ export default function Products() {
         columns={[
           { title: "名称", dataIndex: "name" },
           {
+            title: "分类",
+            dataIndex: "category",
+            render: (value: string) => value || "未分配",
+          },
+          {
             title: "价格",
             render: (_, row) => row.fromPrice?.displayPrice || "未定价",
           },
@@ -442,13 +452,24 @@ export default function Products() {
           >
             <Input />
           </Form.Item>
+          <Form.Item
+            name="categoryId"
+            label="商品分类"
+            rules={[{ required: true, message: "请选择商品分类" }]}
+          >
+            <Select
+              showSearch
+              optionFilterProp="label"
+              placeholder="请选择分类"
+              options={categories.map((c) => ({ value: c.id, label: c.name }))}
+            />
+          </Form.Item>
           <Form.Item name="summary" label="简介（英文）">
             <Input.TextArea />
           </Form.Item>
           <Space wrap>
             {(
               [
-                "category",
                 "aliases",
                 "cas",
                 "formula",
@@ -464,7 +485,6 @@ export default function Products() {
                 name={key}
                 label={
                   {
-                    category: "分类",
                     aliases: "别名",
                     cas: "CAS",
                     formula: "分子式",

@@ -37,7 +37,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	switch {
-	case r.URL.Path == "/api/v1/whatsapp-contact" || r.URL.Path == "/api/v1/whatsapp-status":
+	case r.URL.Path == "/api/v1/contact" || r.URL.Path == "/api/v1/whatsapp-status":
 		if h.whatsapp != nil {
 			h.whatsapp.ServeHTTP(w, r)
 			return
@@ -47,7 +47,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			h.branding.ServeHTTP(w, r)
 			return
 		}
-	case r.URL.Path == "/api/v1/products" || strings.HasPrefix(r.URL.Path, "/api/v1/products/"):
+	case r.URL.Path == "/api/v1/categories" || r.URL.Path == "/api/v1/products" || strings.HasPrefix(r.URL.Path, "/api/v1/products/"):
 		if h.catalog != nil {
 			r.SetPathValue("slug", strings.TrimPrefix(r.URL.Path, "/api/v1/products/"))
 			h.catalog.ServeHTTP(w, r)
@@ -74,7 +74,7 @@ func (h *Handler) admin(w http.ResponseWriter, r *http.Request) {
 			h.branding.ServeHTTP(w, r)
 			return
 		}
-	case r.URL.Path == "/admin/api/v1/products" || r.URL.Path == "/admin/api/v1/currencies" || strings.HasPrefix(r.URL.Path, "/admin/api/v1/products/"):
+	case r.URL.Path == "/admin/api/v1/categories" || strings.HasPrefix(r.URL.Path, "/admin/api/v1/categories/") || r.URL.Path == "/admin/api/v1/products" || r.URL.Path == "/admin/api/v1/currencies" || strings.HasPrefix(r.URL.Path, "/admin/api/v1/products/"):
 		if h.catalog != nil {
 			h.catalog.ServeHTTP(w, r)
 			return

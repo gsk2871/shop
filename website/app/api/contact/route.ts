@@ -19,7 +19,7 @@ export async function GET(request: Request) {
     );
   try {
     const response = await fetch(
-      `${process.env.BACKEND_URL || "http://127.0.0.1:8080"}/api/v1/whatsapp-contact`,
+      `${process.env.BACKEND_URL || "http://127.0.0.1:8080"}/api/v1/contact`,
       {
         method: "GET",
         cache: "no-store",

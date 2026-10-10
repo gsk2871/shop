@@ -57,6 +57,11 @@ func (r *Repo) CheckKeys(ctx context.Context) error {
 	}
 	return nil
 }
+
+// Password-only tokens are tagged before hashing so clients cannot remove the
+// marker to keep a session valid after TOTP is re-enabled.
+const passwordOnlyPrefix = "p:"
+
 func Hash(value string) string { s := sha256.Sum256([]byte(value)); return hex.EncodeToString(s[:]) }
 func randomToken() (string, error) {
 	b := make([]byte, 32)
@@ -95,6 +100,9 @@ func activeUser(tx *gorm.DB, id int64) (biz.User, biz.Role, error) {
 	return u, role, err
 }
 func (r *Repo) Identity(ctx context.Context, token string) (*biz.Identity, error) {
+	if r.Config.Auth.TOTP.Enabled && strings.HasPrefix(token, passwordOnlyPrefix) {
+		return nil, errdef.New(401, "AUTHENTICATION_REQUIRED")
+	}
 	var session struct {
 		UserID, AuthVersion int64
 		Scope               string
@@ -126,7 +134,14 @@ func (r *Repo) Identity(ctx context.Context, token string) (*biz.Identity, error
 		return nil, err
 	}
 	u.TOTPBound = u.TotpCipher != nil
-	identity := &biz.Identity{User: u, Role: role, Scope: session.Scope, VerifiedAt: session.VerifiedAt, SessionHash: Hash(token), Permissions: permissions}
+	scope := session.Scope
+	if !r.Config.Auth.TOTP.Enabled {
+		scope = "full"
+		if u.MustChangePwd {
+			scope = "password_change"
+		}
+	}
+	identity := &biz.Identity{TOTPEnabled: r.Config.Auth.TOTP.Enabled, User: u, Role: role, Scope: scope, VerifiedAt: session.VerifiedAt, SessionHash: Hash(token), Permissions: permissions}
 	identity.Menu, err = r.Tree(ctx, permissions, false)
 	return identity, err
 }
@@ -170,6 +185,9 @@ func (r *Repo) createSession(tx *gorm.DB, u biz.User, scope string, verified *ti
 	if err != nil {
 		return LoginResult{}, err
 	}
+	if !r.Config.Auth.TOTP.Enabled && verified == nil {
+		token = passwordOnlyPrefix + token[len(passwordOnlyPrefix):]
+	}
 	ttl := r.Config.Auth.SessionTTL
 	if scope != "full" {
 		ttl = r.Config.Auth.OnboardingTTL
@@ -192,7 +210,16 @@ func (r *Repo) Login(ctx context.Context, username, password string, m Meta) (Lo
 			return errdef.New(401, "INVALID_CREDENTIALS")
 		}
 		m.ActorID = u.ID
-		if u.TotpCipher == nil {
+		if !r.Config.Auth.TOTP.Enabled {
+			scope := "full"
+			if u.MustChangePwd {
+				scope = "password_change"
+			}
+			result, err = r.createSession(tx, u, scope, nil)
+			if err == nil {
+				err = tx.Exec("UPDATE admin_user SET last_login_at=? WHERE id=?", r.Now().UTC(), u.ID).Error
+			}
+		} else if u.TotpCipher == nil {
 			result, err = r.createSession(tx, u, "onboarding", nil)
 		} else {
 			var token string
@@ -395,12 +422,14 @@ func (r *Repo) Reauthenticate(ctx context.Context, i *biz.Identity, password, co
 		if bcrypt.CompareHashAndPassword([]byte(u.PasswordHash), []byte(password)) != nil {
 			return errdef.New(401, "INVALID_CREDENTIALS")
 		}
-		ok, err := r.useCode(tx, u, code)
-		if err != nil {
-			return err
-		}
-		if !ok {
-			return errdef.New(401, "MFA_INVALID")
+		if r.Config.Auth.TOTP.Enabled {
+			ok, err := r.useCode(tx, u, code)
+			if err != nil {
+				return err
+			}
+			if !ok {
+				return errdef.New(401, "MFA_INVALID")
+			}
 		}
 		if err := tx.Exec("UPDATE admin_session SET verified_at=? WHERE token_hash=?", r.Now(), i.SessionHash).Error; err != nil {
 			return err

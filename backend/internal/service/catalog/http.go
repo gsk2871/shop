@@ -49,6 +49,10 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		prefix = "/api/v1/"
 	}
 	path := strings.TrimPrefix(r.URL.Path, prefix)
+	if path == "categories" || strings.HasPrefix(path, "categories/") {
+		h.categories(w, r, path, public)
+		return
+	}
 	if path == "currencies" {
 		rows, err := h.Repo.Currencies(r.Context())
 		if err != nil {
@@ -64,7 +68,12 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			admin.Failure(w, r, err)
 			return
 		}
-		rows, total, err := h.Repo.List(r.Context(), public, p, size, strings.TrimSpace(r.URL.Query().Get("q")))
+		categoryID, err := biz.ParseID(r.URL.Query().Get("categoryId"))
+		if err != nil {
+			admin.Failure(w, r, err)
+			return
+		}
+		rows, total, err := h.Repo.List(r.Context(), public, p, size, strings.TrimSpace(r.URL.Query().Get("q")), categoryID)
 		if err != nil {
 			admin.Failure(w, r, err)
 			return

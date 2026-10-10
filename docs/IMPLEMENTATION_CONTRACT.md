@@ -43,7 +43,7 @@ Go 定义位于 backend/internal/service/contract，TypeScript 的唯一公共�
 
 可提交的唯一种子来源为 backend/internal/data/seed/admin_permissions.json。使用 python3 scripts/check_permission_seed.py 校验，测试命令为 python3 -m unittest discover -s scripts -p test_check_permission_seed.py。数据库加载器校验并事务导入，保留已有账号及角色授权。
 
-现有种子包含 48 节点、43 业务权限和三种角色，包含完整 API 映射和自助 scope 清单。校验拒绝孤立父节点、环、重复代码、重复 API、未知角色授权、查看者写权限和额外匿名写入口。目录及角色按 code 幂等初始化，不产生演示业务内容。
+现有种子包含 52 节点、47 业务权限和三种角色，包含完整 API 映射和自助 scope 清单。校验拒绝孤立父节点、环、重复代码、重复 API、未知角色授权、查看者写权限和额外匿名写入口。目录及角色按 code 幂等初始化，不产生演示业务内容。
 
 ## 工程规则与交付边界
 
@@ -64,6 +64,9 @@ Go 定义位于 backend/internal/service/contract，TypeScript 的唯一公共�
 | GET | `/products` | product.read | 09 |
 | GET | `/products/{id}` | product.read | 09 |
 | GET | `/currencies` | product.read | 08 |
+| GET | `/categories/options` | product.read | 分类 |
+| GET | `/categories` | category.read | 分类 |
+| GET | `/categories/{id}` | category.read | 分类 |
 | GET | `/articles` | article.read | 11 |
 | GET | `/articles/{id}` | article.read | 11 |
 | GET | `/settings` | site.read | 12 |
@@ -81,6 +84,9 @@ Go 定义位于 backend/internal/service/contract，TypeScript 的唯一公共�
 | POST | `/media` | media.upload | 06 |
 | PATCH | `/media/{id}` | media.update | 06 |
 | DELETE | `/media/{id}` | media.delete | 06 |
+| POST | `/categories` | category.create | 分类 |
+| PUT | `/categories/{id}` | category.update | 分类 |
+| DELETE | `/categories/{id}` | category.delete | 分类 |
 | POST | `/products` | product.create | 09 |
 | PUT | `/products/{id}` | product.update | 09 |
 | POST | `/products/preview` | product.preview | 09 |
@@ -110,6 +116,8 @@ Go 定义位于 backend/internal/service/contract，TypeScript 的唯一公共�
 
 角色启停使用 PUT /roles/{id} 的 enabled 字段并校验 role.update，不额外增加未在权限种子登记的路径。用户启停统一使用 user.disable。静态 /media/upload-policy、/products/preview 和 /articles/preview 使用精确 method/path 注册。产品和新闻旧 PUT 集合路径在模块切换时删除。
 
+`auth.totp.enabled` 控制登录与再认证的验证码要求，默认开启。关闭时密码登录可以取得完整会话，首次强制改密仍限制业务访问；绑定接口保持可用。GET /me 公开当前 totpEnabled 标记。重新开启后，关闭期间创建的密码登录会话失效并要求重新登录，敏感操作再认证仍保留 5 分钟有效期。
+
 匿名管理入口仅 POST /login 和 POST /login/totp。自助入口 GET /me、GET /me/permissions、POST /password、POST /logout 支持 full、onboarding、password_change；POST /totp/setup 和 POST /totp/activate 支持 full、onboarding，且再次检查未绑定及首次改密已完成。绑定成功撤销受限会话，返回重新登录指令。正式业务 API 仅允许 full。
 
 ## 公共接口及预览边界
@@ -117,7 +125,8 @@ Go 定义位于 backend/internal/service/contract，TypeScript 的唯一公共�
 | 方法与完整路径 | 返回目标 | 官网页面及要求 |
 | --- | --- | --- |
 | GET /api/v1/site | 品牌与文字标记、解析后 Logo URL、主题、公司介绍、官网页面标题与正文、Cookie 提示及兼容联系方式 | layout、首页、about、privacy、products、news；不返回后台 version、操作者或种子信息 |
-| GET /api/v1/products | Page<产品摘要>，含服务端 fromPrice | /products，q 搜索，published 且有有效定价 SKU |
+| GET /api/v1/products | Page<产品摘要>，含 categoryId、category、服务端 fromPrice | /products，q 产品名称子串搜索，可选 categoryId 分类筛选，published 且有有效定价 SKU |
+| GET /api/v1/categories | 全部分类 items，仅 id/name | 产品搜索区，按后台 sort/id 顺序 |
 | GET /api/v1/products/{slug} | 产品公开详情、specs、有效 skus、detail | /products/[slug]，下架 404；无图库和管理字段 |
 | GET /api/v1/articles | Page<新闻摘要> | /news，只读 published，置顶、sort、首次发布时间、ID 稳定排序 |
 | GET /api/v1/articles/{slug} | 新闻公开详情、净化 body、封面 URL、SEO | /news/[slug]，草稿或下线 404 |
@@ -160,3 +169,9 @@ POST /me/reauth 为 full scope 自助接口，接收 password/code；独立于�
 ## WhatsApp 地域客服
 
 国家配置、二维码、更新时间防覆盖、默认唯一及官网 GET／H5 契约见 [WhatsApp 国家客服分配](WHATSAPP_ROUTING.md)。
+
+### 商品分类契约
+
+product_category 使用 identity 主键、软删除、版本检查和有效名称大小写不敏感唯一索引。product.category_id 为逻辑关联；创建及编辑保存必选有效分类，旧空分类商品继续展示。分类删除事务持有行排他锁，商品保存事务持有分类共享锁，防止并发创建和删除造成失效引用。分类重命名通过关联查询即时展示，product.category 保留名称快照以支持开发回退。000013 迁移归并并回填历史非空分类。
+
+管理 API：GET/POST /categories，GET/PUT/DELETE /categories/{id}，对应 category.read/create/update/delete；GET /categories/options 对应 product.read。创建返回 201，更新返回 200，删除返回 ok；更新和删除要求 expectedVersion，被商品使用返回 CATEGORY_IN_USE。公共分类仅返回 id/name，产品列表 categoryId 未传或空值不加条件，q 仅按名称进行字面子串查询。

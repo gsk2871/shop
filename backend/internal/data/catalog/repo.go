@@ -55,6 +55,7 @@ func (r *Repo) Sanitize(ctx context.Context, d richtext.Document) (richtext.Docu
 }
 
 type productRow struct {
+	CategoryID                                                                                                                                                 *int64
 	ID                                                                                                                                                         int64
 	Name, Slug, Category, Aliases, CAS, Formula, MolecularWeight, Sequence, Purity, Storage, Solubility, Summary, DetailHTML, Status, SEOTitle, SEODescription string
 	Version                                                                                                                                                    int64
@@ -86,6 +87,14 @@ func (r *Repo) get(tx *gorm.DB, id int64) (biz.Product, error) {
 		return biz.Product{}, err
 	}
 	p := biz.Product{ID: strconv.FormatInt(row.ID, 10), Name: row.Name, Slug: row.Slug, Category: row.Category, Aliases: row.Aliases, CAS: row.CAS, Formula: row.Formula, MolecularWeight: row.MolecularWeight, Sequence: row.Sequence, Purity: row.Purity, Storage: row.Storage, Solubility: row.Solubility, Summary: row.Summary, Status: row.Status, SEOTitle: row.SEOTitle, SEODescription: row.SEODescription, Version: row.Version, UpdatedAt: row.UpdatedAt.UTC().Format(time.RFC3339), Specs: []biz.Spec{}, SKUs: []biz.SKU{}, Detail: richtext.Document{HTML: row.DetailHTML, MediaIDs: []string{}}}
+	if row.CategoryID != nil {
+		c, err := category(tx, *row.CategoryID, false)
+		if err != nil {
+			return p, err
+		}
+		p.CategoryID = strconv.FormatInt(c.ID, 10)
+		p.Category = c.Name
+	}
 	var refs []int64
 	if err := tx.Table("media_reference").Where("owner_type='product' AND owner_id=? AND field='detail'", p.ID).Order("media_id").Pluck("media_id", &refs).Error; err != nil {
 		return p, err
@@ -160,7 +169,7 @@ func (r *Repo) Public(ctx context.Context, slug string) (map[string]any, error) 
 	}, &sql.TxOptions{Isolation: sql.LevelRepeatableRead, ReadOnly: true})
 	return output, err
 }
-func (r *Repo) List(ctx context.Context, public bool, page, size int, search string) ([]map[string]any, int64, error) {
+func (r *Repo) List(ctx context.Context, public bool, page, size int, search string, categoryID int64) ([]map[string]any, int64, error) {
 	output := []map[string]any{}
 	var total int64
 	err := r.Data.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
@@ -170,7 +179,10 @@ func (r *Repo) List(ctx context.Context, public bool, page, size int, search str
 			q = q.Where("p.status='published'").Where("EXISTS(SELECT 1 FROM product_sku s JOIN product_sku_price sp ON sp.sku_id=s.id AND sp.currency=s.currency AND sp.deleted_at IS NULL WHERE s.product_id=p.id AND s.enabled AND s.deleted_at IS NULL)")
 		}
 		if search != "" {
-			q = q.Where("strpos(lower(p.name || ' ' || p.aliases || ' ' || p.cas || ' ' || p.sequence || ' ' || p.category),lower(?))>0", search)
+			q = q.Where("strpos(lower(p.name),lower(?))>0", search)
+		}
+		if categoryID != 0 {
+			q = q.Where("p.category_id=?", categoryID)
 		}
 		if err := q.Count(&total).Error; err != nil {
 			return err
@@ -183,7 +195,7 @@ func (r *Repo) List(ctx context.Context, public bool, page, size int, search str
 			if err != nil {
 				return err
 			}
-			item := map[string]any{"id": p.ID, "name": p.Name, "slug": p.Slug, "category": p.Category, "summary": p.Summary, "fromPrice": p.FromPrice}
+			item := map[string]any{"id": p.ID, "name": p.Name, "slug": p.Slug, "category": p.Category, "categoryId": p.CategoryID, "summary": p.Summary, "fromPrice": p.FromPrice}
 			if !public {
 				item["status"] = p.Status
 				item["version"] = p.Version
@@ -209,6 +221,15 @@ func (r *Repo) Prepare(ctx context.Context, p *biz.Product) error {
 	if err := biz.Validate(p, r.Config.Product.DefaultCurrency); err != nil {
 		return err
 	}
+	categoryID, _ := biz.ParseID(p.CategoryID)
+	c, err := category(r.Data.DB.WithContext(ctx), categoryID, false)
+	if err == gorm.ErrRecordNotFound {
+		return errdef.Invalid()
+	}
+	if err != nil {
+		return err
+	}
+	p.Category = c.Name
 	clean, err := r.Sanitize(ctx, p.Detail)
 	if err != nil {
 		return err
@@ -318,6 +339,15 @@ func (r *Repo) Save(ctx context.Context, id int64, p biz.Product) (biz.Product, 
 		return p, err
 	}
 	err := r.Data.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		categoryID, _ := biz.ParseID(p.CategoryID)
+		c, err := category(tx, categoryID, true)
+		if err == gorm.ErrRecordNotFound {
+			return errdef.Invalid()
+		}
+		if err != nil {
+			return err
+		}
+		p.Category = c.Name
 		old := biz.Product{}
 		if id != 0 {
 			var row productRow
@@ -360,7 +390,7 @@ func (r *Repo) Save(ctx context.Context, id int64, p biz.Product) (biz.Product, 
 				return errdef.Invalid()
 			}
 		}
-		columns := map[string]any{"name": p.Name, "slug": p.Slug, "category": p.Category, "aliases": p.Aliases, "cas": p.CAS, "formula": p.Formula, "molecular_weight": p.MolecularWeight, "sequence": p.Sequence, "purity": p.Purity, "storage": p.Storage, "solubility": p.Solubility, "summary": p.Summary, "detail_html": p.Detail.HTML, "status": p.Status, "seo_title": p.SEOTitle, "seo_description": p.SEODescription, "updated_at": time.Now().UTC(), "updated_by": actor(ctx)}
+		columns := map[string]any{"name": p.Name, "slug": p.Slug, "category": p.Category, "category_id": categoryID, "aliases": p.Aliases, "cas": p.CAS, "formula": p.Formula, "molecular_weight": p.MolecularWeight, "sequence": p.Sequence, "purity": p.Purity, "storage": p.Storage, "solubility": p.Solubility, "summary": p.Summary, "detail_html": p.Detail.HTML, "status": p.Status, "seo_title": p.SEOTitle, "seo_description": p.SEODescription, "updated_at": time.Now().UTC(), "updated_by": actor(ctx)}
 		if id == 0 {
 			columns["created_by"] = actor(ctx)
 			columns["version"] = 1

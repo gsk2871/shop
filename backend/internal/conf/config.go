@@ -103,6 +103,7 @@ type Storage struct {
 }
 
 type TOTP struct {
+	Enabled     bool              `yaml:"enabled"`
 	Issuer      string            `yaml:"issuer"`
 	ActiveKeyID string            `yaml:"active_key_id"`
 	Keys        map[string]string `yaml:"keys"`
@@ -129,7 +130,7 @@ func defaults() Config {
 		App:     App{Name: "peptide-site"},
 		Server:  Server{HTTP: HTTP{Addr: "127.0.0.1:8080", Timeout: 30 * time.Second, ReadHeaderTimeout: 10 * time.Second, ReadTimeout: 60 * time.Second, WriteTimeout: 90 * time.Second, IdleTimeout: 120 * time.Second}},
 		Data:    Data{Database: Database{MaxOpenConns: 10, MaxIdleConns: 5, ConnMaxLifetime: 30 * time.Minute}, Storage: Storage{UploadDir: "./storage/uploads", MaxImageBytes: 20 << 20, MaxVideoBytes: 200 << 20, MaxDocumentBytes: 20 << 20, AllowedTypes: []string{"image/jpeg", "image/png", "image/webp", "image/gif", "video/mp4", "video/webm", "application/pdf"}, CleanupInterval: time.Minute}},
-		Auth:    Auth{CookieSecure: true, SessionTTL: 8 * time.Hour, OnboardingTTL: 15 * time.Minute, MFATicketTTL: 5 * time.Minute, MFAMaxAttempts: 5, LoginLimit: 5, TOTP: TOTP{Issuer: "Research Supply Admin"}},
+		Auth:    Auth{CookieSecure: true, SessionTTL: 8 * time.Hour, OnboardingTTL: 15 * time.Minute, MFATicketTTL: 5 * time.Minute, MFAMaxAttempts: 5, LoginLimit: 5, TOTP: TOTP{Enabled: true, Issuer: "Research Supply Admin"}},
 	}
 }
 

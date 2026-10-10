@@ -94,7 +94,7 @@ def validate_seed(seed):
     if anonymous != {
         ("POST", "/admin/api/v1/login"),
         ("POST", "/admin/api/v1/login/totp"),
-        ("GET", "/api/v1/whatsapp-contact"),
+        ("GET", "/api/v1/contact"),
         ("GET", "/api/v1/whatsapp-status"),
     }:
         raise ValueError("unexpected anonymous administrative route")

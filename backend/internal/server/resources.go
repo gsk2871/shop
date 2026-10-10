@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"peptide-site/internal/conf"
 	"peptide-site/internal/data"
 	adminData "peptide-site/internal/data/admin"
@@ -72,6 +73,9 @@ func NewResources(c conf.Config, d *data.Data, s *service.System, content *cms.H
 	commitResources := func() error {
 		if err := commit(); err != nil {
 			return err
+		}
+		if !c.Auth.TOTP.Enabled {
+			slog.Warn("Admin TOTP disabled")
 		}
 		var workerCtx context.Context
 		workerCtx, cancel = context.WithCancel(context.Background())

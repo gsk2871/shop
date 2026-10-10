@@ -50,7 +50,7 @@ export default function ContactButton({
     setImageError(false);
     const timeout = setTimeout(() => controller.abort(), 15000);
     try {
-      const response = await fetch("/api/contact/whatsapp", {
+      const response = await fetch("/api/contact", {
         method: "GET",
         cache: "no-store",
         credentials: "same-origin",

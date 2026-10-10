@@ -10,6 +10,7 @@ export default defineConfig({
   initialState: {},
   model: {},
   routes: [
+    { path: "/categories", name: "商品分类", component: "./Categories", wrappers: ["@/components/Auth"] },
     {
       path: "/whatsapp",
       name: "WhatsApp 客服配置",

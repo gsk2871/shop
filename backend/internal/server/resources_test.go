@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"gopkg.in/yaml.v3"
+	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
@@ -240,5 +241,94 @@ func TestReloadResourceConsumers(t *testing.T) {
 	}
 	if m.Config().Product.DefaultCurrency != "EUR" || m.Config().Seed.SuperAdmin.Username != "future_admin" {
 		t.Fatal("generation fields stale")
+	}
+}
+
+func TestReloadTOTPEnabledConsumer(t *testing.T) {
+	d, c := testutil.Postgres(t)
+	ctx := context.Background()
+	if err := d.DB.Exec("UPDATE admin_user SET must_change_pwd=false WHERE username=?", "admin").Error; err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(t.TempDir(), "totp.yaml")
+	write := func() {
+		t.Helper()
+		body, err := yaml.Marshal(c)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err = os.WriteFile(path, body, 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write()
+	factory := func(ctx context.Context, cfg conf.Config) (*configreload.Resource, error) {
+		return NewResources(cfg, d, service.NewSystem(biz.NewSystem(d)), cms.NewHandler(cfg))
+	}
+	manager, err := configreload.New(ctx, path, c, conf.NewLoader(), factory)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer manager.Close()
+	request := func(method, path, token string, body []byte) *httptest.ResponseRecorder {
+		t.Helper()
+		req := httptest.NewRequest(method, path, bytes.NewReader(body))
+		req.Header.Set("X-Requested-With", "peptide-admin")
+		if token != "" {
+			req.AddCookie(&http.Cookie{Name: "admin_session", Value: token})
+		}
+		w := httptest.NewRecorder()
+		manager.ServeHTTP(w, req)
+		return w
+	}
+	login := func() (admin.LoginResult, string) {
+		t.Helper()
+		body, _ := json.Marshal(map[string]string{"username": "admin", "password": c.Seed.SuperAdmin.Password})
+		w := request("POST", "/admin/api/v1/login", "", body)
+		var result admin.LoginResult
+		if w.Code != 200 || json.Unmarshal(w.Body.Bytes(), &result) != nil {
+			t.Fatalf("login %d %s", w.Code, w.Body.String())
+		}
+		cookies := w.Result().Cookies()
+		if len(cookies) != 1 {
+			t.Fatal("missing session cookie")
+		}
+		return result, cookies[0].Value
+	}
+	original, originalToken := login()
+	if original.Scope != "onboarding" {
+		t.Fatal("enabled unbound login bypassed onboarding")
+	}
+	prepare := func(conf.Config) (func(), func(), error) { return nil, nil, nil }
+	c.Auth.TOTP.Enabled = false
+	write()
+	if err = manager.Reload(ctx, prepare); err != nil {
+		t.Fatal(err)
+	}
+	w := request("GET", "/admin/api/v1/me", originalToken, nil)
+	var identity struct {
+		TOTPEnabled bool   `json:"totpEnabled"`
+		Scope       string `json:"scope"`
+	}
+	if w.Code != 200 || json.Unmarshal(w.Body.Bytes(), &identity) != nil || identity.TOTPEnabled || identity.Scope != "full" {
+		t.Fatalf("reload identity %d %s", w.Code, w.Body.String())
+	}
+	disabled, disabledToken := login()
+	if disabled.Step != "session" || disabled.Scope != "full" || len(disabledToken) != 64 {
+		t.Fatalf("disabled login %+v", disabled)
+	}
+	if w = request("GET", "/admin/api/v1/products", disabledToken, nil); w.Code != 200 {
+		t.Fatalf("disabled business access %d %s", w.Code, w.Body.String())
+	}
+	c.Auth.TOTP.Enabled = true
+	write()
+	if err = manager.Reload(ctx, prepare); err != nil {
+		t.Fatal(err)
+	}
+	if w = request("GET", "/admin/api/v1/me", disabledToken, nil); w.Code != 401 {
+		t.Fatal("password-only cookie survived re-enabling", w.Code)
+	}
+	if w = request("GET", "/admin/api/v1/products", originalToken, nil); w.Code != 403 {
+		t.Fatal("old onboarding cookie bypassed re-enabled binding", w.Code)
 	}
 }

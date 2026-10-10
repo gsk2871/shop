@@ -36,6 +36,7 @@ auth:
   login_limit: 5
   trusted_proxies: [127.0.0.1/32, "::1/128"] # local Next.js; production must use actual proxy CIDRs
   totp:
+    enabled: true # false skips login codes and mandatory binding; password changes still required
     issuer: Research Supply Admin
     active_key_id: "" # required for run, optional for migrate/seed
     keys: {} # inject private base64 encoded 32-byte keys in protected YAML

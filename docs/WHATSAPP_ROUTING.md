@@ -28,9 +28,9 @@ ID 为十进制字符串，时间为 UTC RFC 3339，保留数据库微秒精度�
 | DELETE /admin/api/v1/whatsapp-groups/{id} | whatsapp.delete；软删除配置和子记录 |
 | PUT /admin/api/v1/whatsapp-default | whatsapp.default；切换唯一默认 |
 | GET /api/v1/whatsapp-status | 公开读取可用状态，不消耗轮询 |
-| GET /api/v1/whatsapp-contact | 可信官网代理读取选中账号及二维码 |
+| GET /api/v1/contact | 可信官网代理读取选中账号及二维码 |
 
-官网浏览器调用 `GET /api/contact/whatsapp` 同源代理，无 body、业务 query、点击标识或产品提交。前后端使用 no-store，禁预取和自动重试，用户主动重试作为新分配；HEAD 明确拒绝，不能消耗位置。响应为 accountName、phoneNumber、qrCodeUrl、url。产品文案在浏览器基于已展示名称编码到 wa.me 链接。官网没有联系页、邮件入口或联系表单，旧 `/contact` 重定向到首页。
+官网浏览器调用 `GET /api/contact` 同源代理，无 body、业务 query、点击标识或产品提交。前后端使用 no-store，禁预取和自动重试，用户主动重试作为新分配；HEAD 明确拒绝，不能消耗位置。响应为 accountName、phoneNumber、qrCodeUrl、url。产品文案在浏览器基于已展示名称编码到 wa.me 链接。官网没有联系页、邮件入口或联系表单，旧 `/contact` 重定向到首页。
 
 编辑输入为 name、countryCodes、enabled、accounts；账号为已有 id（新账号省略）、name、phoneNumber、qrCodeMediaId、enabled。已有账号缺席表示软删除，保留账号 ID 和计数。更新、启停、删除传 `expectedUpdatedAt`，指所属配置更新时间，账号操作也同步推进配置时间。默认切换传 groupId、expectedUpdatedAt（全局设置时间）、expectedGroupUpdatedAt（目标配置时间）。数据库时间不一致返回 409 UPDATE_CONFLICT，整次不更新，前端刷新后人工核对。时间原样回传，不通过 JavaScript Date 截断。
 

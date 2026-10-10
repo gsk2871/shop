@@ -20,6 +20,8 @@ docker compose up -d postgres
 
 修改 `.env` 的数据库密码，同时填写后端私有 YAML 的 DSN。后端不会自动读取 `.env`，配置模板也不会自动用作运行配置。运行 YAML 不进入 Git。
 
+管理后台二次验证由 YAML 的 `auth.totp.enabled` 控制，默认 `true`；设为 `false` 时只用密码登录，保留首次强制改密，敏感操作再认证仅校验密码。开关支持热加载，重新开启后关闭期间创建的密码登录会话需重新登录并验证。绑定接口仍可使用，关闭时仍须保留加密密钥配置。
+
 为 `auth.totp.keys` 生成一个 32 字节密钥，并设置相应 `active_key_id`；本地 HTTP 使用 `cookie_secure: false`。密钥存入权限为 0600 的私有配置，和数据库、媒体目录配套备份。
 
 ```sh

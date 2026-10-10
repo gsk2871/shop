@@ -38,14 +38,14 @@ func TestPublicReadAndHeaderBoundary(t *testing.T) {
 		headers              http.Header
 		want                 int
 	}{
-		{"GET", "/api/v1/whatsapp-contact", "127.0.0.1:1234", http.Header{}, 400},
-		{"GET", "/api/v1/whatsapp-contact", "127.0.0.1:1234", http.Header{"X-Forwarded-For": {"8.8.8.8"}}, 400},
-		{"GET", "/api/v1/whatsapp-contact", "127.0.0.1:1234", http.Header{"X-Client-Ip": {"8.8.8.8", "1.1.1.1"}}, 400},
-		{"GET", "/api/v1/whatsapp-contact", "192.0.2.1:1234", http.Header{"X-Client-Ip": {"8.8.8.8"}}, 403},
-		{"GET", "/api/v1/whatsapp-contact?ip=8.8.8.8", "127.0.0.1:1234", http.Header{"X-Client-Ip": {"8.8.8.8"}}, 400},
-		{"POST", "/api/v1/whatsapp-contact", "127.0.0.1:1234", http.Header{"X-Client-Ip": {"8.8.8.8"}}, 405},
-		{"HEAD", "/api/v1/whatsapp-contact", "127.0.0.1:1234", http.Header{"X-Client-Ip": {"8.8.8.8"}}, 405},
-		{"GET", "/api/v1/whatsapp-contact", "127.0.0.1:1234", http.Header{"X-Client-Ip": {"8.8.8.8"}}, 503},
+		{"GET", "/api/v1/contact", "127.0.0.1:1234", http.Header{}, 400},
+		{"GET", "/api/v1/contact", "127.0.0.1:1234", http.Header{"X-Forwarded-For": {"8.8.8.8"}}, 400},
+		{"GET", "/api/v1/contact", "127.0.0.1:1234", http.Header{"X-Client-Ip": {"8.8.8.8", "1.1.1.1"}}, 400},
+		{"GET", "/api/v1/contact", "192.0.2.1:1234", http.Header{"X-Client-Ip": {"8.8.8.8"}}, 403},
+		{"GET", "/api/v1/contact?ip=8.8.8.8", "127.0.0.1:1234", http.Header{"X-Client-Ip": {"8.8.8.8"}}, 400},
+		{"POST", "/api/v1/contact", "127.0.0.1:1234", http.Header{"X-Client-Ip": {"8.8.8.8"}}, 405},
+		{"HEAD", "/api/v1/contact", "127.0.0.1:1234", http.Header{"X-Client-Ip": {"8.8.8.8"}}, 405},
+		{"GET", "/api/v1/contact", "127.0.0.1:1234", http.Header{"X-Client-Ip": {"8.8.8.8"}}, 503},
 	} {
 		w := request(tc.method, tc.path, tc.remote, tc.headers)
 		if w.Code != tc.want {
@@ -83,7 +83,7 @@ func TestPublicReadAndHeaderBoundary(t *testing.T) {
 	if count != 0 {
 		t.Fatal("status consumed")
 	}
-	w = request("GET", "/api/v1/whatsapp-contact", "127.0.0.1:1234", http.Header{"X-Client-Ip": {"8.8.8.8"}})
+	w = request("GET", "/api/v1/contact", "127.0.0.1:1234", http.Header{"X-Client-Ip": {"8.8.8.8"}})
 	if w.Code != 200 {
 		t.Fatal(w.Body.String())
 	}

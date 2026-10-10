@@ -15,8 +15,12 @@ func TestProductAggregateAndConcurrentVersion(t *testing.T) {
 	d, c := testutil.Postgres(t)
 	r := NewRepo(d, c)
 	ctx := auth.WithIdentity(context.Background(), &auth.Identity{User: auth.User{ID: 1}, Permissions: []string{"product.publish", "product.price.update"}})
+	category, err := r.SaveCategory(ctx, 0, biz.Category{Name: "Compounds"})
+	if err != nil {
+		t.Fatal(err)
+	}
 	price := "12.34"
-	input := biz.Product{Name: "Research compound", Slug: "research-compound", Status: "draft", Detail: richtext.Document{HTML: "<p>Test</p>", MediaIDs: []string{}}, Specs: []biz.Spec{{Key: "size", Name: "Size", Values: []biz.Value{{Key: "small", Name: "Small"}, {Key: "large", Name: "Large"}}}}, SKUs: []biz.SKU{{Key: "small-sku", Enabled: true, SpecValueKeys: []string{"small"}, Currency: "USD", SalePrice: &price}, {Key: "large-sku", Enabled: false, SpecValueKeys: []string{"large"}, Currency: "USD", SalePrice: &price}}}
+	input := biz.Product{CategoryID: category.ID, Name: "Research compound", Slug: "research-compound", Status: "draft", Detail: richtext.Document{HTML: "<p>Test</p>", MediaIDs: []string{}}, Specs: []biz.Spec{{Key: "size", Name: "Size", Values: []biz.Value{{Key: "small", Name: "Small"}, {Key: "large", Name: "Large"}}}}, SKUs: []biz.SKU{{Key: "small-sku", Enabled: true, SpecValueKeys: []string{"small"}, Currency: "USD", SalePrice: &price}, {Key: "large-sku", Enabled: false, SpecValueKeys: []string{"large"}, Currency: "USD", SalePrice: &price}}}
 	product, err := r.Save(ctx, 0, input)
 	if err != nil {
 		t.Fatal(err)

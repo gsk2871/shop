@@ -86,6 +86,7 @@ export interface PublicProduct {
   id?: EntityID;
   name: string;
   slug: string;
+  categoryId: EntityID | "";
   category: string;
   aliases: string;
   cas: string;
@@ -116,6 +117,7 @@ export interface ProductSummary {
   id: EntityID;
   name: string;
   slug: string;
+  categoryId: EntityID | "";
   category: string;
   summary: string;
   fromPrice?: Price | null;
@@ -259,4 +261,14 @@ export interface WhatsAppContact {
   phoneNumber: string;
   qrCodeUrl: string;
   url: string;
+}
+
+export interface PublicCategory {
+  id: EntityID;
+  name: string;
+}
+export interface Category extends PublicCategory {
+  sort: number;
+  version: number;
+  expectedVersion?: number;
 }

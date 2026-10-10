@@ -5,6 +5,7 @@ import { api } from "../../services/cms";
 export default function Security() {
   const { initialState } = useModel("@@initialState");
   const identity = initialState?.identity;
+  const totpEnabled = identity?.totpEnabled !== false;
   const [binding, setBinding] = useState<{ secret: string; uri: string }>();
   const [busy, setBusy] = useState(false);
   const [msg, context] = message.useMessage();
@@ -45,7 +46,9 @@ export default function Security() {
             type="info"
             title={
               identity?.user.mustChangePwd
-                ? "请先修改初始密码，再重新登录并绑定验证器"
+                ? totpEnabled
+                  ? "请先修改初始密码，再重新登录并绑定验证器"
+                  : "请先修改初始密码，再重新登录"
                 : "请绑定验证器，完成后重新登录"
             }
           />
@@ -90,7 +93,7 @@ export default function Security() {
             </Button>
           </Form>
         )}
-        {!identity?.user.mustChangePwd && identity?.scope === "onboarding" && (
+        {identity && !identity.user.mustChangePwd && !identity.user.totpBound && (
           <>
             <Button
               loading={busy}
@@ -139,8 +142,8 @@ export default function Security() {
       {identity?.scope === "full" && (
         <Card title="敏感操作身份验证">
           <p>
-            重置密码或验证器前，先在此验证身份。验证有效期为 5
-            分钟，同一验证码不能重复使用。
+            重置密码或验证器前，先在此验证身份。验证有效期为 5 分钟。
+            {totpEnabled ? "同一验证码不能重复使用。" : "二次验证已关闭，仅校验当前密码。"}
           </p>
           <Form
             layout="vertical"
@@ -159,17 +162,19 @@ export default function Security() {
             >
               <Input.Password autoComplete="current-password" />
             </Form.Item>
-            <Form.Item
-              name="code"
-              label="验证码"
-              rules={[{ required: true, pattern: /^\d{6}$/ }]}
-            >
-              <Input
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                maxLength={6}
-              />
-            </Form.Item>
+            {totpEnabled && (
+              <Form.Item
+                name="code"
+                label="验证码"
+                rules={[{ required: true, pattern: /^\d{6}$/ }]}
+              >
+                <Input
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  maxLength={6}
+                />
+              </Form.Item>
+            )}
             <Button htmlType="submit" loading={busy}>
               再次验证
             </Button>

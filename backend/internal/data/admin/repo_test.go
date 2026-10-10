@@ -221,3 +221,85 @@ func bytesRepeat(value byte, n int) []byte {
 	}
 	return b
 }
+
+func TestTOTPDisabledLoginBindingAndReenable(t *testing.T) {
+	r, d, c := testRepo(t)
+	ctx := context.Background()
+	m := Meta{RequestID: "test-totp-policy"}
+	r.Config.Auth.TOTP.Enabled = false
+	initial, err := r.Login(ctx, "admin", c.Seed.SuperAdmin.Password, m)
+	if err != nil || initial.Step != "session" || initial.Scope != "password_change" || len(initial.Token) != 64 {
+		t.Fatalf("initial login: %+v %v", initial, err)
+	}
+	i, err := r.Identity(ctx, initial.Token)
+	if err != nil || i.Scope != "password_change" || i.TOTPEnabled {
+		t.Fatalf("initial identity: %+v %v", i, err)
+	}
+	if err = r.Password(ctx, i, c.Seed.SuperAdmin.Password, "test-new-password", m); err != nil {
+		t.Fatal(err)
+	}
+	login, err := r.Login(ctx, "admin", "test-new-password", m)
+	if err != nil || login.Step != "session" || login.Scope != "full" {
+		t.Fatalf("password login: %+v %v", login, err)
+	}
+	i, err = r.Identity(ctx, login.Token)
+	if err != nil || i.Scope != "full" || i.User.TOTPBound {
+		t.Fatalf("unbound identity: %+v %v", i, err)
+	}
+	if err = r.Reauthenticate(ctx, i, "wrong-password", "", m); err == nil {
+		t.Fatal("wrong password accepted")
+	}
+	if err = r.Reauthenticate(ctx, i, "test-new-password", "", m); err != nil {
+		t.Fatal("password reauthentication", err)
+	}
+	// Reauthentication must not let a password-only session survive enabling MFA.
+	r.Config.Auth.TOTP.Enabled = true
+	if _, err = r.Identity(ctx, login.Token); err == nil {
+		t.Fatal("password-only session survived enabling MFA")
+	}
+	stripped := login.Token[len(passwordOnlyPrefix):]
+	if _, err = r.Identity(ctx, stripped); err == nil {
+		t.Fatal("removing token marker bypassed policy")
+	}
+	onboarding, err := r.Login(ctx, "admin", "test-new-password", m)
+	if err != nil || onboarding.Scope != "onboarding" {
+		t.Fatalf("enabled unbound login: %+v %v", onboarding, err)
+	}
+	// Disabling also frees existing onboarding sessions without rebinding.
+	r.Config.Auth.TOTP.Enabled = false
+	i, err = r.Identity(ctx, onboarding.Token)
+	if err != nil || i.Scope != "full" {
+		t.Fatalf("disabled onboarding: %+v %v", i, err)
+	}
+	secret, _, err := r.Setup(ctx, i, m)
+	if err != nil {
+		t.Fatal("optional binding disabled", err)
+	}
+	code, _ := admintotp.Code(secret, r.Now().Unix()/30)
+	if err = r.Activate(ctx, i, code, m); err != nil {
+		t.Fatal("optional activation disabled", err)
+	}
+	login, err = r.Login(ctx, "admin", "test-new-password", m)
+	if err != nil || login.Step != "session" || login.Scope != "full" {
+		t.Fatalf("disabled bound login: %+v %v", login, err)
+	}
+	i, err = r.Identity(ctx, login.Token)
+	if err != nil || !i.User.TOTPBound {
+		t.Fatalf("binding lost: %+v %v", i, err)
+	}
+	r.Config.Auth.TOTP.Enabled = true
+	if _, err = r.Identity(ctx, login.Token); err == nil {
+		t.Fatal("bound password-only session survived enabling MFA")
+	}
+	ticket, err := r.Login(ctx, "admin", "test-new-password", m)
+	if err != nil || ticket.Step != "totp" || ticket.Token != "" {
+		t.Fatalf("enabled bound login: %+v %v", ticket, err)
+	}
+	if err = r.Reauthenticate(ctx, i, "test-new-password", "", m); err == nil {
+		t.Fatal("enabled reauthentication accepted missing code")
+	}
+	var count int64
+	if err = d.DB.Table("admin_mfa_ticket").Where("token_hash=?", Hash(ticket.Ticket)).Count(&count).Error; err != nil || count != 1 {
+		t.Fatal("MFA ticket missing", err)
+	}
+}

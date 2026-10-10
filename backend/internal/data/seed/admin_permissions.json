@@ -90,6 +90,10 @@
         {
           "method": "GET",
           "path": "/admin/api/v1/currencies"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/api/v1/categories/options"
         }
       ]
     },
@@ -762,6 +766,70 @@
           "path": "/admin/api/v1/whatsapp-default"
         }
       ]
+    },
+    {
+      "code": "menu.categories",
+      "parentCode": "directory.content",
+      "name": "商品分类",
+      "type": "menu",
+      "sort": 25,
+      "route": "/categories",
+      "permissionCode": "category.read",
+      "apis": [
+        {
+          "method": "GET",
+          "path": "/admin/api/v1/categories"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/api/v1/categories/{id}"
+        }
+      ]
+    },
+    {
+      "code": "action.category.create",
+      "parentCode": "menu.categories",
+      "name": "新增分类",
+      "type": "action",
+      "sort": 10,
+      "route": null,
+      "permissionCode": "category.create",
+      "apis": [
+        {
+          "method": "POST",
+          "path": "/admin/api/v1/categories"
+        }
+      ]
+    },
+    {
+      "code": "action.category.update",
+      "parentCode": "menu.categories",
+      "name": "修改分类",
+      "type": "action",
+      "sort": 20,
+      "route": null,
+      "permissionCode": "category.update",
+      "apis": [
+        {
+          "method": "PUT",
+          "path": "/admin/api/v1/categories/{id}"
+        }
+      ]
+    },
+    {
+      "code": "action.category.delete",
+      "parentCode": "menu.categories",
+      "name": "删除分类",
+      "type": "action",
+      "sort": 30,
+      "route": null,
+      "permissionCode": "category.delete",
+      "apis": [
+        {
+          "method": "DELETE",
+          "path": "/admin/api/v1/categories/{id}"
+        }
+      ]
     }
   ],
   "roles": [
@@ -812,7 +880,11 @@
         "whatsapp.create",
         "whatsapp.update",
         "whatsapp.delete",
-        "whatsapp.default"
+        "whatsapp.default",
+        "category.read",
+        "category.create",
+        "category.update",
+        "category.delete"
       ]
     },
     {
@@ -848,7 +920,11 @@
         "whatsapp.create",
         "whatsapp.update",
         "whatsapp.delete",
-        "whatsapp.default"
+        "whatsapp.default",
+        "category.read",
+        "category.create",
+        "category.update",
+        "category.delete"
       ]
     },
     {
@@ -861,7 +937,8 @@
         "article.read",
         "site.read",
         "banner.read",
-        "whatsapp.read"
+        "whatsapp.read",
+        "category.read"
       ]
     }
   ],
@@ -968,7 +1045,7 @@
     },
     {
       "method": "GET",
-      "path": "/api/v1/whatsapp-contact"
+      "path": "/api/v1/contact"
     },
     {
       "method": "GET",

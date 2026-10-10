@@ -149,7 +149,34 @@ func TestConfigFieldsDocumented(t *testing.T) {
 			t.Errorf("configuration field has no consumer registration: %s", field)
 		}
 	}
-	if len(fields) != 34 {
+	if len(fields) != 35 {
 		t.Fatalf("configuration field count changed; update matrix and consumer tests: %d", len(fields))
+	}
+}
+
+func TestTOTPEnabledConfiguration(t *testing.T) {
+	clearEnv(t)
+	t.Setenv("DATABASE_DSN", "test-dsn")
+	for _, tc := range []struct {
+		name, body string
+		want       bool
+	}{
+		{"default", "", true},
+		{"enabled", "auth:\n  totp:\n    enabled: true\n", true},
+		{"disabled", "auth:\n  totp:\n    enabled: false\n", false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			loader := NewLoader()
+			c, err := loader.Decode([]byte(tc.body))
+			if err != nil || c.Auth.TOTP.Enabled != tc.want {
+				t.Fatalf("enabled=%v, error=%v", c.Auth.TOTP.Enabled, err)
+			}
+			if tc.name != "default" && loader.Sources()["auth.totp.enabled"] != "yaml" {
+				t.Fatal("missing configuration source")
+			}
+		})
+	}
+	if _, err := NewLoader().Decode([]byte("auth:\n  totp:\n    enabled: invalid\n")); err == nil {
+		t.Fatal("invalid switch accepted")
 	}
 }

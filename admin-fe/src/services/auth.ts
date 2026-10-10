@@ -19,6 +19,7 @@ export interface Role {
   isSuper: boolean;
 }
 export interface Identity {
+  totpEnabled: boolean;
   user: User;
   role: Role;
   scope: "full" | "onboarding" | "password_change";

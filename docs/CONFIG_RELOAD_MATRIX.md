@@ -2,7 +2,7 @@
 
 默认值 → YAML → 启动时捕获的环境覆盖。整版校验并准备独立资源后原子发布，失败保留最后可用版本；请求、上传、预览和事务使用同一版本。状态接口仅显示版本、时间、错误与来源，不输出配置值。
 
-全部 34 个有效 YAML 字段如下。DSN、HTTP 地址及目录可热加载；seed 参数只改变下一次显式 seed 的输入，不在请求期间重置账号。
+全部 35 个有效 YAML 字段如下。DSN、HTTP 地址及目录可热加载；seed 参数只改变下一次显式 seed 的输入，不在请求期间重置账号。
 
 | 字段 | 默认值／校验 | 实际消费者 | 验证证据 |
 | --- | --- | --- | --- |
@@ -32,6 +32,7 @@
 | auth.mfa_max_attempts | 5；1–20 | 票据消费事务、失败次数 | 同上，2 次失败后正确验证码仍拒绝 |
 | auth.login_limit | 5；≥1；按一分钟窗口 | PostgreSQL 共享计数 | 同上；TestSeedAndTwoPhaseLogin 跨仓储共享 |
 | auth.trusted_proxies | 空；合法 CIDR | 来源 IP 与 HTTPS Origin 判断 | TestTrustedProxyConsumers：可信／不可信两侧 |
+| auth.totp.enabled | true；可配置为 true/false | 登录验证码、强制绑定、密码再认证与 me.totpEnabled；新请求使用当前配置，重新开启后密码登录会话需重登 | TestTOTPEnabledConfiguration；TestTOTPDisabledLoginBindingAndReenable；TestReloadTOTPEnabledConsumer |
 | auth.totp.issuer | Research Supply Admin；非空 | 新绑定 URI 和本地二维码 | TestReloadResourceConsumers |
 | auth.totp.active_key_id | 运行时必填；存在于 keys | 新绑定 AES-GCM 加密 | 同上，pending.key_id 实际更新 |
 | auth.totp.keys | 运行时必填；每项 base64 32 字节 | 当前／历史密文解密；在途旧版本保护 | TestSeedAndTwoPhaseLogin；TestKeyRemovalWaitsForOldLease；恢复启动检查 |

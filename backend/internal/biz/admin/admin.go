@@ -44,6 +44,7 @@ type Permission struct {
 	Children       []Permission `json:"children" gorm:"-"`
 }
 type Identity struct {
+	TOTPEnabled bool         `json:"totpEnabled"`
 	User        User         `json:"user"`
 	Role        Role         `json:"role"`
 	Scope       string       `json:"scope"`

@@ -57,6 +57,7 @@ const errors: Record<string, string> = {
     "不能停用或删除默认配置及其最后一个可用账号，请先更换默认",
   DEFAULT_GROUP_UNAVAILABLE: "默认配置必须启用且至少有一个带二维码的启用账号",
   VERSION_CONFLICT: "内容已被修改，请刷新后重试",
+  CATEGORY_IN_USE: "分类正在被商品使用，请先调整商品分类再删除",
   MEDIA_IN_USE: "素材正在使用，不能删除",
   CONFLICT: "操作冲突，请刷新后重试",
   LAST_SUPER_ADMIN: "不能停用、删除或降级最后一位有效超级管理员",

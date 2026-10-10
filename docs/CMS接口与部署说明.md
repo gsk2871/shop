@@ -4,17 +4,25 @@
 
 ## 身份与权限
 
-`POST /login` 接收 username/password。未完成设置者只得到受限 Cookie；已绑定者得到短期 ticket，不签发完整 Cookie。`POST /login/totp` 接收 ticket/code，一次性消费票据及验证码时间步后才签发完整会话。`GET /me` 返回用户、角色、scope、授权及供后台直接消费的菜单树。
+`auth.totp.enabled` 默认 true，可通过配置文件热加载开启或关闭。关闭时密码正确即签发会话，未完成首次改密者仍只能访问安全中心；已绑定用户也跳过验证码，绑定／激活接口继续可用。敏感操作再认证在关闭时只验证当前密码，开启时要求密码与验证码。公共身份 `/me` 返回 `totpEnabled` 供后台界面使用。重新开启后，关闭期间的密码登录会话返回 401，需重新登录，未绑定者进入绑定流程。加密密钥仍必填并检查历史密文，关闭开关不清除绑定。
+
+开关开启时，`POST /login` 接收 username/password。未完成设置者只得到受限 Cookie；已绑定者得到短期 ticket，不签发完整 Cookie。`POST /login/totp` 接收 ticket/code，一次性消费票据及验证码时间步后才签发完整会话。`GET /me` 返回用户、角色、scope、授权及供后台直接消费的菜单树。
 
 自助接口为 `POST /logout`、`POST /password`、`POST /totp/setup`、`POST /totp/activate` 和 `POST /me/reauth`。初始化二维码在本地生成。受限 scope 不能调用业务接口；改密、停用、角色修改、重置 MFA 均撤销相关会话和票据。重置他人密码／MFA 要求 5 分钟内的密码加新验证码再认证和操作原因。并发操作不能移除最后一位有效超管。
 
-完整路由与权限映射以 `backend/internal/data/seed/admin_permissions.json` 为唯一来源。包含 48 个节点、43 个业务权限、super_admin / content_admin / viewer 三种默认角色。未登记的业务路径默认拒绝；整份内容 PUT 也不能绕过独立的发布或价格权限。所有管理写请求要求 `X-Requested-With: peptide-admin`，并校验同源 Origin；仅信任配置中的代理 CIDR。
+完整路由与权限映射以 `backend/internal/data/seed/admin_permissions.json` 为唯一来源。包含 52 个节点、47 个业务权限、super_admin / content_admin / viewer 三种默认角色。未登记的业务路径默认拒绝；整份内容 PUT 也不能绕过独立的发布或价格权限。所有管理写请求要求 `X-Requested-With: peptide-admin`，并校验同源 Origin；仅信任配置中的代理 CIDR。
 
 ## 内容契约
 
-列表使用 `{items,total,page,pageSize}`，页码从 1 开始，单页 1–100；产品与媒体支持 q 搜索。详情返回单对象；创建 POST 返回 201；更新返回 200；删除返回 `{ok:true}`。产品、文章、Banner 和品牌设置修改要求 expectedVersion；冲突返回 409 VERSION_CONFLICT，页面需刷新重新编辑。
+列表使用 `{items,total,page,pageSize}`，页码从 1 开始，单页 1–100；产品与媒体支持 q 搜索。详情返回单对象；创建 POST 返回 201；更新返回 200；删除返回 `{ok:true}`。分类、产品、文章、Banner 和品牌设置修改要求 expectedVersion；冲突返回 409 VERSION_CONFLICT，页面需刷新重新编辑。
 
 产品由基本信息、specs、values、skus、价格及 detail 组成。规格维度不超过 6 个，每维不超过 20 值，SKU 不超过 500 个；同产品组合不能重复，每个 SKU 必须从每维选择一个值，无规格产品使用一个默认 SKU。更新保留已有实体 ID，并校验规格／值／SKU 属于当前产品。产品状态单独 PATCH `/products/{id}/status`，SKU 价格 PATCH `/products/{id}/skus/{skuId}/price`。价格输入为 salePrice 十进制字符串，后端按 currency.minor_unit 转为整数，并返回格式化 price 和 fromPrice；首期种子仅 USD，不换汇，不使用浮点。
+
+商品分类管理使用 GET/POST `/categories`、GET/PUT/DELETE `/categories/{id}`，分别受 category.read/create/update/delete 权限控制。分类名称去首尾空白、不区分大小写唯一，sort 越小越靠前，同序按 ID 排列；删除为软删除，被任意未删除商品使用时返回 409 CATEGORY_IN_USE。GET `/categories/options` 由 product.read 授权，返回全部可选分类的 `{items:[{id,name}]}`；创建及编辑保存商品必传 categoryId，分类名称由服务端解析，重命名即时反映在商品展示中。
+
+公共 GET `/api/v1/categories` 返回全部未删除分类的 `{items:[{id,name}]}`，不包含管理版本信息。GET `/api/v1/products` 的 categoryId 可选，不传或空值不增加分类筛选；q 仅对产品名称做不区分大小写的字面子串查询，两个条件可组合，total 与分页使用同一筛选。官网首次进入选中 All products，搜索／切换分类重置页码，翻页保留条件；分类与结果数量来自后台接口。
+
+升级须先执行 000013_product_category migration，再运行 seed 更新菜单／权限登记，最后启动新版本。已有非空分类文字按去空白、忽略大小写归并为分类并回填 category_id；无分类的历史商品保持未分配，可出现在全部查询中，编辑保存须补选分类。种子不生成演示分类；超管自动补齐新权限，已有普通角色需在角色管理中授权。开发回退 down SQL 会将分类当前名称写回商品原 category 字段。
 
 产品 detail 和文章 body 为 `{html,mediaIds}`。HTML 只保留段落、h2–h4、强调、列表、引用、安全链接和受控图片／视频。媒体节点含 `data-media-id`，必须对应可用素材及后端生成的 URL；正文 ID 集合必须一致。脚本、iframe、SVG、事件属性和外部媒体会被删除或拒绝。`POST /products/preview`、`POST /articles/preview` 对当前表单进行同一套净化，返回公共 DTO，不保存、发布或创建持久引用。后台预览和官网共用 `@shop/content`。
 
