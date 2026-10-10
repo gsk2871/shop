@@ -77,7 +77,15 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			admin.Failure(w, r, err)
 			return
 		}
-		rows, total, err := h.Repo.List(r.Context(), public, p, size, strings.TrimSpace(r.URL.Query().Get("q")), categoryID)
+		status := ""
+		if !public {
+			status = r.URL.Query().Get("status")
+			if status != "" && status != "draft" && status != "published" && status != "offline" {
+				admin.Failure(w, r, errdef.Invalid())
+				return
+			}
+		}
+		rows, total, err := h.Repo.List(r.Context(), public, p, size, strings.TrimSpace(r.URL.Query().Get("q")), categoryID, status)
 		if err != nil {
 			admin.Failure(w, r, err)
 			return

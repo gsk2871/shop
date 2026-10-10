@@ -22,8 +22,8 @@ export default function Overview() {
       <Alert
         type="info"
         showIcon
-        message="系统管理、素材库、文章管理和官网配置已接入后端"
-        description="先上传品牌素材，再配置官网 Banner、Logo 和色系；商品管理支持录入和上下架；文章支持富文本，主题与 Banner 支持在线配置。"
+        message="系统管理、素材库、新闻管理和官网配置已接入后端"
+        description="先上传品牌素材，再配置官网 Banner、Logo 和色系；商品管理支持录入和上下架；新闻支持富文本，主题与 Banner 支持在线配置。"
       />
       <Card title="工作台">
         <Typography.Paragraph>

@@ -169,7 +169,7 @@ func (r *Repo) Public(ctx context.Context, slug string) (map[string]any, error) 
 	}, &sql.TxOptions{Isolation: sql.LevelRepeatableRead, ReadOnly: true})
 	return output, err
 }
-func (r *Repo) List(ctx context.Context, public bool, page, size int, search string, categoryID int64) ([]map[string]any, int64, error) {
+func (r *Repo) List(ctx context.Context, public bool, page, size int, search string, categoryID int64, status string) ([]map[string]any, int64, error) {
 	output := []map[string]any{}
 	var total int64
 	err := r.Data.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
@@ -180,6 +180,9 @@ func (r *Repo) List(ctx context.Context, public bool, page, size int, search str
 		}
 		if search != "" {
 			q = q.Where("strpos(lower(p.name),lower(?))>0", search)
+		}
+		if !public && status != "" {
+			q = q.Where("p.status=?", status)
 		}
 		if categoryID != 0 {
 			q = q.Where("p.category_id=?", categoryID)

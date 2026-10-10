@@ -56,7 +56,25 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			admin.Failure(w, r, err)
 			return
 		}
-		rows, total, err := h.Repo.List(r.Context(), public, p, size)
+		search, status := "", ""
+		var pinned *bool
+		if !public {
+			search = strings.TrimSpace(r.URL.Query().Get("q"))
+			status = r.URL.Query().Get("status")
+			if status != "" && status != "draft" && status != "published" && status != "offline" {
+				admin.Failure(w, r, errdef.Invalid())
+				return
+			}
+			if raw := r.URL.Query().Get("pinned"); raw != "" {
+				if raw != "true" && raw != "false" {
+					admin.Failure(w, r, errdef.Invalid())
+					return
+				}
+				value := raw == "true"
+				pinned = &value
+			}
+		}
+		rows, total, err := h.Repo.List(r.Context(), public, p, size, search, status, pinned)
 		if err != nil {
 			admin.Failure(w, r, err)
 			return

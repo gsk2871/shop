@@ -1,7 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useModel } from "@umijs/max";
 import {
   Button,
+  Badge,
+  Typography,
   Card,
   Form,
   Input,
@@ -13,11 +15,20 @@ import {
   Table,
   message,
 } from "antd";
+import {
+  PlusOutlined,
+  ReloadOutlined,
+  SearchOutlined,
+} from "@ant-design/icons";
+import ContentPage, {
+  ContentHeading,
+  formatTime,
+} from "../../components/ContentPage";
+import useContentList from "../../hooks/useContentList";
 import { ProductView } from "@shop/content";
 import { api } from "../../services/cms";
 import { allows } from "../../services/auth";
 import type {
-  Page,
   PublicCategory,
   Product,
   ProductSpec,
@@ -129,12 +140,10 @@ const labels = { draft: "草稿", published: "已上架", offline: "已下架" }
 export default function Products() {
   const { initialState } = useModel("@@initialState");
   const can = (p: string) => allows(initialState?.identity, p);
-  const [data, setData] = useState<Page<ProductSummary>>({
-    items: [],
-    total: 0,
-    page: 1,
-    pageSize: 20,
-  });
+  const { data, loading, error, query, search, paginate, refresh } =
+    useContentList<ProductSummary>("products");
+  const [filterForm] = Form.useForm();
+  const [modal, modalContext] = Modal.useModal();
   const [editing, setEditing] = useState<Product | null>();
   const [preview, setPreview] = useState<PublicProduct>();
   const [mobile, setMobile] = useState(false);
@@ -143,41 +152,37 @@ export default function Products() {
     sku: ProductSKU;
   }>();
   const [categories, setCategories] = useState<PublicCategory[]>([]);
-  const [query, setQuery] = useState("");
   const [busy, setBusy] = useState(false);
   const [currencies, setCurrencies] = useState<{
     items: { code: string; minorUnit: number }[];
     defaultCurrency: string;
   }>({ items: [], defaultCurrency: "USD" });
   const [form] = Form.useForm<Product>();
+  const cleanSnapshot = useRef("");
   const specs = Form.useWatch("specs", form) || [];
   const skus = Form.useWatch("skus", form) || [];
   const [msg, context] = message.useMessage();
-  async function load(page = data.page, pageSize = data.pageSize, q = query) {
-    setBusy(true);
-    try {
-      setData(
-        await api(
-          `products?page=${page}&pageSize=${pageSize}&q=${encodeURIComponent(q)}`,
-        ),
-      );
-    } catch (e) {
-      msg.error((e as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  }
   useEffect(() => {
-    void load();
     api<typeof currencies>("currencies")
       .then(setCurrencies)
       .catch((e: Error) => msg.error(e.message));
+    api<{ items: PublicCategory[] }>("categories/options")
+      .then((result) => setCategories(result.items))
+      .catch((e: Error) => msg.error(e.message));
   }, []);
+  function closeEditor() {
+    if (busy) return;
+    if (cleanSnapshot.current !== JSON.stringify(form.getFieldsValue(true))) {
+      modal.confirm({
+        title: "放弃未保存的产品修改？",
+        okText: "放弃修改",
+        cancelText: "继续编辑",
+        onOk: () => setEditing(undefined),
+      });
+    } else setEditing(undefined);
+  }
   async function edit(id?: string) {
     try {
-      setCategories(
-        (await api<{ items: PublicCategory[] }>("categories/options")).items,
-      );
       const product = id ? await api<Product>(`products/${id}`) : null;
       setEditing(product);
       form.resetFields();
@@ -198,6 +203,7 @@ export default function Products() {
           ],
         },
       );
+      cleanSnapshot.current = JSON.stringify(form.getFieldsValue(true));
     } catch (e) {
       msg.error((e as Error).message);
     }
@@ -286,8 +292,10 @@ export default function Products() {
       );
       msg.success("保存成功");
       setEditing(result);
+      form.resetFields();
       form.setFieldsValue(result);
-      await load();
+      cleanSnapshot.current = JSON.stringify(form.getFieldsValue(true));
+      refresh();
     } catch (e) {
       msg.error((e as Error).message || "请检查必填项");
     } finally {
@@ -295,56 +303,158 @@ export default function Products() {
     }
   }
   return (
-    <Card
+    <ContentPage
       title="产品管理"
+      description="维护产品资料、规格与官网上架状态"
+      error={error}
       extra={
         can("product.create") && (
-          <Button type="primary" onClick={() => void edit()}>
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => void edit()}
+          >
             新增产品
           </Button>
         )
       }
+      filters={
+        <Form
+          name="product-filters"
+          form={filterForm}
+          layout="vertical"
+          onFinish={(values) =>
+            search({
+              q: values.q?.trim() || "",
+              categoryId: values.categoryId || "",
+              status: values.status || "",
+            })
+          }
+        >
+          <Form.Item name="q" label="产品名称">
+            <Input allowClear maxLength={200} placeholder="输入产品名称" />
+          </Form.Item>
+          <Form.Item name="categoryId" label="产品分类">
+            <Select
+              allowClear
+              showSearch
+              optionFilterProp="label"
+              placeholder="全部分类"
+              options={categories.map((category) => ({
+                value: category.id,
+                label: category.name,
+              }))}
+            />
+          </Form.Item>
+          <Form.Item name="status" label="上架状态">
+            <Select
+              allowClear
+              placeholder="全部状态"
+              options={Object.entries(labels).map(([value, label]) => ({
+                value,
+                label,
+              }))}
+            />
+          </Form.Item>
+          <Form.Item>
+            <Space>
+              <Button
+                type="primary"
+                htmlType="submit"
+                icon={<SearchOutlined />}
+              >
+                查询
+              </Button>
+              <Button
+                onClick={() => {
+                  filterForm.resetFields();
+                  search({});
+                }}
+              >
+                重置
+              </Button>
+            </Space>
+          </Form.Item>
+        </Form>
+      }
     >
       {context}
-      <Input.Search
-        placeholder="搜索产品名称、CAS 或分类"
-        onSearch={(value) => {
-          setQuery(value);
-          void load(1, data.pageSize, value);
-        }}
-      />
+      {modalContext}
+      <div className="content-toolbar">
+        <Typography.Title level={5}>
+          产品列表{" "}
+          <Typography.Text type="secondary">（{data.total}）</Typography.Text>
+        </Typography.Title>
+        <Button icon={<ReloadOutlined />} onClick={refresh} loading={loading}>
+          刷新
+        </Button>
+      </div>
       <Table<ProductSummary>
-        loading={busy}
+        loading={loading}
+        scroll={{ x: 1140 }}
         rowKey="id"
         dataSource={data.items}
         pagination={{
-          current: data.page,
-          pageSize: data.pageSize,
+          current: query.page,
+          pageSize: query.pageSize,
           total: data.total,
           showSizeChanger: true,
-          onChange: load,
+          showTotal: (total) => `共 ${total} 个产品`,
+          onChange: paginate,
         }}
         columns={[
-          { title: "名称", dataIndex: "name" },
+          {
+            title: "产品名称",
+            width: 260,
+            render: (_, row) => (
+              <div>
+                <div className="content-cell-title">{row.name}</div>
+                <div className="content-cell-meta">{row.slug}</div>
+              </div>
+            ),
+          },
           {
             title: "分类",
+            width: 180,
             dataIndex: "category",
             render: (value: string) => value || "未分配",
           },
           {
-            title: "价格",
+            title: "起价",
+            width: 130,
             render: (_, row) => row.fromPrice?.displayPrice || "未定价",
           },
           {
             title: "状态",
-            render: (_, row) => (row.status ? labels[row.status] : ""),
+            width: 100,
+            render: (_, row) => (
+              <Badge
+                status={
+                  row.status === "published"
+                    ? "success"
+                    : row.status === "offline"
+                      ? "warning"
+                      : "default"
+                }
+                text={row.status ? labels[row.status] : "—"}
+              />
+            ),
+          },
+          {
+            title: "更新时间",
+            width: 190,
+            render: (_, row) => formatTime(row.updatedAt),
           },
           {
             title: "操作",
+            width: 280,
+            fixed: "right",
             render: (_, row) => (
-              <Space wrap>
+              <Space wrap className="content-actions">
                 {(can("product.update") || can("product.preview")) && (
-                  <Button onClick={() => void edit(row.id)}>查看 / 编辑</Button>
+                  <Button type="link" onClick={() => void edit(row.id)}>
+                    {can("product.update") ? "编辑" : "查看"}
+                  </Button>
                 )}
                 {row.status === "published" && (
                   <a
@@ -356,8 +466,10 @@ export default function Products() {
                   </a>
                 )}
                 {can("product.publish") && (
-                  <Button
-                    onClick={async () => {
+                  <Popconfirm
+                    title={`确认${row.status === "published" ? "下架" : "上架"}此产品？`}
+                    description={row.name}
+                    onConfirm={async () => {
                       try {
                         await api(`products/${row.id}/status`, "PATCH", {
                           status:
@@ -366,14 +478,18 @@ export default function Products() {
                               : "published",
                           expectedVersion: row.version,
                         });
-                        await load();
+                        msg.success("上架状态已更新");
+                        refresh();
                       } catch (e) {
                         msg.error((e as Error).message);
+                        throw e;
                       }
                     }}
                   >
-                    {row.status === "published" ? "下架" : "上架"}
-                  </Button>
+                    <Button type="link">
+                      {row.status === "published" ? "下架" : "上架"}
+                    </Button>
+                  </Popconfirm>
                 )}
                 {can("product.delete") && (
                   <Popconfirm
@@ -383,13 +499,15 @@ export default function Products() {
                         await api(`products/${row.id}`, "DELETE", {
                           expectedVersion: row.version,
                         });
-                        await load();
+                        refresh();
                       } catch (e) {
                         msg.error((e as Error).message);
                       }
                     }}
                   >
-                    <Button danger>删除</Button>
+                    <Button type="link" danger>
+                      删除
+                    </Button>
                   </Popconfirm>
                 )}
               </Space>
@@ -398,10 +516,11 @@ export default function Products() {
         ]}
       />
       <Modal
-        title={editing ? "编辑产品" : "新增产品"}
+        className="content-editor"
+        title={editing ? `编辑产品 · ${editing.name}` : "新增产品"}
         open={editing !== undefined}
-        onCancel={() => setEditing(undefined)}
-        width={1100}
+        onCancel={closeEditor}
+        width={1200}
         footer={
           <Space>
             {can("product.preview") && (
@@ -432,42 +551,66 @@ export default function Products() {
                 保存
               </Button>
             )}
-            <Button onClick={() => setEditing(undefined)}>关闭</Button>
+            <Button disabled={busy} onClick={closeEditor}>
+              关闭
+            </Button>
           </Space>
         }
         destroyOnHidden
       >
-        <Form form={form} layout="vertical" preserve={false}>
-          <Form.Item
-            name="name"
-            label="产品名称（英文）"
-            rules={[{ required: true, max: 200 }]}
-          >
-            <Input />
-          </Form.Item>
-          <Form.Item
-            name="slug"
-            label="官网路径（小写字母、数字及连字符）"
-            rules={[{ required: true, pattern: /^[a-z0-9]+(?:-[a-z0-9]+)*$/ }]}
-          >
-            <Input />
-          </Form.Item>
-          <Form.Item
-            name="categoryId"
-            label="商品分类"
-            rules={[{ required: true, message: "请选择商品分类" }]}
-          >
-            <Select
-              showSearch
-              optionFilterProp="label"
-              placeholder="请选择分类"
-              options={categories.map((c) => ({ value: c.id, label: c.name }))}
-            />
-          </Form.Item>
-          <Form.Item name="summary" label="简介（英文）">
-            <Input.TextArea />
-          </Form.Item>
-          <Space wrap>
+        <Form
+          name="product-editor"
+          form={form}
+          layout="vertical"
+          preserve={false}
+          disabled={busy || !can(editing ? "product.update" : "product.create")}
+        >
+          <ContentHeading
+            title="基础信息"
+            description="产品名称和简介用于英文官网展示。"
+          />
+          <div className="content-form-grid">
+            <Form.Item
+              name="name"
+              label="产品名称（英文）"
+              rules={[{ required: true, max: 200 }]}
+            >
+              <Input />
+            </Form.Item>
+            <Form.Item
+              name="slug"
+              label="官网路径（小写字母、数字及连字符）"
+              rules={[
+                { required: true, pattern: /^[a-z0-9]+(?:-[a-z0-9]+)*$/ },
+              ]}
+            >
+              <Input />
+            </Form.Item>
+            <Form.Item
+              name="categoryId"
+              label="商品分类"
+              rules={[{ required: true, message: "请选择商品分类" }]}
+            >
+              <Select
+                showSearch
+                optionFilterProp="label"
+                placeholder="请选择分类"
+                options={categories.map((c) => ({
+                  value: c.id,
+                  label: c.name,
+                }))}
+              />
+            </Form.Item>
+            <Form.Item
+              className="full-width"
+              name="summary"
+              label="简介（英文）"
+            >
+              <Input.TextArea rows={3} />
+            </Form.Item>
+          </div>
+          <ContentHeading title="理化信息" />
+          <div className="content-spec-grid">
             {(
               [
                 "aliases",
@@ -499,7 +642,11 @@ export default function Products() {
                 <Input />
               </Form.Item>
             ))}
-          </Space>
+          </div>
+          <ContentHeading
+            title="规格与价格"
+            description="设置规格维度后生成组合，再填写各组合的售价。"
+          />
           <Form.Item name="specs" label="自定义规格（修改后请更新 SKU 组合）">
             <Specs />
           </Form.Item>
@@ -530,6 +677,7 @@ export default function Products() {
             </Button>
           </Space>
           <Table<ProductSKU>
+            scroll={{ x: 750 }}
             rowKey="key"
             dataSource={skus}
             pagination={{ pageSize: 20 }}
@@ -588,7 +736,7 @@ export default function Products() {
                 ),
               },
               {
-                title: "价格（十进制字符串）",
+                title: "售价",
                 render: (_, sku, index) => (
                   <Input
                     disabled={!can("product.price.update")}
@@ -617,7 +765,16 @@ export default function Products() {
                   <Space>
                     {!!editing && !!sku.id && can("product.price.update") && (
                       <Button
-                        onClick={() => setPriceEdit({ product: editing, sku })}
+                        onClick={() => {
+                          if (
+                            cleanSnapshot.current !==
+                            JSON.stringify(form.getFieldsValue(true))
+                          ) {
+                            msg.warning("请先保存产品修改，再独立改价");
+                            return;
+                          }
+                          setPriceEdit({ product: editing, sku });
+                        }}
                       >
                         独立改价
                       </Button>
@@ -642,24 +799,32 @@ export default function Products() {
               },
             ]}
           />
+          <ContentHeading title="产品详情" />
           <Form.Item name="detail" label="产品详情（英文，媒体从库选择）">
             <RichTextEditor />
           </Form.Item>
-          <Form.Item name="status" label="状态">
-            <Select
-              disabled={!can("product.publish")}
-              options={Object.entries(labels).map(([value, label]) => ({
-                value,
-                label,
-              }))}
-            />
-          </Form.Item>
-          <Form.Item name="seoTitle" label="SEO 标题">
-            <Input />
-          </Form.Item>
-          <Form.Item name="seoDescription" label="SEO 描述">
-            <Input.TextArea />
-          </Form.Item>
+          <ContentHeading title="发布与搜索展示" />
+          <div className="content-form-grid">
+            <Form.Item name="status" label="状态">
+              <Select
+                disabled={!can("product.publish")}
+                options={Object.entries(labels).map(([value, label]) => ({
+                  value,
+                  label,
+                }))}
+              />
+            </Form.Item>
+            <Form.Item name="seoTitle" label="SEO 标题">
+              <Input />
+            </Form.Item>
+            <Form.Item
+              className="full-width"
+              name="seoDescription"
+              label="SEO 描述"
+            >
+              <Input.TextArea rows={3} />
+            </Form.Item>
+          </div>
         </Form>
       </Modal>
       <Modal
@@ -713,8 +878,10 @@ export default function Products() {
               );
               setPriceEdit(undefined);
               setEditing(result);
+              form.resetFields();
               form.setFieldsValue(result);
-              await load();
+              cleanSnapshot.current = JSON.stringify(form.getFieldsValue(true));
+              refresh();
             } catch (e) {
               msg.error((e as Error).message);
             }
@@ -732,6 +899,6 @@ export default function Products() {
           </Button>
         </Form>
       </Modal>
-    </Card>
+    </ContentPage>
   );
 }

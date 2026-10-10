@@ -124,13 +124,24 @@ func (r *Repo) Public(ctx context.Context, slug string) (map[string]any, error) 
 	}, &sql.TxOptions{Isolation: sql.LevelRepeatableRead, ReadOnly: true})
 	return output, err
 }
-func (r *Repo) List(ctx context.Context, public bool, page, size int) ([]map[string]any, int64, error) {
+func (r *Repo) List(ctx context.Context, public bool, page, size int, search, status string, pinned *bool) ([]map[string]any, int64, error) {
 	output := []map[string]any{}
 	var total int64
 	err := r.Data.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		q := tx.Table("article").Where("deleted_at IS NULL")
 		if public {
 			q = q.Where("status='published'")
+		}
+		if !public {
+			if search != "" {
+				q = q.Where("strpos(lower(title),lower(?))>0", search)
+			}
+			if status != "" {
+				q = q.Where("status=?", status)
+			}
+			if pinned != nil {
+				q = q.Where("pinned=?", *pinned)
+			}
 		}
 		if err := q.Count(&total).Error; err != nil {
 			return err
@@ -150,6 +161,7 @@ func (r *Repo) List(ctx context.Context, public bool, page, size int) ([]map[str
 				item["version"] = a.Version
 				item["pinned"] = a.Pinned
 				item["sort"] = a.Sort
+				item["updatedAt"] = a.UpdatedAt
 			}
 			output = append(output, item)
 		}

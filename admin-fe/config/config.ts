@@ -4,13 +4,28 @@ export default defineConfig({
   title: "管理后台",
   hash: true,
   esbuildMinifyIIFE: true,
-  antd: {},
+  antd: {
+    configProvider: {
+      theme: {
+        token: {
+          colorPrimary: "#1677ff",
+          borderRadius: 8,
+          colorBgLayout: "#f5f7fa",
+        },
+      },
+    },
+  },
   layout: { title: "管理后台" },
   request: {},
   initialState: {},
   model: {},
   routes: [
-    { path: "/categories", name: "商品分类", component: "./Categories", wrappers: ["@/components/Auth"] },
+    {
+      path: "/categories",
+      name: "商品分类",
+      component: "./Categories",
+      wrappers: ["@/components/Auth"],
+    },
     {
       path: "/whatsapp",
       name: "WhatsApp 客服配置",
@@ -69,7 +84,7 @@ export default defineConfig({
     },
     {
       path: "/articles",
-      name: "文章管理",
+      name: "新闻管理",
       component: "./Articles",
       wrappers: ["@/components/Auth"],
     },

@@ -181,3 +181,15 @@ product_category 使用 identity 主键、软删除、版本检查和有效名�
 运行 YAML 只包含 app/server/data/auth/reload/log/contact。超管初始化用户名通过 -seed-admin-username 输入，首次密码通过 SEED_ADMIN_PASSWORD 输入，业务请求和热加载不读取初始化凭据。currency 表是币种唯一来源，启用记录按编码排序提供选择和默认值，已有商品不自动换币。
 
 PostgreSQL 建连、连接生命周期与空闲回收、SQL 执行和等锁超时使用 data.database 的对应配置。全量 SQL 日志要求 log_sql=true 且日志等级 debug；慢查询为 warn，失败查询为 error，绑定参数与数据库错误详情不输出。服务日志为标准输出文本，轮转交给进程管理器或容器平台。
+
+
+### 管理后台列表与编辑
+
+后台使用浅色混合布局与蓝色主色，产品和新闻采用统一的筛选卡片、分页列表及分区编辑表单。新闻菜单展示为「新闻管理」，路由继续使用 /articles，权限继续使用 article.*。
+
+- GET /admin/api/v1/products：支持 q 产品名称字面子串搜索、categoryId 分类、status 状态；状态为 draft/published/offline，空值不筛选。q 不搜索 CAS 或分类名称。
+- GET /admin/api/v1/articles：支持 q 标题字面子串搜索、status 状态及 pinned=true/false 置顶筛选；空值不筛选。q 大小写不敏感，百分号和下划线按普通字符匹配。管理列表返回 updatedAt。
+- 列表筛选在数据库分页前执行，total 为筛选后的全量数量；修改筛选或每页条数时回到第一页，删除末页最后一项时回到有效页码。非法状态和非法置顶值返回 INVALID_ARGUMENT。
+- 公共产品和新闻接口始终限制已发布内容，管理状态和置顶筛选不会扩大公开范围；新闻公共列表不接受后台标题筛选，且不返回 updatedAt 等管理字段。
+- 产品编辑分为基础信息、理化信息、规格与价格、详情、发布与搜索展示；新闻编辑分为基础信息、正文、展示设置及搜索展示。操作保持原权限检查和 expectedVersion 乐观锁。
+- 表单有修改时关闭会提示放弃；产品独立改价前必须先保存聚合表单修改，避免改价响应覆盖未保存内容。预览仍使用当前未保存内容。
