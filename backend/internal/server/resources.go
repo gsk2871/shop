@@ -35,14 +35,12 @@ func NewResources(c conf.Config, d *data.Data, s *service.System, content *cms.H
 	if err != nil {
 		return nil, err
 	}
-	for _, code := range c.Product.AllowedCurrencies {
-		var count int64
-		if err := d.DB.WithContext(ctx).Table("currency").Where("code=? AND enabled", code).Count(&count).Error; err != nil {
-			return nil, err
-		}
-		if count != 1 {
-			return nil, errors.New("currency dictionary is not initialized; run seed")
-		}
+	currencies, err := catalogData.NewRepo(d, c).Currencies(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if len(currencies) == 0 {
+		return nil, errors.New("currency dictionary is not initialized; run seed")
 	}
 	authRepo, err := adminData.NewRepo(d, c)
 	if err != nil {

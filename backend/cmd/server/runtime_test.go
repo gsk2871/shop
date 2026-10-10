@@ -94,8 +94,7 @@ func TestRuntimePostgres(t *testing.T) {
 		}
 		err = data.Migrate(d)
 		if err == nil {
-			seedConfig := cc.Seed
-			seedConfig.SuperAdmin.Password = "test-initial-password"
+			seedConfig := adminData.SeedOptions{Username: "admin", Password: "test-initial-password"}
 			err = adminData.Seed(ctx, d, seedConfig)
 		}
 		cleanup()

@@ -1,6 +1,7 @@
 package conf
 
 import (
+	"gopkg.in/yaml.v3"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -68,7 +69,7 @@ func TestLoadFile(t *testing.T) {
 		t.Fatal("invalid boolean accepted")
 	}
 	t.Setenv("COOKIE_SECURE", "true")
-	for _, body := range []string{"unknown: true", "data:\n  database:\n    dsn: [broken", "data:\n  database:\n    dsn: secret\n---\nother: true", "server:\n  http:\n    timeout: invalid"} {
+	for _, body := range []string{"unknown: true", "data:\n  database:\n    dsn: [broken", "data:\n  database:\n    dsn: secret\n---\nother: true", "server:\n  http:\n    timeout: invalid", "seed:\n  super_admin:\n    username: admin", "product:\n  default_currency: USD"} {
 		if err := os.WriteFile(path, []byte(body), 0600); err != nil {
 			t.Fatal(err)
 		}
@@ -95,6 +96,11 @@ func TestValidate(t *testing.T) {
 		{"write budget", func(c *Config) { c.Server.HTTP.WriteTimeout = c.Server.HTTP.ReadTimeout }},
 		{"pool", func(c *Config) { c.Data.Database.MaxIdleConns = 11 }},
 		{"pool lifetime", func(c *Config) { c.Data.Database.ConnMaxLifetime = 0 }},
+		{"pool idle time", func(c *Config) { c.Data.Database.ConnMaxIdleTime = 0 }},
+		{"connect timeout", func(c *Config) { c.Data.Database.ConnectTimeout = 0 }},
+		{"statement timeout", func(c *Config) { c.Data.Database.StatementTimeout = 31 * time.Second }},
+		{"lock timeout", func(c *Config) { c.Data.Database.LockTimeout = c.Data.Database.StatementTimeout }},
+		{"slow SQL", func(c *Config) { c.Data.Database.SlowSQLMS = 0 }},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			c := defaults()
@@ -149,7 +155,7 @@ func TestConfigFieldsDocumented(t *testing.T) {
 			t.Errorf("configuration field has no consumer registration: %s", field)
 		}
 	}
-	if len(fields) != 35 {
+	if len(fields) != 37 {
 		t.Fatalf("configuration field count changed; update matrix and consumer tests: %d", len(fields))
 	}
 }
@@ -178,5 +184,31 @@ func TestTOTPEnabledConfiguration(t *testing.T) {
 	}
 	if _, err := NewLoader().Decode([]byte("auth:\n  totp:\n    enabled: invalid\n")); err == nil {
 		t.Fatal("invalid switch accepted")
+	}
+}
+
+func TestTemplateIncludesEveryRuntimeField(t *testing.T) {
+	body, err := os.ReadFile("../../configs/config.local.example.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var values map[string]any
+	if err = yaml.Unmarshal(body, &values); err != nil {
+		t.Fatal(err)
+	}
+	fields := map[string]string{}
+	configLeaves(reflect.ValueOf(defaults()), "", fields)
+	for field := range fields {
+		var current any = values
+		for _, part := range strings.Split(field, ".") {
+			object, ok := current.(map[string]any)
+			if !ok {
+				t.Fatalf("template field incomplete: %s", field)
+			}
+			current, ok = object[part]
+			if !ok {
+				t.Fatalf("template field missing: %s", field)
+			}
+		}
 	}
 }

@@ -96,14 +96,7 @@ func TestReloadResourceConsumers(t *testing.T) {
 	next.Auth.TOTP.Issuer = "Reloaded Admin"
 	next.Auth.TOTP.ActiveKeyID = "rotated"
 	next.Auth.TOTP.Keys = map[string]string{"test": c.Auth.TOTP.Keys["test"], "rotated": base64.StdEncoding.EncodeToString(bytes.Repeat([]byte{1}, 32))}
-	next.Seed.SuperAdmin.Username = "future_admin"
-	next.Seed.SuperAdmin.Password = "future-seed-password"
-	next.Product.DefaultCurrency = "EUR"
-	next.Product.AllowedCurrencies = []string{"USD", "EUR"}
 	write(next)
-	if e = m.Reload(ctx, prepare); e == nil || m.Status().Version != 1 {
-		t.Fatal("missing currency partially applied", e)
-	}
 	if e = d.DB.Exec("INSERT INTO currency(code,minor_unit,symbol) VALUES('EUR',2,'€')").Error; e != nil {
 		t.Fatal(e)
 	}
@@ -126,9 +119,9 @@ func TestReloadResourceConsumers(t *testing.T) {
 	if e != nil {
 		t.Fatal(e)
 	}
-	result, e := authRepo.Login(ctx, "admin", c.Seed.SuperAdmin.Password, admin.Meta{})
+	result, e := authRepo.Login(ctx, "admin", "test-initial-password", admin.Meta{})
 	if e != nil || result.ExpiresIn != int(next.Auth.OnboardingTTL.Seconds()) {
-		t.Fatal("onboarding TTL or seed reset", e, result)
+		t.Fatal("onboarding TTL stale", e, result)
 	}
 	identity, e := authRepo.Identity(ctx, result.Token)
 	if e != nil {
@@ -192,7 +185,7 @@ func TestReloadResourceConsumers(t *testing.T) {
 	if e = active.DB.Exec("UPDATE admin_user SET totp_key_id=?,totp_cipher=? WHERE id=1", kid, encrypted).Error; e != nil {
 		t.Fatal(e)
 	}
-	login, e := authRepo.Login(ctx, "admin", c.Seed.SuperAdmin.Password, admin.Meta{})
+	login, e := authRepo.Login(ctx, "admin", "test-initial-password", admin.Meta{})
 	if e != nil || login.ExpiresIn != 120 {
 		t.Fatal("MFA ticket TTL stale", e, login)
 	}
@@ -206,7 +199,7 @@ func TestReloadResourceConsumers(t *testing.T) {
 	if _, e = authRepo.LoginTOTP(ctx, login.Ticket, code, admin.Meta{}); e == nil {
 		t.Fatal("MFA attempts stale")
 	}
-	login, e = authRepo.Login(ctx, "admin", c.Seed.SuperAdmin.Password, admin.Meta{})
+	login, e = authRepo.Login(ctx, "admin", "test-initial-password", admin.Meta{})
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -232,16 +225,7 @@ func TestReloadResourceConsumers(t *testing.T) {
 		}
 		time.Sleep(20 * time.Millisecond)
 	}
-	if e = admin.Seed(ctx, active, next.Seed); e != nil {
-		t.Fatal(e)
-	}
-	future, e := authRepo.Login(ctx, "future_admin", next.Seed.SuperAdmin.Password, admin.Meta{})
-	if e != nil || future.Scope != "onboarding" {
-		t.Fatal("explicit seed consumer stale", e, future)
-	}
-	if m.Config().Product.DefaultCurrency != "EUR" || m.Config().Seed.SuperAdmin.Username != "future_admin" {
-		t.Fatal("generation fields stale")
-	}
+
 }
 
 func TestReloadTOTPEnabledConsumer(t *testing.T) {
@@ -283,7 +267,7 @@ func TestReloadTOTPEnabledConsumer(t *testing.T) {
 	}
 	login := func() (admin.LoginResult, string) {
 		t.Helper()
-		body, _ := json.Marshal(map[string]string{"username": "admin", "password": c.Seed.SuperAdmin.Password})
+		body, _ := json.Marshal(map[string]string{"username": "admin", "password": "test-initial-password"})
 		w := request("POST", "/admin/api/v1/login", "", body)
 		var result admin.LoginResult
 		if w.Code != 200 || json.Unmarshal(w.Body.Bytes(), &result) != nil {

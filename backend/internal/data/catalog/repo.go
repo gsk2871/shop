@@ -36,7 +36,7 @@ type Currency struct {
 
 func (r *Repo) Currencies(ctx context.Context) ([]Currency, error) {
 	rows := []Currency{}
-	err := r.Data.DB.WithContext(ctx).Table("currency").Where("code IN ? AND enabled", r.Config.Product.AllowedCurrencies).Order("code").Find(&rows).Error
+	err := r.Data.DB.WithContext(ctx).Table("currency").Where("enabled").Order("code").Find(&rows).Error
 	return rows, err
 }
 func currency(tx *gorm.DB, code string) (Currency, error) {
@@ -218,7 +218,14 @@ func audit(tx *gorm.DB, ctx context.Context, action string, id int64) error {
 }
 func can(ctx context.Context, p string) bool { i := auth.Current(ctx); return i != nil && i.Allows(p) }
 func (r *Repo) Prepare(ctx context.Context, p *biz.Product) error {
-	if err := biz.Validate(p, r.Config.Product.DefaultCurrency); err != nil {
+	rows, err := r.Currencies(ctx)
+	if err != nil {
+		return err
+	}
+	if len(rows) == 0 {
+		return errdef.New(503, "SERVICE_UNAVAILABLE")
+	}
+	if err := biz.Validate(p, rows[0].Code); err != nil {
 		return err
 	}
 	categoryID, _ := biz.ParseID(p.CategoryID)
@@ -376,19 +383,6 @@ func (r *Repo) Save(ctx context.Context, id int64, p biz.Product) (biz.Product, 
 		}
 		if pricesDiffer(old, p) && !can(ctx, "product.price.update") {
 			return errdef.Denied()
-		}
-		allowed := map[string]bool{}
-		for _, code := range r.Config.Product.AllowedCurrencies {
-			allowed[code] = true
-		}
-		oldCurrency := map[string]string{}
-		for _, sku := range old.SKUs {
-			oldCurrency[sku.ID] = sku.Currency
-		}
-		for _, sku := range p.SKUs {
-			if !allowed[sku.Currency] && oldCurrency[sku.ID] != sku.Currency {
-				return errdef.Invalid()
-			}
 		}
 		columns := map[string]any{"name": p.Name, "slug": p.Slug, "category": p.Category, "category_id": categoryID, "aliases": p.Aliases, "cas": p.CAS, "formula": p.Formula, "molecular_weight": p.MolecularWeight, "sequence": p.Sequence, "purity": p.Purity, "storage": p.Storage, "solubility": p.Solubility, "summary": p.Summary, "detail_html": p.Detail.HTML, "status": p.Status, "seo_title": p.SEOTitle, "seo_description": p.SEODescription, "updated_at": time.Now().UTC(), "updated_by": actor(ctx)}
 		if id == 0 {

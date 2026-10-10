@@ -35,7 +35,7 @@ func TestLoginScopesPermissionsAndRevocation(t *testing.T) {
 		h.ServeHTTP(w, req)
 		return w
 	}
-	w := request("POST", "login", "", map[string]string{"username": "admin", "password": c.Seed.SuperAdmin.Password})
+	w := request("POST", "login", "", map[string]string{"username": "admin", "password": "test-initial-password"})
 	if w.Code != 200 || len(w.Result().Cookies()) != 1 {
 		t.Fatal(w.Code, w.Body.String())
 	}
@@ -49,7 +49,7 @@ func TestLoginScopesPermissionsAndRevocation(t *testing.T) {
 	if request("POST", "totp/setup", onboarding.Value, nil).Code != 409 {
 		t.Fatal("initial password bypass")
 	}
-	w = request("POST", "password", onboarding.Value, map[string]string{"current": c.Seed.SuperAdmin.Password, "password": "new-test-password-123"})
+	w = request("POST", "password", onboarding.Value, map[string]string{"current": "test-initial-password", "password": "new-test-password-123"})
 	if w.Code != 200 {
 		t.Fatal(w.Code, w.Body.String())
 	}

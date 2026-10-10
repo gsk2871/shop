@@ -1,62 +1,72 @@
-# Tracked template. Copy to config.local.yaml and fill in your credentials.
-# One service handles both public and admin APIs on the same HTTP listener.
+# shop 本地开发配置模板：本文件入库，真实配置和凭据不入库。
+# 使用方法：复制为 configs/config.local.yaml，填写数据库连接和二次验证密钥。
+# 后端以一个服务、一个 HTTP 监听同时提供官网与管理后台接口。
+# 配置优先级：默认值 → 本文件 → 启动时捕获的环境变量；文件修改支持整版热加载。
+# 支持的环境覆盖：HTTP_ADDRESS、DATABASE_DSN、UPLOAD_DIR、COOKIE_SECURE。
+# 超管初始化使用显式 -seed 命令；用户名用 -seed-admin-username 指定，
+# 首次密码用 SEED_ADMIN_PASSWORD 环境变量传入，不在运行配置中保存。
+# 商品币种由 currency 表中的启用记录提供，不在运行配置中重复维护。
+
 app:
-  name: peptide-site
+  name: peptide-site # 服务名称，用于应用标识和日志属性，不能为空。
 
 server:
   http:
-    addr: 127.0.0.1:8080
-    timeout: 30s
-    read_header_timeout: 10s
-    read_timeout: 60s
-    write_timeout: 90s
-    idle_timeout: 120s
+    addr: 127.0.0.1:8080 # HTTP 监听地址；容器内需要外部访问时使用 0.0.0.0:8080。
+    timeout: 30s # 请求处理的上下文超时。
+    read_header_timeout: 10s # 请求头读取超时，限制慢速请求头占用连接。
+    read_timeout: 60s # 请求头和请求体整体读取超时；包含文件上传时间。
+    write_timeout: 90s # 响应写入超时，必须大于 timeout 和 read_timeout。
+    idle_timeout: 120s # 长连接等待下一次请求的最大空闲时间。
 
+# 仅支持 PostgreSQL；数据库驱动和日志输出格式由代码统一，不提供无效配置项。
 data:
   database:
-    dsn: "host=127.0.0.1 user=admin password=REPLACE_WITH_DATABASE_PASSWORD dbname=peptide port=5432 sslmode=disable"
-    max_open_conns: 10
-    max_idle_conns: 5
-    conn_max_lifetime: 30m
+    # 连接串字段：host 主机、port 端口、user 用户、password 密码、dbname 数据库。
+    # sslmode 本机可用 disable；生产按数据库证书要求配置 require 或 verify-full。
+    # 时间戳采用带时区类型，业务按 UTC 判断；连接会话统一使用 UTC。
+    dsn: "host=127.0.0.1 user=admin password=REPLACE_WITH_DATABASE_PASSWORD dbname=peptide port=5432 sslmode=disable TimeZone=UTC"
+    max_open_conns: 10 # 最大连接数；所有服务实例之和需为数据库运维连接保留余量。
+    max_idle_conns: 5 # 最大空闲连接数，不得超过 max_open_conns；可按负载调整。
+    conn_max_lifetime: 30m # 连接最长生命周期，必须为正数。
+    conn_max_idle_time: 15m # 连接空闲多久后回收，必须为正数。
+    connect_timeout: 10s # 数据库建连超时，范围为 1s–30s，优先于连接串中的同名设置。
+    statement_timeout: 5s # 单条 SQL 执行超时，范围为 1ms–30s；同时包含等锁时间。
+    lock_timeout: 3s # 单条 SQL 等锁超时，至少 1ms，且必须小于 statement_timeout。
+    log_sql: false # 全量 SQL 日志开关，还须 log.level=debug；绑定参数不输出。
+    slow_sql_ms: 200 # 慢查询阈值，单位为毫秒，范围为 1–30000；慢查询记为 warn。
+    # SQL 错误记为 error，不受 log_sql 开关影响，但仍遵守全局日志等级。
   storage:
-    upload_dir: ./storage/uploads
-    max_image_bytes: 20971520
-    max_video_bytes: 209715200
-    max_document_bytes: 20971520
+    upload_dir: ./storage/uploads # 本地上传目录；历史目录注册保留，切换目录不会搬迁旧文件。
+    max_image_bytes: 20971520 # 单张图片上限，单位为字节，当前示例为 20 MiB。
+    max_video_bytes: 209715200 # 单个视频上限，单位为字节，当前示例为 200 MiB。
+    max_document_bytes: 20971520 # 单份文档上限，单位为字节，当前示例为 20 MiB。
+    # 接受的素材类型，必须来自以下受支持类型且不能重复；上传时校验实际文件内容。
     allowed_types: [image/jpeg, image/png, image/webp, image/gif, application/pdf, video/mp4, video/webm]
-    cleanup_interval: 1m
+    cleanup_interval: 1m # 素材和认证过期记录清理间隔，范围为 100ms–1h。
 
 auth:
-  # Local HTTP only. Set true for production HTTPS.
-  cookie_secure: false
-  session_ttl: 8h
-  onboarding_ttl: 15m
-  mfa_ticket_ttl: 5m
-  mfa_max_attempts: 5
-  login_limit: 5
-  trusted_proxies: [127.0.0.1/32, "::1/128"] # local Next.js; production must use actual proxy CIDRs
+  cookie_secure: false # 本地 HTTP 使用 false；生产 HTTPS 使用 true。
+  session_ttl: 8h # 完整登录会话有效期，必须为正数，最长 24h。
+  onboarding_ttl: 15m # 首次改密／绑定验证器的受限会话有效期，最长 1h。
+  mfa_ticket_ttl: 5m # 二次验证码登录票据有效期，最长 15m。
+  mfa_max_attempts: 5 # 每张二次验证票据允许的失败次数，范围为 1–20。
+  login_limit: 5 # 每分钟登录尝试限制，至少为 1，计数存储于数据库。
+  # 可信反向代理网段；用于识别真实来源 IP 和 HTTPS，生产填写实际代理网段。
+  trusted_proxies: [127.0.0.1/32, "::1/128"]
   totp:
-    enabled: true # false skips login codes and mandatory binding; password changes still required
-    issuer: Research Supply Admin
-    active_key_id: "" # required for run, optional for migrate/seed
-    keys: {} # inject private base64 encoded 32-byte keys in protected YAML
+    enabled: true # 二次验证开关；关闭时密码登录，首次强制改密仍保留；重新开启需重新登录。
+    issuer: Research Supply Admin # 验证器显示的服务名称，不能为空。
+    active_key_id: "" # 当前加密密钥标识；运行服务必填，迁移／初始化命令可留空。
+    keys: {} # 密钥标识到 Base64 编码的 32 字节密钥映射；关闭验证仍须保留历史密钥。
 
-# Backend YAML fields are applied as one resource generation.
 reload:
-  interval: 5s
+  interval: 5s # 配置文件检查间隔，范围为 100ms–1h；失败保留上一版完整配置。
+
 log:
-  level: info
+  level: info # 日志等级：debug 调试、info 常规、warn 警告、error 错误；支持热加载。
+  # 日志统一输出到标准输出，采用文本格式；生产由进程管理器或容器平台收集与轮转。
+  # 全量 SQL 需同时配置 debug 和 data.database.log_sql=true，绑定参数与错误详情不输出。
 
-# Explicit -seed reads these values; reload does not reset any account.
-seed:
-  super_admin:
-    username: admin
-    password: "" # inject SEED_ADMIN_PASSWORD, or use protected private YAML
-
-product:
-  default_currency: USD
-  allowed_currencies: [USD]
-
-# Local, versioned MMDB country database. Empty routes visitors to the default.
 contact:
-  geoip_database_path: ""
+  geoip_database_path: "" # 本地 MMDB 国家库路径；留空使用后台配置的默认客服，更新后热加载。

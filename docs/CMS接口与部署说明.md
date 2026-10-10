@@ -16,7 +16,7 @@
 
 列表使用 `{items,total,page,pageSize}`，页码从 1 开始，单页 1–100；产品与媒体支持 q 搜索。详情返回单对象；创建 POST 返回 201；更新返回 200；删除返回 `{ok:true}`。分类、产品、文章、Banner 和品牌设置修改要求 expectedVersion；冲突返回 409 VERSION_CONFLICT，页面需刷新重新编辑。
 
-产品由基本信息、specs、values、skus、价格及 detail 组成。规格维度不超过 6 个，每维不超过 20 值，SKU 不超过 500 个；同产品组合不能重复，每个 SKU 必须从每维选择一个值，无规格产品使用一个默认 SKU。更新保留已有实体 ID，并校验规格／值／SKU 属于当前产品。产品状态单独 PATCH `/products/{id}/status`，SKU 价格 PATCH `/products/{id}/skus/{skuId}/price`。价格输入为 salePrice 十进制字符串，后端按 currency.minor_unit 转为整数，并返回格式化 price 和 fromPrice；首期种子仅 USD，不换汇，不使用浮点。
+产品由基本信息、specs、values、skus、价格及 detail 组成。规格维度不超过 6 个，每维不超过 20 值，SKU 不超过 500 个；同产品组合不能重复，每个 SKU 必须从每维选择一个值，无规格产品使用一个默认 SKU。更新保留已有实体 ID，并校验规格／值／SKU 属于当前产品。产品状态单独 PATCH `/products/{id}/status`，SKU 价格 PATCH `/products/{id}/skus/{skuId}/price`。价格输入为 salePrice 十进制字符串，后端按 currency.minor_unit 转为整数，并返回格式化 price 和 fromPrice；首次种子补齐 USD，不换汇，不使用浮点。币种选项直接读取 currency 表中全部启用记录，默认取编码排序后的第一项；增加币种无需修改运行配置，已有 SKU 币种不自动改变。
 
 商品分类管理使用 GET/POST `/categories`、GET/PUT/DELETE `/categories/{id}`，分别受 category.read/create/update/delete 权限控制。分类名称去首尾空白、不区分大小写唯一，sort 越小越靠前，同序按 ID 排列；删除为软删除，被任意未删除商品使用时返回 409 CATEGORY_IN_USE。GET `/categories/options` 由 product.read 授权，返回全部可选分类的 `{items:[{id,name}]}`；创建及编辑保存商品必传 categoryId，分类名称由服务端解析，重命名即时反映在商品展示中。
 
@@ -41,7 +41,7 @@ Banner 位仅种子 home_hero、products_header、research_header。投放字段
 ## 首次部署
 
 1. 配套构建 backend、admin-fe、website，使用锁文件安装，保留 shared 两个包。使用 `backend/configs/config.local.example.yaml` 配置私有运行文件，填写 DSN、持久目录、TOTP active key 和 keyring，权限 0600。
-2. 执行 `server -conf /path/config.yaml -migrate`，然后通过 SEED_ADMIN_PASSWORD 注入初始密码，执行 `-seed`。再执行 `server -conf /path/config.yaml`；运行不会自动 seed 或 reset。
+2. 执行 `server -conf /path/config.yaml -migrate`，然后通过 SEED_ADMIN_PASSWORD 注入初始密码，执行 `-seed -seed-admin-username admin`；用户名也可指定其他合法名称，运行 YAML 不保存用户名和密码。再执行 `server -conf /path/config.yaml`；运行不会自动 seed 或 reset。
 3. 后端仅内网监听，官网 Next 服务端使用 BACKEND_URL；后台构建前设置 UMI_APP_WEBSITE_URL 为官网地址；生产 cookie_secure=true，并填写实际反向代理 CIDR。后台浏览器与其 `/backend` 代理保持同源，Nginx 传递 Host、X-Forwarded-For 和 X-Forwarded-Proto。
 4. 超管完成首次改密及 MFA，再创建运营和查看者账号。检查 readyz、运行配置版本和上传策略；创建业务内容之前官网显示默认品牌及英文空状态。
 5. 官网 output=standalone，生产运行 `.next/standalone/server.js`，并将 `.next/static`、public（若存在）复制到对应位置；后台 dist 静态发布，未知前端路径回退 index.html。
@@ -92,3 +92,7 @@ server -conf /path/config.yaml -recover-totp-user admin -recover-reason '经过�
 - 同一设置页面维护 homeTitle/homeContent、aboutTitle/aboutContent、productsTitle、newsTitle、privacyTitle/privacyContent、cookieTitle/cookieContent。正文为纯文本，保留换行，HTML 按文本显示；正文和品牌标记留空时不展示，不补写示例宣传内容。Cookie 标题和正文均留空时不弹出提示。
 - 设置仍由 GET/PUT /admin/api/v1/settings 管理，公共 GET /api/v1/site 返回上述展示字段。沿用 site_config.payload JSON 存储及版本冲突校验，无需数据库结构迁移。旧配置缺失新增字段时使用空值；升级后请在后台填写所需正文。
 - 官网不再展示 disclaimer、固定科研声明及 DB-IP 链接；disclaimer 保留为兼容字段。导航、搜索、分页、联系按钮和错误提示属于界面操作文字。
+
+## 运行配置
+
+完整中文字段说明见 backend/configs/config.local.example.yaml，字段校验与消费者见 CONFIG_RELOAD_MATRIX.md。旧私有配置删除 seed 和 product 段后再启动本版本；加载器会拒绝未知字段。数据库连接串、连接池、连接空闲回收、建连／SQL 执行／等锁超时、慢查询阈值和 SQL 日志开关均由 data.database 配置；连接超时和 SQL 超时优先于 DSN 中对应设置。日志统一输出到标准输出，采用文本格式，等级支持 debug/info/warn/error 热加载。

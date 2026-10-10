@@ -95,3 +95,9 @@ pnpm run build
 部署顺序、Nginx、密钥轮换、MFA 恢复及配套备份见 [CMS 接口与部署说明](docs/CMS接口与部署说明.md)。完整字段及实效证据见 [配置矩阵](docs/CONFIG_RELOAD_MATRIX.md)，接口规则见 [实施契约](docs/IMPLEMENTATION_CONTRACT.md)，本次验收见 [验收记录](docs/IMPLEMENTATION_ACCEPTANCE.md)。
 
 WhatsApp 国家配置、二维码、轮询、更新时间防覆盖及官网 H5 部署见 [WhatsApp 客服说明](docs/WHATSAPP_ROUTING.md)。本地官网 pnpm dev 通过 3000 入口覆盖访客 IP 请求头；美国默认配置种子不包含虚构联系方式，需在后台补齐真实账号。
+
+后端配置模板中的服务监听、连接池、数据库超时、SQL 日志、素材和认证字段均附中文说明。数据库仅支持 PostgreSQL；日志输出到标准输出，等级由 log.level 控制。全量 SQL 需同时开启 data.database.log_sql 和 debug 等级，参数不写入日志。
+
+超管初始化不读取运行 YAML：首次密码通过 SEED_ADMIN_PASSWORD 环境变量传入，用户名通过 -seed-admin-username 指定（默认 admin）。已有配置中的 seed 和 product 段应删除；商品币种直接使用 currency 表中的启用记录，默认取编码排序后的第一项，已有 SKU 不自动换币。
+
+backend/bin/server 是 make build 生成的本机可执行文件，backend/bin/ 已由 Git 忽略。代码库只保存源码，部署构建产物通过发布流程交付。

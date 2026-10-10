@@ -31,7 +31,6 @@ func testRepo(t *testing.T) (*Repo, *data.Data, conf.Config) {
 	}
 	c.Auth.TOTP.ActiveKeyID = "one"
 	c.Auth.TOTP.Keys = map[string]string{"one": base64.StdEncoding.EncodeToString(make([]byte, 32))}
-	c.Seed.SuperAdmin.Password = "test-initial-password"
 	admin, cleanup, err := data.NewData(c)
 	if err != nil {
 		t.Fatal(err)
@@ -49,7 +48,7 @@ func testRepo(t *testing.T) (*Repo, *data.Data, conf.Config) {
 	if err := data.Migrate(d); err != nil {
 		t.Fatal(err)
 	}
-	if err := Seed(context.Background(), d, c.Seed); err != nil {
+	if err := Seed(context.Background(), d, SeedOptions{Username: "admin", Password: "test-initial-password"}); err != nil {
 		t.Fatal(err)
 	}
 	r, err := NewRepo(d, c)
@@ -68,8 +67,7 @@ func TestSeedAndTwoPhaseLogin(t *testing.T) {
 	if err := d.DB.Table("admin_user").Where("username=?", "admin").Take(&initial).Error; err != nil {
 		t.Fatal(err)
 	}
-	c.Seed.SuperAdmin.Password = "different-seed-password"
-	if err := Seed(ctx, d, c.Seed); err != nil {
+	if err := Seed(ctx, d, SeedOptions{Username: "admin", Password: "different-seed-password"}); err != nil {
 		t.Fatal(err)
 	}
 	var repeated biz.User
@@ -223,11 +221,11 @@ func bytesRepeat(value byte, n int) []byte {
 }
 
 func TestTOTPDisabledLoginBindingAndReenable(t *testing.T) {
-	r, d, c := testRepo(t)
+	r, d, _ := testRepo(t)
 	ctx := context.Background()
 	m := Meta{RequestID: "test-totp-policy"}
 	r.Config.Auth.TOTP.Enabled = false
-	initial, err := r.Login(ctx, "admin", c.Seed.SuperAdmin.Password, m)
+	initial, err := r.Login(ctx, "admin", "test-initial-password", m)
 	if err != nil || initial.Step != "session" || initial.Scope != "password_change" || len(initial.Token) != 64 {
 		t.Fatalf("initial login: %+v %v", initial, err)
 	}
@@ -235,7 +233,7 @@ func TestTOTPDisabledLoginBindingAndReenable(t *testing.T) {
 	if err != nil || i.Scope != "password_change" || i.TOTPEnabled {
 		t.Fatalf("initial identity: %+v %v", i, err)
 	}
-	if err = r.Password(ctx, i, c.Seed.SuperAdmin.Password, "test-new-password", m); err != nil {
+	if err = r.Password(ctx, i, "test-initial-password", "test-new-password", m); err != nil {
 		t.Fatal(err)
 	}
 	login, err := r.Login(ctx, "admin", "test-new-password", m)

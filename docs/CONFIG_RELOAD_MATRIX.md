@@ -2,7 +2,7 @@
 
 默认值 → YAML → 启动时捕获的环境覆盖。整版校验并准备独立资源后原子发布，失败保留最后可用版本；请求、上传、预览和事务使用同一版本。状态接口仅显示版本、时间、错误与来源，不输出配置值。
 
-全部 35 个有效 YAML 字段如下。DSN、HTTP 地址及目录可热加载；seed 参数只改变下一次显式 seed 的输入，不在请求期间重置账号。
+全部 37 个有效 YAML 字段如下。DSN、HTTP 地址及目录可热加载。超管初始化只读取显式命令参数和环境变量，币种直接读取 currency 表，均不属于运行 YAML。
 
 | 字段 | 默认值／校验 | 实际消费者 | 验证证据 |
 | --- | --- | --- | --- |
@@ -19,6 +19,12 @@
 | data.database.max_open_conns | 10；>0 | 新 sql.DB 池上限 | TestReloadResourceConsumers 的 Stats |
 | data.database.max_idle_conns | 5；0≤值≤max_open | 新池空闲上限 | 同上，真实池与连接寿命 |
 | data.database.conn_max_lifetime | 30m；正数 | 新池连接回收 | 同上，MaxLifetimeClosed 实际增加 |
+| data.database.conn_max_idle_time | 15m；正数 | 新连接池空闲连接回收 | TestDatabaseTimeoutsAndPool |
+| data.database.connect_timeout | 10s；1s–30s | pgx 建连超时，优先于 DSN | TestDatabaseTimeoutsAndPool |
+| data.database.statement_timeout | 5s；1ms–30s | 每条连接启动参数，SQL 执行超时 | TestDatabaseTimeoutsAndPool 的 pg_sleep 超时 |
+| data.database.lock_timeout | 3s；≥1ms，且小于 statement_timeout | 每条连接启动参数，SQL 等锁超时 | TestDatabaseTimeoutsAndPool 的锁竞争 |
+| data.database.log_sql | false；需同时 log.level=debug | GORM SQL 日志，参数不输出 | TestSQLLoggingPolicyAndRedaction |
+| data.database.slow_sql_ms | 200；1–30000 | 慢查询 warn 日志阈值 | TestSQLLoggingPolicyAndRedaction |
 | data.storage.upload_dir | ./storage/uploads；可写目录 | 上传路径和持久 root 注册 | TestRuntimePostgres：切换、旧文件和 Range；配套恢复演练 |
 | data.storage.max_image_bytes | 20 MiB；>0，≤1 TiB | 图片流写入限制／策略接口 | TestStreamingUploadPolicyAndReferences；TestReloadResourceConsumers |
 | data.storage.max_video_bytes | 200 MiB；同上 | 视频流写入限制／策略接口 | 分类限额拒绝；TestReloadDrainsUploadAndTransaction：在途视频保留旧策略；真实 MP4 官网 readyState=4 |
@@ -36,11 +42,7 @@
 | auth.totp.issuer | Research Supply Admin；非空 | 新绑定 URI 和本地二维码 | TestReloadResourceConsumers |
 | auth.totp.active_key_id | 运行时必填；存在于 keys | 新绑定 AES-GCM 加密 | 同上，pending.key_id 实际更新 |
 | auth.totp.keys | 运行时必填；每项 base64 32 字节 | 当前／历史密文解密；在途旧版本保护 | TestSeedAndTwoPhaseLogin；TestKeyRemovalWaitsForOldLease；恢复启动检查 |
-| seed.super_admin.username | admin；3–100 位允许字符；普通／删除账号冲突拒绝 | 下一次显式 Seed | TestReloadResourceConsumers：未来 seed 创建账号；原账号未被重置 |
-| seed.super_admin.password | 空；首次 seed 12–72 字节；SEED_ADMIN_PASSWORD 覆盖 | 首次 bcrypt 密码 | 同上；重复 seed 保留凭据测试 |
 | contact.geoip_database_path | 空；非空路径需可读有效 MMDB | 新资源打开国家 Reader，旧请求排空后关闭，失败保留当前配置 | TestCountryDatabase；TestCountryDatabaseReload |
-| product.default_currency | USD；必须属于 allowed_currencies | 新未指定币种 SKU、币种接口 | TestReloadResourceConsumers：EUR；产品默认 SKU 验证 |
-| product.allowed_currencies | [USD]；大写三字母、无重复、字典启用 | 新 SKU／价格写入、字典接口 | 同上：缺失字典拒绝整版；增加字典后成功；已有价格不换汇 |
 
 来源接口 `/admin/api/v1/config/status` 需要 config.read。后台每 10 秒刷新状态及上传策略。环境覆盖固定捕获，不重读后来修改的进程环境；被覆盖 YAML 变化可以校验但不能替代环境值，等效配置不增加版本。敏感字段的状态只显示字段名和来源。
 
@@ -49,3 +51,5 @@ Prepare：校验配置、打开独立池、Ping 和结构／身份检查、校�
 已验证配置文件消失及恢复、无效 YAML、错误数据库身份、连接池非法组合、端口占用和密钥使用中的整版拒绝；环境快照、原子文件替换、在途租约排空、重复版本切换、真实读写超时、清理任务及恢复文件均有可复跑测试。TestReloadDrainsUploadAndTransaction 使用真实 PostgreSQL 事务和暂停的视频流，同时切换 DSN、上传目录与视频限额；旧请求完成后才关闭旧池，新上传立即采用新限额。不可读目录未作为单独端到端案例记成功。
 
 外部 Nginx、后台构建环境与官网 BACKEND_URL 不属于后端 YAML，使用各自部署机制。schema 迁移及 seed 均为显式维护命令。
+
+超管用户名由 -seed-admin-username 指定（默认 admin），首次密码由 SEED_ADMIN_PASSWORD 提供；重复 seed 保留已有账号凭据。日志输出为标准输出文本，SQL 绑定参数和数据库错误详情不输出。

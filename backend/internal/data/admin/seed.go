@@ -6,16 +6,24 @@ import (
 	"errors"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
-	"peptide-site/internal/conf"
 	"peptide-site/internal/data"
 	"peptide-site/internal/data/seed"
 	whatsapp "peptide-site/internal/data/whatsapp"
+	"regexp"
 	"time"
 )
 
-// Seed initializes only missing system records. Existing user credentials,
-// states, MFA bindings and role assignment are never changed.
-func Seed(ctx context.Context, d *data.Data, c conf.Seed) error {
+// SeedOptions 仅用于显式初始化命令，不属于运行配置。
+type SeedOptions struct {
+	Username string
+	Password string
+}
+
+// Seed 只初始化缺失的系统记录，不覆盖已有账号凭据、状态、二次验证绑定或角色分配。
+func Seed(ctx context.Context, d *data.Data, c SeedOptions) error {
+	if !regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9_.-]{2,99}$`).MatchString(c.Username) {
+		return errors.New("种子管理员用户名须为 3–100 位字母、数字、下划线、点或短横线")
+	}
 	registry, err := seed.Load()
 	if err != nil {
 		return err
@@ -102,7 +110,7 @@ func Seed(ctx context.Context, d *data.Data, c conf.Seed) error {
 			RoleID    int64
 			DeletedAt *time.Time
 		}
-		result := tx.Table("admin_user").Where("username=?", c.SuperAdmin.Username).Order("id DESC").Limit(1).Scan(&existing)
+		result := tx.Table("admin_user").Where("username=?", c.Username).Order("id DESC").Limit(1).Scan(&existing)
 		if result.Error != nil {
 			return result.Error
 		}
@@ -112,13 +120,13 @@ func Seed(ctx context.Context, d *data.Data, c conf.Seed) error {
 			}
 			return nil
 		}
-		if len(c.SuperAdmin.Password) < 12 || len(c.SuperAdmin.Password) > 72 {
-			return errors.New("SEED_ADMIN_PASSWORD or seed.super_admin.password must contain 12 to 72 bytes")
+		if len(c.Password) < 12 || len(c.Password) > 72 {
+			return errors.New("首次初始化时 SEED_ADMIN_PASSWORD 必须包含 12 至 72 字节")
 		}
-		hash, err := bcrypt.GenerateFromPassword([]byte(c.SuperAdmin.Password), bcrypt.DefaultCost)
+		hash, err := bcrypt.GenerateFromPassword([]byte(c.Password), bcrypt.DefaultCost)
 		if err != nil {
 			return err
 		}
-		return tx.Exec("INSERT INTO admin_user(username,display_name,password_hash,role_id,enabled,must_change_pwd) VALUES(?,?,?,?,true,true)", c.SuperAdmin.Username, "超级管理员", string(hash), superID).Error
+		return tx.Exec("INSERT INTO admin_user(username,display_name,password_hash,role_id,enabled,must_change_pwd) VALUES(?,?,?,?,true,true)", c.Username, "超级管理员", string(hash), superID).Error
 	})
 }

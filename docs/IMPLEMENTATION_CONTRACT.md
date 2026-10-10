@@ -175,3 +175,9 @@ POST /me/reauth 为 full scope 自助接口，接收 password/code；独立于�
 product_category 使用 identity 主键、软删除、版本检查和有效名称大小写不敏感唯一索引。product.category_id 为逻辑关联；创建及编辑保存必选有效分类，旧空分类商品继续展示。分类删除事务持有行排他锁，商品保存事务持有分类共享锁，防止并发创建和删除造成失效引用。分类重命名通过关联查询即时展示，product.category 保留名称快照以支持开发回退。000013 迁移归并并回填历史非空分类。
 
 管理 API：GET/POST /categories，GET/PUT/DELETE /categories/{id}，对应 category.read/create/update/delete；GET /categories/options 对应 product.read。创建返回 201，更新返回 200，删除返回 ok；更新和删除要求 expectedVersion，被商品使用返回 CATEGORY_IN_USE。公共分类仅返回 id/name，产品列表 categoryId 未传或空值不加条件，q 仅按名称进行字面子串查询。
+
+### 部署配置与初始化
+
+运行 YAML 只包含 app/server/data/auth/reload/log/contact。超管初始化用户名通过 -seed-admin-username 输入，首次密码通过 SEED_ADMIN_PASSWORD 输入，业务请求和热加载不读取初始化凭据。currency 表是币种唯一来源，启用记录按编码排序提供选择和默认值，已有商品不自动换币。
+
+PostgreSQL 建连、连接生命周期与空闲回收、SQL 执行和等锁超时使用 data.database 的对应配置。全量 SQL 日志要求 log_sql=true 且日志等级 debug；慢查询为 warn，失败查询为 error，绑定参数与数据库错误详情不输出。服务日志为标准输出文本，轮转交给进程管理器或容器平台。

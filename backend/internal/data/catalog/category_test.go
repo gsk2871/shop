@@ -176,3 +176,33 @@ func TestLegacyCategoryMigration(t *testing.T) {
 		t.Fatal(count, err)
 	}
 }
+
+func TestCurrencyDictionaryDrivesOptionsAndDefaultSKU(t *testing.T) {
+	d, c := testutil.Postgres(t)
+	r := NewRepo(d, c)
+	ctx := auth.WithIdentity(context.Background(), &auth.Identity{User: auth.User{ID: 1}})
+	cat, err := r.SaveCategory(ctx, 0, biz.Category{Name: "Currency"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = d.DB.Exec("INSERT INTO currency(code,minor_unit,symbol,enabled) VALUES ('EUR',2,'€',true),('JPY',0,'¥',true),('GBP',2,'£',false)").Error; err != nil {
+		t.Fatal(err)
+	}
+	rows, err := r.Currencies(ctx)
+	if err != nil || len(rows) != 3 || rows[0].Code != "EUR" || rows[2].Code != "USD" {
+		t.Fatal("enabled dictionary options", rows, err)
+	}
+	product := biz.Product{Name: "Default", Slug: "default", CategoryID: cat.ID, Status: "draft", Detail: richtext.Document{MediaIDs: []string{}}}
+	if err = r.Prepare(ctx, &product); err != nil || len(product.SKUs) != 1 || product.SKUs[0].Currency != "EUR" {
+		t.Fatal("dictionary default SKU", product, err)
+	}
+	product.SKUs[0].Currency = "JPY"
+	if _, err = r.Save(ctx, 0, product); err != nil {
+		t.Fatal("enabled currency rejected", err)
+	}
+	product.Slug = "disabled"
+	product.SKUs[0].Currency = "GBP"
+	if _, err = r.Save(ctx, 0, product); err == nil {
+		t.Fatal("disabled currency accepted")
+	}
+}

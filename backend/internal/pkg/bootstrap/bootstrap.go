@@ -5,6 +5,8 @@ import (
 	"context"
 	"flag"
 	"log"
+	"log/slog"
+	"os"
 
 	"github.com/go-kratos/kratos/v2"
 	"peptide-site/internal/pkg/configreload"
@@ -22,6 +24,7 @@ func Run(version string, factory func(conf.Config) (*configreload.Resource, func
 	recoverUser := flag.String("recover-totp-user", "", "server-only MFA recovery username")
 	recoverReason := flag.String("recover-reason", "", "required reason for MFA recovery")
 	seed := flag.Bool("seed", false, "initialize permissions, roles and first administrator")
+	seedUsername := flag.String("seed-admin-username", "admin", "显式初始化时的超管用户名")
 	flag.Parse()
 	explicitConfig := *configPath != ""
 	loader := conf.NewLoader()
@@ -34,6 +37,10 @@ func Run(version string, factory func(conf.Config) (*configreload.Resource, func
 	if err != nil {
 		log.Fatal(err)
 	}
+	// 维护命令和启动准备阶段也使用配置中的日志等级。
+	level := slog.LevelInfo
+	_ = level.UnmarshalText([]byte(config.Log.Level))
+	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: level})))
 	if *migrate || *initAdmin || *seed || *recoverUser != "" {
 		d, cleanup, err := data.NewData(config)
 		if err != nil {
@@ -46,7 +53,7 @@ func Run(version string, factory func(conf.Config) (*configreload.Resource, func
 			}
 		}
 		if *initAdmin || *seed {
-			if err := adminData.Seed(context.Background(), d, config.Seed); err != nil {
+			if err := adminData.Seed(context.Background(), d, adminData.SeedOptions{Username: *seedUsername, Password: os.Getenv("SEED_ADMIN_PASSWORD")}); err != nil {
 				log.Fatal(err)
 			}
 		}

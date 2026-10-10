@@ -59,7 +59,11 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			admin.Failure(w, r, err)
 			return
 		}
-		admin.Reply(w, 200, map[string]any{"items": rows, "defaultCurrency": h.Repo.Config.Product.DefaultCurrency})
+		if len(rows) == 0 {
+			admin.Failure(w, r, errdef.New(503, "SERVICE_UNAVAILABLE"))
+			return
+		}
+		admin.Reply(w, 200, map[string]any{"items": rows, "defaultCurrency": rows[0].Code})
 		return
 	}
 	if path == "products" && r.Method == "GET" {

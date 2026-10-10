@@ -9,8 +9,7 @@ import (
 	"github.com/jackc/pgx/v5/stdlib"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
-	"time"
+	"strconv"
 
 	"peptide-site/internal/conf"
 )
@@ -24,11 +23,12 @@ func NewData(c conf.Config) (*Data, func(), error) {
 	if err != nil {
 		return nil, nil, fmt.Errorf("invalid database configuration")
 	}
-	if connection.ConnectTimeout == 0 || connection.ConnectTimeout > 10*time.Second {
-		connection.ConnectTimeout = 10 * time.Second
-	}
+	connection.ConnectTimeout = c.Data.Database.ConnectTimeout
+	// 通过连接启动参数对每条连接设置执行与等锁超时，配置值优先于 DSN。
+	connection.RuntimeParams["statement_timeout"] = strconv.FormatInt(c.Data.Database.StatementTimeout.Milliseconds(), 10)
+	connection.RuntimeParams["lock_timeout"] = strconv.FormatInt(c.Data.Database.LockTimeout.Milliseconds(), 10)
 	sqlPool := stdlib.OpenDB(*connection)
-	db, err := gorm.Open(postgres.New(postgres.Config{Conn: sqlPool}), &gorm.Config{Logger: logger.Default.LogMode(logger.Silent)})
+	db, err := gorm.Open(postgres.New(postgres.Config{Conn: sqlPool}), &gorm.Config{Logger: newSQLLogger(c)})
 	if err != nil {
 		_ = sqlPool.Close()
 		return nil, nil, fmt.Errorf("database connection unavailable")
@@ -40,6 +40,7 @@ func NewData(c conf.Config) (*Data, func(), error) {
 	pool.SetMaxOpenConns(c.Data.Database.MaxOpenConns)
 	pool.SetMaxIdleConns(c.Data.Database.MaxIdleConns)
 	pool.SetConnMaxLifetime(c.Data.Database.ConnMaxLifetime)
+	pool.SetConnMaxIdleTime(c.Data.Database.ConnMaxIdleTime)
 	return &Data{DB: db}, func() { _ = pool.Close() /* Shutdown cannot return an error to Wire's cleanup caller. */ }, nil
 }
 

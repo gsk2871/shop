@@ -32,7 +32,6 @@ func Postgres(t *testing.T) (*data.Data, conf.Config) {
 	c.Data.Storage.UploadDir = t.TempDir()
 	c.Auth.TOTP.ActiveKeyID = "test"
 	c.Auth.TOTP.Keys = map[string]string{"test": base64.StdEncoding.EncodeToString(make([]byte, 32))}
-	c.Seed.SuperAdmin.Password = "test-initial-password"
 	root, closeRoot, err := data.NewData(c)
 	if err != nil {
 		t.Fatal(err)
@@ -56,7 +55,7 @@ func Postgres(t *testing.T) (*data.Data, conf.Config) {
 	if err := data.Migrate(d); err != nil {
 		t.Fatal(err)
 	}
-	if err := admin.Seed(context.Background(), d, c.Seed); err != nil {
+	if err := admin.Seed(context.Background(), d, admin.SeedOptions{Username: "admin", Password: "test-initial-password"}); err != nil {
 		t.Fatal(err)
 	}
 	return d, c
