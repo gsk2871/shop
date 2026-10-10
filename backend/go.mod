@@ -6,6 +6,7 @@ require (
 	github.com/go-kratos/kratos/v2 v2.9.2
 	github.com/google/wire v0.7.0
 	github.com/jackc/pgx/v5 v5.6.0
+	github.com/oschwald/maxminddb-golang/v2 v2.0.0
 	golang.org/x/crypto v0.31.0
 	golang.org/x/image v0.32.0
 	golang.org/x/net v0.33.0
@@ -27,7 +28,7 @@ require (
 	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	golang.org/x/sync v0.17.0 // indirect
-	golang.org/x/sys v0.28.0 // indirect
+	golang.org/x/sys v0.37.0 // indirect
 	golang.org/x/text v0.30.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240102182953-50ed04b92917 // indirect
 	google.golang.org/grpc v1.61.1 // indirect

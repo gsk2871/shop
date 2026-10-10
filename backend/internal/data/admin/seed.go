@@ -9,6 +9,7 @@ import (
 	"peptide-site/internal/conf"
 	"peptide-site/internal/data"
 	"peptide-site/internal/data/seed"
+	whatsapp "peptide-site/internal/data/whatsapp"
 	"time"
 )
 
@@ -30,6 +31,11 @@ func Seed(ctx context.Context, d *data.Data, c conf.Seed) error {
 		}
 		if tx.Migrator().HasTable("banner_slot") {
 			if err := tx.Exec("INSERT INTO banner_slot(code,name) VALUES('home_hero','首页主视觉'),('products_header','产品页顶部'),('research_header','文章页顶部') ON CONFLICT(code) DO NOTHING").Error; err != nil {
+				return err
+			}
+		}
+		if tx.Migrator().HasTable("whatsapp_group") {
+			if err := whatsapp.Seed(tx); err != nil {
 				return err
 			}
 		}
@@ -81,7 +87,9 @@ func Seed(ctx context.Context, d *data.Data, c conf.Seed) error {
 			if role.IsSuper {
 				superID = id
 			}
-			if fresh {
+			// Super administrators gain missing registered permissions; ordinary roles
+			// retain their existing explicit grants. Neither path removes grants.
+			if fresh || role.IsSuper {
 				for _, permission := range role.Permissions {
 					if err := tx.Exec("INSERT INTO admin_role_permission(role_id,permission_id) SELECT ?,id FROM admin_permission WHERE permission_code=? ON CONFLICT DO NOTHING", id, permission).Error; err != nil {
 						return err

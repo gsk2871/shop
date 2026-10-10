@@ -109,16 +109,6 @@ export default function SettingsPage() {
         <Form.Item name="description" label="英文公司介绍">
           <Input.TextArea maxLength={5000} />
         </Form.Item>
-        <Form.Item name="email" label="联系邮箱" rules={[{ type: "email" }]}>
-          <Input />
-        </Form.Item>
-        <Form.Item
-          name="whatsapp"
-          label="WhatsApp 国际号码（仅数字）"
-          rules={[{ pattern: /^$|^[0-9]{7,15}$/ }]}
-        >
-          <Input />
-        </Form.Item>
         <Form.Item name="disclaimer" label="英文科研声明">
           <Input.TextArea maxLength={500} />
         </Form.Item>

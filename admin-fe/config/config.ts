@@ -11,6 +11,12 @@ export default defineConfig({
   model: {},
   routes: [
     {
+      path: "/whatsapp",
+      name: "WhatsApp 客服配置",
+      component: "./WhatsApp",
+      wrappers: ["@/components/Auth"],
+    },
+    {
       path: "/banners",
       name: "Banner 投放",
       component: "./Banners",

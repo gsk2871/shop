@@ -89,22 +89,27 @@ def validate_seed(seed):
             _register_endpoint(endpoints, endpoint)
     anonymous = set()
     for endpoint in seed["anonymousApis"]:
-        _register_endpoint(endpoints, endpoint)
+        _register_endpoint(endpoints, endpoint, public=True)
         anonymous.add((endpoint["method"], endpoint["path"]))
     if anonymous != {
         ("POST", "/admin/api/v1/login"),
         ("POST", "/admin/api/v1/login/totp"),
+        ("GET", "/api/v1/whatsapp-contact"),
+        ("GET", "/api/v1/whatsapp-status"),
     }:
         raise ValueError("unexpected anonymous administrative route")
     return len(nodes), len(permissions), len(roles)
 
 
-def _register_endpoint(endpoints, endpoint):
+def _register_endpoint(endpoints, endpoint, public=False):
     """Enforce one administrative authorization owner per method and path."""
     method, path = endpoint["method"], endpoint["path"]
     if method not in {"GET", "POST", "PUT", "PATCH", "DELETE"}:
         raise ValueError(f"invalid HTTP method: {method}")
-    if not path.startswith("/admin/api/v1/") or ".." in path or "?" in path:
+    valid_prefix = path.startswith("/admin/api/v1/") or (
+        public and method == "GET" and path.startswith("/api/v1/")
+    )
+    if not valid_prefix or ".." in path or "?" in path:
         raise ValueError(f"invalid administrative API: {path}")
     key = method, path
     if key in endpoints:

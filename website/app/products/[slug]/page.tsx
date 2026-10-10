@@ -1,3 +1,4 @@
+import ContactButton from "../../../components/ContactButton";
 import { notFound } from "next/navigation";
 import { ProductView } from "@shop/content";
 import { contentResult } from "../../../lib/content";
@@ -37,6 +38,9 @@ export default async function ProductDetail({
   return (
     <section className="section">
       <ProductView key={result.data.slug} product={result.data} />
+      <ContactButton productName={result.data.name}>
+        Enquire about this product ↗
+      </ContactButton>
       <aside className="article-disclaimer">
         For laboratory research use only.
       </aside>

@@ -31,6 +31,11 @@ type Config struct {
 	Log     Log     `yaml:"log"`
 	Seed    Seed    `yaml:"seed"`
 	Product Product `yaml:"product"`
+	Contact Contact `yaml:"contact"`
+}
+
+type Contact struct {
+	GeoIPDatabasePath string `yaml:"geoip_database_path"`
 }
 
 type Product struct {

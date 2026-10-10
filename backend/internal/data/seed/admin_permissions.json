@@ -671,6 +671,97 @@
       "permissionCode": null,
       "apis": [],
       "visibility": "authenticated_self_service"
+    },
+    {
+      "code": "menu.whatsapp",
+      "parentCode": "directory.site",
+      "name": "WhatsApp 客服配置",
+      "type": "menu",
+      "sort": 40,
+      "route": "/whatsapp",
+      "permissionCode": "whatsapp.read",
+      "apis": [
+        {
+          "method": "GET",
+          "path": "/admin/api/v1/whatsapp-groups"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/api/v1/whatsapp-groups/{id}"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/api/v1/whatsapp-countries"
+        }
+      ]
+    },
+    {
+      "code": "action.whatsapp.create",
+      "parentCode": "menu.whatsapp",
+      "name": "新增客服配置",
+      "type": "action",
+      "sort": 10,
+      "route": null,
+      "permissionCode": "whatsapp.create",
+      "apis": [
+        {
+          "method": "POST",
+          "path": "/admin/api/v1/whatsapp-groups"
+        }
+      ]
+    },
+    {
+      "code": "action.whatsapp.update",
+      "parentCode": "menu.whatsapp",
+      "name": "修改客服配置",
+      "type": "action",
+      "sort": 10,
+      "route": null,
+      "permissionCode": "whatsapp.update",
+      "apis": [
+        {
+          "method": "PUT",
+          "path": "/admin/api/v1/whatsapp-groups/{id}"
+        },
+        {
+          "method": "PATCH",
+          "path": "/admin/api/v1/whatsapp-groups/{id}/enabled"
+        },
+        {
+          "method": "PATCH",
+          "path": "/admin/api/v1/whatsapp-groups/{id}/accounts/{accountId}/enabled"
+        }
+      ]
+    },
+    {
+      "code": "action.whatsapp.delete",
+      "parentCode": "menu.whatsapp",
+      "name": "删除客服配置",
+      "type": "action",
+      "sort": 10,
+      "route": null,
+      "permissionCode": "whatsapp.delete",
+      "apis": [
+        {
+          "method": "DELETE",
+          "path": "/admin/api/v1/whatsapp-groups/{id}"
+        }
+      ]
+    },
+    {
+      "code": "action.whatsapp.default",
+      "parentCode": "menu.whatsapp",
+      "name": "设置默认客服",
+      "type": "action",
+      "sort": 10,
+      "route": null,
+      "permissionCode": "whatsapp.default",
+      "apis": [
+        {
+          "method": "PUT",
+          "path": "/admin/api/v1/whatsapp-default"
+        }
+      ]
     }
   ],
   "roles": [
@@ -716,7 +807,12 @@
         "role.create",
         "role.update",
         "role.delete",
-        "role.grant"
+        "role.grant",
+        "whatsapp.read",
+        "whatsapp.create",
+        "whatsapp.update",
+        "whatsapp.delete",
+        "whatsapp.default"
       ]
     },
     {
@@ -747,7 +843,12 @@
         "banner.create",
         "banner.update",
         "banner.publish",
-        "banner.delete"
+        "banner.delete",
+        "whatsapp.read",
+        "whatsapp.create",
+        "whatsapp.update",
+        "whatsapp.delete",
+        "whatsapp.default"
       ]
     },
     {
@@ -759,7 +860,8 @@
         "product.read",
         "article.read",
         "site.read",
-        "banner.read"
+        "banner.read",
+        "whatsapp.read"
       ]
     }
   ],
@@ -863,6 +965,14 @@
     {
       "method": "POST",
       "path": "/admin/api/v1/login/totp"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/whatsapp-contact"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/whatsapp-status"
     }
   ],
   "enforcementRules": [

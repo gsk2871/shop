@@ -149,7 +149,7 @@ func TestConfigFieldsDocumented(t *testing.T) {
 			t.Errorf("configuration field has no consumer registration: %s", field)
 		}
 	}
-	if len(fields) != 33 {
+	if len(fields) != 34 {
 		t.Fatalf("configuration field count changed; update matrix and consumer tests: %d", len(fields))
 	}
 }

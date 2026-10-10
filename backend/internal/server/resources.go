@@ -10,7 +10,9 @@ import (
 	catalogData "peptide-site/internal/data/catalog"
 	mediaData "peptide-site/internal/data/media"
 	newsData "peptide-site/internal/data/news"
+	whatsappData "peptide-site/internal/data/whatsapp"
 	"peptide-site/internal/pkg/configreload"
+	"peptide-site/internal/pkg/geoip"
 	"peptide-site/internal/service"
 	adminService "peptide-site/internal/service/admin"
 	brandingService "peptide-site/internal/service/branding"
@@ -18,6 +20,7 @@ import (
 	cms "peptide-site/internal/service/cms"
 	mediaService "peptide-site/internal/service/media"
 	newsService "peptide-site/internal/service/news"
+	whatsappService "peptide-site/internal/service/whatsapp"
 	"sync"
 	"time"
 )
@@ -57,6 +60,11 @@ func NewResources(c conf.Config, d *data.Data, s *service.System, content *cms.H
 	content.SetBranding(brandingService.NewHandler(brandingData.NewRepo(d)))
 	content.SetNews(newsService.NewHandler(newsData.NewRepo(d, c)))
 	content.SetCatalog(catalogService.NewHandler(catalogData.NewRepo(d, c)))
+	geo, err := geoip.Open(c.Contact.GeoIPDatabasePath)
+	if err != nil {
+		return nil, errors.New("country database unavailable")
+	}
+	content.SetWhatsApp(whatsappService.NewHandler(whatsappData.NewRepo(d), c, geo))
 	content.SetAdministration(authHandler)
 	handler := NewHTTPServer(c, s, content)
 	var cancel context.CancelFunc
@@ -87,6 +95,7 @@ func NewResources(c conf.Config, d *data.Data, s *service.System, content *cms.H
 		return nil
 	}
 	return &configreload.Resource{Handler: handler, Identity: identity, Schema: schema, Commit: commitResources, Close: func() {
+		geo.Close()
 		if cancel != nil {
 			cancel()
 			worker.Wait()

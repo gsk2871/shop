@@ -50,6 +50,12 @@ const errors: Record<string, string> = {
   ONBOARDING_REQUIRED: "请先完成改密和验证器绑定",
   REAUTHENTICATION_REQUIRED: "请在安全中心再次验证身份，并填写操作原因",
   NOT_FOUND: "内容不存在",
+  UPDATE_CONFLICT: "配置已被其他人修改，请刷新后重新确认",
+  COUNTRY_ALREADY_ASSIGNED: "此国家已被其他配置占用",
+  DUPLICATE_WHATSAPP_ACCOUNT: "同一配置不能包含重复号码",
+  DEFAULT_GROUP_PROTECTED:
+    "不能停用或删除默认配置及其最后一个可用账号，请先更换默认",
+  DEFAULT_GROUP_UNAVAILABLE: "默认配置必须启用且至少有一个带二维码的启用账号",
   VERSION_CONFLICT: "内容已被修改，请刷新后重试",
   MEDIA_IN_USE: "素材正在使用，不能删除",
   CONFLICT: "操作冲突，请刷新后重试",

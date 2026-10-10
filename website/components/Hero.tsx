@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
+import ContactButton from "./ContactButton";
 import type { PublicBanner as Banner } from "../lib/contracts";
 export default function Hero({ banners }: { banners: Banner[] }) {
   const [index, setIndex] = useState(0);
@@ -13,9 +14,15 @@ export default function Hero({ banners }: { banners: Banner[] }) {
         <h1>{b.title}</h1>
         <p>{b.subtitle}</p>
         <div className="actions">
-          <Link className="button" href={b.link || "/contact"}>
-            {b.ctaText || "Make an enquiry"} <span>↗</span>
-          </Link>
+          {!b.link ||
+          b.link === "/contact" ||
+          /^(mailto:|https:\/\/wa\.me\/)/i.test(b.link) ? (
+            <ContactButton>{b.ctaText || "Make an enquiry"} ↗</ContactButton>
+          ) : (
+            <Link className="button" href={b.link}>
+              {b.ctaText || "Explore"} ↗
+            </Link>
+          )}
           <Link className="text-link" href="/research">
             Explore research →
           </Link>

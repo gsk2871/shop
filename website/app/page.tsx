@@ -1,3 +1,4 @@
+import ContactButton from "../components/ContactButton";
 import Link from "next/link";
 import Hero from "../components/Hero";
 import { settings, content, type Article, banners } from "../lib/content";
@@ -23,7 +24,7 @@ export default async function Home() {
                   image: "",
                   mobileImage: "",
                   ctaText: "Make an enquiry",
-                  link: "/contact",
+                  link: "",
                 },
               ]
         }
@@ -48,9 +49,9 @@ export default async function Home() {
             Discuss your material requirements, request available documentation
             and confirm specifications directly with our team.
           </p>
-          <Link className="text-link" href="/contact">
+          <ContactButton className="text-link">
             Discuss your requirements →
-          </Link>
+          </ContactButton>
         </div>
       </section>
       <section className="documentation">
@@ -158,9 +159,7 @@ export default async function Home() {
           <br />
           your next project.
         </h2>
-        <Link className="button" href="/contact">
-          Start an enquiry ↗
-        </Link>
+        <ContactButton className="button">Start an enquiry ↗</ContactButton>
       </section>
     </>
   );

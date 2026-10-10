@@ -2,7 +2,7 @@
 
 默认值 → YAML → 启动时捕获的环境覆盖。整版校验并准备独立资源后原子发布，失败保留最后可用版本；请求、上传、预览和事务使用同一版本。状态接口仅显示版本、时间、错误与来源，不输出配置值。
 
-全部 33 个有效 YAML 字段如下。DSN、HTTP 地址及目录可热加载；seed 参数只改变下一次显式 seed 的输入，不在请求期间重置账号。
+全部 34 个有效 YAML 字段如下。DSN、HTTP 地址及目录可热加载；seed 参数只改变下一次显式 seed 的输入，不在请求期间重置账号。
 
 | 字段 | 默认值／校验 | 实际消费者 | 验证证据 |
 | --- | --- | --- | --- |
@@ -37,6 +37,7 @@
 | auth.totp.keys | 运行时必填；每项 base64 32 字节 | 当前／历史密文解密；在途旧版本保护 | TestSeedAndTwoPhaseLogin；TestKeyRemovalWaitsForOldLease；恢复启动检查 |
 | seed.super_admin.username | admin；3–100 位允许字符；普通／删除账号冲突拒绝 | 下一次显式 Seed | TestReloadResourceConsumers：未来 seed 创建账号；原账号未被重置 |
 | seed.super_admin.password | 空；首次 seed 12–72 字节；SEED_ADMIN_PASSWORD 覆盖 | 首次 bcrypt 密码 | 同上；重复 seed 保留凭据测试 |
+| contact.geoip_database_path | 空；非空路径需可读有效 MMDB | 新资源打开国家 Reader，旧请求排空后关闭，失败保留当前配置 | TestCountryDatabase；TestCountryDatabaseReload |
 | product.default_currency | USD；必须属于 allowed_currencies | 新未指定币种 SKU、币种接口 | TestReloadResourceConsumers：EUR；产品默认 SKU 验证 |
 | product.allowed_currencies | [USD]；大写三字母、无重复、字典启用 | 新 SKU／价格写入、字典接口 | 同上：缺失字典拒绝整版；增加字典后成功；已有价格不换汇 |
 

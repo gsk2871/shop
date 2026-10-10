@@ -43,7 +43,7 @@ Go 定义位于 backend/internal/service/contract，TypeScript 的唯一公共�
 
 可提交的唯一种子来源为 backend/internal/data/seed/admin_permissions.json。使用 python3 scripts/check_permission_seed.py 校验，测试命令为 python3 -m unittest discover -s scripts -p test_check_permission_seed.py。数据库加载器校验并事务导入，保留已有账号及角色授权。
 
-现有种子包含 43 节点、38 业务权限和三种角色，包含完整 API 映射和自助 scope 清单。校验拒绝孤立父节点、环、重复代码、重复 API、未知角色授权、查看者写权限和额外匿名写入口。目录及角色按 code 幂等初始化，不产生演示业务内容。
+现有种子包含 48 节点、43 业务权限和三种角色，包含完整 API 映射和自助 scope 清单。校验拒绝孤立父节点、环、重复代码、重复 API、未知角色授权、查看者写权限和额外匿名写入口。目录及角色按 code 幂等初始化，不产生演示业务内容。
 
 ## 工程规则与交付边界
 
@@ -156,3 +156,7 @@ HTTP 生成或复用经过格式校验的请求 ID，在响应 X-Request-ID 与�
 后台预览与官网详情使用 @shop/content 0.1.2，类型来自 @shop/contracts 0.1.2。产品公共 SKU 仅包含 id/key/specValueKeys/price；公共规格和值不包含 sort，顺序由后端数组确定。新闻公共 DTO 不包含 status/version/coverMediaId；Banner 公共 DTO 不包含启用开关、排期或素材管理 ID；品牌公共接口不含配置版本及 Logo 管理 ID。
 
 POST /me/reauth 为 full scope 自助接口，接收 password/code；独立于角色业务权限，为敏感用户重置建立五分钟身份验证。配置运行状态需要 config.read，所有业务写入口均经精确方法和路径授权。完整字段行为与验收证据见 CONFIG_RELOAD_MATRIX.md 和 IMPLEMENTATION_ACCEPTANCE.md。
+
+## WhatsApp 地域客服
+
+国家配置、二维码、更新时间防覆盖、默认唯一及官网 GET／H5 契约见 [WhatsApp 国家客服分配](WHATSAPP_ROUTING.md)。

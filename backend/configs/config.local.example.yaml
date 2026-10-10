@@ -34,7 +34,7 @@ auth:
   mfa_ticket_ttl: 5m
   mfa_max_attempts: 5
   login_limit: 5
-  trusted_proxies: [] # specify actual proxy CIDRs for HTTPS termination
+  trusted_proxies: [127.0.0.1/32, "::1/128"] # local Next.js; production must use actual proxy CIDRs
   totp:
     issuer: Research Supply Admin
     active_key_id: "" # required for run, optional for migrate/seed
@@ -55,3 +55,7 @@ seed:
 product:
   default_currency: USD
   allowed_currencies: [USD]
+
+# Local, versioned MMDB country database. Empty routes visitors to the default.
+contact:
+  geoip_database_path: ""

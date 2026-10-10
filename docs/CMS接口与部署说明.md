@@ -8,7 +8,7 @@
 
 自助接口为 `POST /logout`、`POST /password`、`POST /totp/setup`、`POST /totp/activate` 和 `POST /me/reauth`。初始化二维码在本地生成。受限 scope 不能调用业务接口；改密、停用、角色修改、重置 MFA 均撤销相关会话和票据。重置他人密码／MFA 要求 5 分钟内的密码加新验证码再认证和操作原因。并发操作不能移除最后一位有效超管。
 
-完整路由与权限映射以 `backend/internal/data/seed/admin_permissions.json` 为唯一来源。包含 43 个节点、38 个业务权限、super_admin / content_admin / viewer 三种默认角色。未登记的业务路径默认拒绝；整份内容 PUT 也不能绕过独立的发布或价格权限。所有管理写请求要求 `X-Requested-With: peptide-admin`，并校验同源 Origin；仅信任配置中的代理 CIDR。
+完整路由与权限映射以 `backend/internal/data/seed/admin_permissions.json` 为唯一来源。包含 48 个节点、43 个业务权限、super_admin / content_admin / viewer 三种默认角色。未登记的业务路径默认拒绝；整份内容 PUT 也不能绕过独立的发布或价格权限。所有管理写请求要求 `X-Requested-With: peptide-admin`，并校验同源 Origin；仅信任配置中的代理 CIDR。
 
 ## 内容契约
 
@@ -22,7 +22,7 @@
 
 Banner 位仅种子 home_hero、products_header、research_header。投放字段为位置、英文标题／副标题、桌面图片 ID、可选手机图片 ID、英文 CTA、站内或 HTTPS 链接、sort、enabled、startsAt、endsAt 和 version。管理列表分页，公共 `GET /banners?slot=...` 返回全部在线投放，不设置条数上限；开始含边界、结束不含边界，数据库按 UTC 判断，后台按 Asia/Shanghai 编辑。手机图片缺失使用桌面图片。
 
-品牌配置含 brand、logoMediaId、theme、description、email、whatsapp、disclaimer 和 version。theme 的 primary/background/surface/text/muted/border/accent/onPrimary 均为 #RRGGBB，官网主要区域使用统一 CSS 变量。后台支持颜色预览及恢复默认值。无投放时首页使用英文默认主视觉，内页省略投放区。
+品牌配置含 brand、logoMediaId、theme、description、email、whatsapp、disclaimer 和 version。theme 的 primary/background/surface/text/muted/border/accent/onPrimary 均为 #RRGGBB，官网主要区域使用统一 CSS 变量。后台支持颜色预览及恢复默认值。email 与 whatsapp 为历史兼容字段，官网不读取它们作为联系入口，品牌编辑界面不再显示这两项。无投放时首页使用英文默认主视觉，内页省略投放区。
 
 ## 媒体
 
@@ -70,3 +70,7 @@ server -conf /path/config.yaml -recover-totp-user admin -recover-reason '经过�
 命令撤销该用户会话和票据、清除绑定，并记录系统审计及原因；用户重新登录并绑定。无需修改源码、写入明文密钥或关闭 MFA。
 
 配套恢复流程：停止后端写入 → pg_dump 自定义格式备份 → 备份每个媒体根目录及私有配置／全部历史密钥 → 在独立数据库 pg_restore → 将文件恢复到原注册路径（或受控调整注册目录后核对所有历史 root）→ 保留 site_identity → 验证 seed 幂等和启动 schema 检查 → 验证登录、旧文件、Range、已发布内容和加载状态。不要在文件未恢复时启动清理任务。down SQL 仅用于受控开发回退，不能代替配套备份恢复。
+
+## WhatsApp 客服入口
+
+客服配置、美国默认种子、国家数据库、IP 请求头、官网入口代理及 H5 验收见 [WhatsApp 国家客服分配](WHATSAPP_ROUTING.md)。本地官网使用 pnpm dev 的 3000 可信入口；生产必须在官网入口覆盖 X-Client-IP 并限制后端 trusted_proxies。

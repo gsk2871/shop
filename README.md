@@ -91,3 +91,5 @@ pnpm run build
 环境覆盖在启动时固定捕获：`HTTP_ADDRESS`、`DATABASE_DSN`、`UPLOAD_DIR`、`COOKIE_SECURE`、`SEED_ADMIN_PASSWORD`。被覆盖的 YAML 字段不会取代环境值。需要运行时轮换的密钥放在受保护 YAML 文件中。
 
 部署顺序、Nginx、密钥轮换、MFA 恢复及配套备份见 [CMS 接口与部署说明](docs/CMS接口与部署说明.md)。完整字段及实效证据见 [配置矩阵](docs/CONFIG_RELOAD_MATRIX.md)，接口规则见 [实施契约](docs/IMPLEMENTATION_CONTRACT.md)，本次验收见 [验收记录](docs/IMPLEMENTATION_ACCEPTANCE.md)。
+
+WhatsApp 国家配置、二维码、轮询、更新时间防覆盖及官网 H5 部署见 [WhatsApp 客服说明](docs/WHATSAPP_ROUTING.md)。本地官网 pnpm dev 通过 3000 入口覆盖访客 IP 请求头；美国默认配置种子不包含虚构联系方式，需在后台补齐真实账号。

@@ -198,3 +198,52 @@ export const defaultTheme: Theme = {
   accent: "#d39d49",
   onPrimary: "#ffffff",
 };
+
+export interface WhatsAppAccount {
+  id: EntityID;
+  name: string;
+  phoneNumber: string;
+  qrCodeMediaId: EntityID;
+  qrCodeUrl: string;
+  enabled: boolean;
+  allocationCount: number;
+  updatedAt: string;
+}
+export interface WhatsAppAccountInput {
+  id?: EntityID;
+  name: string;
+  phoneNumber: string;
+  qrCodeMediaId: EntityID;
+  enabled: boolean;
+}
+export interface WhatsAppGroup {
+  id: EntityID;
+  name: string;
+  countryCodes: string[];
+  enabled: boolean;
+  updatedAt: string;
+  isDefault: boolean;
+  pendingSetup: boolean;
+  accountCount: number;
+  availableAccountCount: number;
+  accounts?: WhatsAppAccount[];
+}
+export interface WhatsAppGroupInput {
+  name: string;
+  countryCodes: string[];
+  enabled: boolean;
+  expectedUpdatedAt?: string;
+  accounts: WhatsAppAccountInput[];
+}
+export interface WhatsAppGroupPage extends Page<WhatsAppGroup> {
+  defaultGroupId: EntityID | "";
+  defaultGroupName: string;
+  routingUpdatedAt: string;
+  geoipAvailable: boolean;
+}
+export interface WhatsAppContact {
+  accountName: string;
+  phoneNumber: string;
+  qrCodeUrl: string;
+  url: string;
+}

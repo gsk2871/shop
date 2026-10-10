@@ -3,6 +3,8 @@ import type { Metadata } from "next";
 import type { CSSProperties, ReactNode } from "react";
 import Link from "next/link";
 import { settings } from "../lib/content";
+import ContactButton from "../components/ContactButton";
+import Navigation from "../components/Navigation";
 import CookieNotice from "../components/CookieNotice";
 import "./globals.css";
 export const dynamic = "force-dynamic";
@@ -40,15 +42,8 @@ export default async function Layout({ children }: { children: ReactNode }) {
             )}
             <span>{s.brand}</span>
           </Link>
-          <nav aria-label="Main navigation">
-            <Link href="/products">Catalogue</Link>
-            <Link href="/reports">Documentation</Link>
-            <Link href="/research">Research</Link>
-            <Link href="/about">About</Link>
-          </nav>
-          <Link className="nav-contact" href="/contact">
-            Contact us ↗
-          </Link>
+          <Navigation />
+          <ContactButton className="nav-contact">Contact us ↗</ContactButton>
         </header>
         <main>{children}</main>
         <footer>
@@ -66,23 +61,17 @@ export default async function Layout({ children }: { children: ReactNode }) {
           </div>
           <div>
             <span className="eyebrow">GET IN TOUCH</span>
-            {s.email && <a href={`mailto:${s.email}`}>{s.email}</a>}
-            <Link href="/contact">Contact information →</Link>
+            <ContactButton className="footer-contact">
+              Contact on WhatsApp ↗
+            </ContactButton>
+            <a href="https://db-ip.com" target="_blank" rel="noreferrer">
+              IP Geolocation by DB-IP
+            </a>
             <Link href="/privacy">Privacy & cookies</Link>
           </div>
           <p className="footer-note">{s.disclaimer}</p>
         </footer>
-        {s.whatsapp && (
-          <a
-            className="whatsapp"
-            href={`https://wa.me/${s.whatsapp}`}
-            target="_blank"
-            rel="noreferrer"
-            aria-label="Contact us on WhatsApp"
-          >
-            WhatsApp ↗
-          </a>
-        )}
+        <ContactButton className="whatsapp">WhatsApp ↗</ContactButton>
         <CookieNotice />
       </body>
     </html>
