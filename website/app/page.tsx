@@ -17,7 +17,7 @@ export default async function Home() {
         </section>
       )}
       {!!faqs?.items.length && (
-        <section className="section faq-section" aria-labelledby="faq-title">
+        <section id="faq" className="section faq-section" aria-labelledby="faq-title">
           <h2 id="faq-title">Frequently asked questions</h2>
           <div className="faq-list">
             {faqs.items.map((faq) => (

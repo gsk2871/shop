@@ -2,7 +2,8 @@ import "@shop/content/styles.css";
 import type { Metadata } from "next";
 import type { CSSProperties, ReactNode } from "react";
 import Link from "next/link";
-import { settings } from "../lib/content";
+import { settings, content } from "../lib/content";
+import type { PublicFAQ } from "../lib/contracts";
 import ContactButton from "../components/ContactButton";
 import Navigation from "../components/Navigation";
 import CookieNotice from "../components/CookieNotice";
@@ -16,7 +17,10 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 export default async function Layout({ children }: { children: ReactNode }) {
-  const s = await settings();
+  const [s, faqs] = await Promise.all([
+    settings(),
+    content<{ items: PublicFAQ[] }>("faqs"),
+  ]);
   const style = {
     "--primary": s.theme.primary,
     "--surface": s.theme.surface,
@@ -39,7 +43,7 @@ export default async function Layout({ children }: { children: ReactNode }) {
             ) : null}
             <span>{s.brand}</span>
           </Link>
-          <Navigation />
+          <Navigation showFAQ={!!faqs?.items.length} />
           <ContactButton className="nav-contact">Contact us ↗</ContactButton>
         </header>
         <main>{children}</main>
