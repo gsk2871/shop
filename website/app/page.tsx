@@ -23,12 +23,12 @@ export default async function Home() {
       {!!categories?.items.length && (
         <section
           className="section home-section"
-          data-ruler-title="Collection"
+          data-ruler-title="Products"
           aria-labelledby="home-categories"
         >
           <div className="home-section-heading">
             <div>
-              <span className="eyebrow">EXPLORE THE COLLECTION</span>
+              <span className="eyebrow">PRODUCT CATEGORIES</span>
               <h2 id="home-categories">Find your starting point.</h2>
             </div>
             <Link className="home-text-link" href="/products">
