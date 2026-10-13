@@ -46,7 +46,7 @@ import MediaSelect from "./MediaSelect";
 interface SerializedMedia extends SerializedLexicalNode {
   mediaId: string;
   url: string;
-  kind: "image" | "video";
+  kind: "image";
   alt: string;
 }
 function MediaView({
@@ -59,7 +59,7 @@ function MediaView({
   nodeKey: string;
   id: string;
   url: string;
-  kind: "image" | "video";
+  kind: "image";
   alt: string;
 }) {
   const [editor] = useLexicalComposerContext();
@@ -68,20 +68,7 @@ function MediaView({
       contentEditable={false}
       style={{ display: "block", margin: "12px 0" }}
     >
-      {kind === "image" ? (
-        <img
-          alt={alt}
-          src={assetURL(url)}
-          style={{ maxWidth: "100%", maxHeight: 400 }}
-        />
-      ) : (
-        <video
-          controls
-          preload="metadata"
-          src={assetURL(url)}
-          style={{ maxWidth: "100%", maxHeight: 400 }}
-        />
-      )}
+      <img alt={alt} src={assetURL(url)} style={{ maxWidth: "100%", maxHeight: 400 }} />
       <Button
         size="small"
         onClick={() =>
@@ -98,12 +85,12 @@ function MediaView({
 class MediaNode extends DecoratorNode<ReactElement> {
   __mediaId: string;
   __url: string;
-  __kind: "image" | "video";
+  __kind: "image";
   __alt: string;
   constructor(
     id: string,
     url: string,
-    kind: "image" | "video",
+    kind: "image",
     alt = "",
     key?: NodeKey,
   ) {
@@ -142,7 +129,7 @@ class MediaNode extends DecoratorNode<ReactElement> {
   }
   static importDOM(): DOMConversionMap {
     return Object.fromEntries(
-      ["img", "video"].map((tag) => [
+      ["img"].map((tag) => [
         tag,
         (dom: HTMLElement) => {
           const id = dom.getAttribute("data-media-id");
@@ -156,7 +143,7 @@ class MediaNode extends DecoratorNode<ReactElement> {
                   /^\/backend(?=\/uploads)/,
                   "",
                 ),
-                tag === "img" ? "image" : "video",
+                "image",
                 dom.getAttribute("alt") || "",
               ),
             }),
@@ -173,15 +160,11 @@ class MediaNode extends DecoratorNode<ReactElement> {
   }
   exportDOM(): DOMExportOutput {
     const element = document.createElement(
-      this.__kind === "image" ? "img" : "video",
+      "img",
     );
     element.setAttribute("data-media-id", this.__mediaId);
     element.setAttribute("src", this.__url);
-    if (this.__kind === "image") element.setAttribute("alt", this.__alt);
-    else {
-      element.setAttribute("controls", "");
-      element.setAttribute("preload", "metadata");
-    }
+    element.setAttribute("alt", this.__alt);
     return { element };
   }
   decorate() {
@@ -272,7 +255,7 @@ function Toolbar() {
         new MediaNode(
           media.id,
           media.url,
-          media.type === "video" ? "video" : "image",
+          "image",
           media.name,
         ),
         $createParagraphNode(),
@@ -324,7 +307,7 @@ function Toolbar() {
         >
           移除链接
         </Button>
-        <MediaSelect types={["image", "video"]} onSelect={insert} />
+        <MediaSelect  onSelect={insert} />
         <Button onClick={() => editor.dispatchCommand(UNDO_COMMAND, undefined)}>
           撤销
         </Button>
@@ -405,7 +388,7 @@ export default function RichTextEditor({
                 color: "#999",
               }}
             >
-              编辑英文内容，图片和视频从媒体库选择
+              编辑英文内容，图片从媒体库选择
             </div>
           }
           ErrorBoundary={LexicalErrorBoundary}

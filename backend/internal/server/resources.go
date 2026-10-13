@@ -33,7 +33,7 @@ import (
 func NewResources(c conf.Config, d *data.Data, s *service.System, content *cms.Handler) (*configreload.Resource, error) {
 	ctx, cancelPreparation := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancelPreparation()
-	identity, schema, root, commit, err := d.RuntimeMetadata(ctx, c.Data.Storage.UploadDir)
+	identity, schema, _, commit, err := d.RuntimeMetadata(ctx, c.Data.Storage.UploadDir)
 	if err != nil {
 		return nil, err
 	}
@@ -53,7 +53,7 @@ func NewResources(c conf.Config, d *data.Data, s *service.System, content *cms.H
 		return nil, err
 	}
 	mediaRepo := mediaData.NewRepo(d)
-	mediaHandler, err := mediaService.NewHandler(mediaRepo, c, root)
+	mediaHandler, err := mediaService.NewHandler(mediaRepo, c)
 	if err != nil {
 		return nil, err
 	}
@@ -91,7 +91,9 @@ func NewResources(c conf.Config, d *data.Data, s *service.System, content *cms.H
 					return
 				case <-ticker.C:
 					ctx, stop := context.WithTimeout(workerCtx, 10*time.Second)
-					_ = mediaRepo.Cleanup(ctx)
+					if err := mediaRepo.Cleanup(ctx); err != nil {
+						slog.Warn("media cleanup failed", "error", err)
+					}
 					_ = authRepo.Cleanup(ctx)
 					stop()
 				}

@@ -24,8 +24,8 @@ func TestUnlimitedSchedulingThemeAndReferences(t *testing.T) {
 		t.Fatal(e)
 	}
 	r := NewRepo(d)
-	asset := mediaBiz.Media{Name: "Test", URL: "/uploads/" + root + "/sample.png", MediaType: "image", MIME: "image/png", Size: 1, Available: true, StorageRootID: root, StorageKey: "sample.png"}
-	if e = r.Media.Save(ctx, &asset); e != nil {
+	asset := mediaBiz.Media{Status: "ready", StorageProvider: "local", Name: "Test", URL: "/uploads/" + root + "/sample.png", MediaType: "image", MIME: "image/png", Size: 1, Available: true, StorageRootID: root, StorageKey: "sample.png"}
+	if e = d.DB.Table("media").Create(&asset).Error; e != nil {
 		t.Fatal(e)
 	}
 	mediaID := strconv.FormatInt(asset.ID, 10)

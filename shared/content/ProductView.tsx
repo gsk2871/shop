@@ -41,16 +41,8 @@ export function ProductView({
       {product.image && (
         <img
           className="shop-product-image"
-          src={`${mediaPrefix}${product.image}`}
+          src={product.image.startsWith("/uploads/") ? mediaPrefix + product.image : product.image}
           alt={product.name}
-        />
-      )}
-      {product.video && (
-        <video
-          className="shop-product-video"
-          src={`${mediaPrefix}${product.video}`}
-          controls
-          preload="metadata"
         />
       )}
       {product.report && (
@@ -58,7 +50,7 @@ export function ProductView({
           <h2>Test report</h2>
           <img
             className="shop-product-report"
-            src={`${mediaPrefix}${product.report}`}
+            src={product.report.startsWith("/uploads/") ? mediaPrefix + product.report : product.report}
             alt={`${product.name} test report`}
           />
         </section>

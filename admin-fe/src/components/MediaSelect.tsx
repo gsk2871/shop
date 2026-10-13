@@ -1,177 +1,71 @@
 import { useEffect, useState } from "react";
-import { useModel } from "@umijs/max";
-import {
-  Button,
-  Image,
-  Input,
-  Modal,
-  Select,
-  Space,
-  Table,
-  message,
-} from "antd";
+import { Button, Image, Modal, Space, Typography } from "antd";
 import { api, assetURL, type Media } from "../services/cms";
-import { allows } from "../services/auth";
-import type { Page } from "../services/contracts";
-import MediaUpload from "./MediaUpload";
+import MediaLibrary from "./MediaLibrary";
 export default function MediaSelect({
   value,
   onChange,
   onSelect,
-  types = ["image"],
 }: {
   value?: string;
   onChange?: (id: string) => void;
   onSelect?: (media: Media) => void;
-  types?: ("image" | "video")[];
 }) {
-  const { initialState } = useModel("@@initialState");
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<Media>();
+  const [error, setError] = useState("");
   useEffect(() => {
-    let active = true;
+    let live = true;
     setSelected(undefined);
+    setError("");
     if (value)
       api<Media>(`media/${value}`)
-        .then((asset) => {
-          if (active) setSelected(asset);
+        .then((m) => {
+          if (live) setSelected(m);
         })
-        .catch((e: Error) => {
-          if (active) msg.error(e.message);
+        .catch((e) => {
+          if (live) setError(e.message);
         });
     return () => {
-      active = false;
+      live = false;
     };
   }, [value]);
-  const [data, setData] = useState<Page<Media>>({
-    items: [],
-    total: 0,
-    page: 1,
-    pageSize: 20,
-  });
-  const [kind, setKind] = useState<string>(types.length === 1 ? types[0] : "");
-  const [query, setQuery] = useState("");
-  const [msg, context] = message.useMessage();
-  async function load(page = 1, type = kind, q = query) {
-    try {
-      setData(
-        await api(
-          `media?page=${page}&pageSize=20&type=${encodeURIComponent(type)}&q=${encodeURIComponent(q)}`,
-        ),
-      );
-    } catch (e) {
-      msg.error((e as Error).message);
-    }
-  }
-  useEffect(() => {
-    if (open) void load();
-  }, [open]);
   return (
     <>
-      {context}
       <Space>
         <Button onClick={() => setOpen(true)}>
-          {value ? `已选择素材 #${value}` : "从媒体库选择"}
+          {value ? "更换图片" : "从媒体库选择"}
         </Button>
         {value && <Button onClick={() => onChange?.("")}>清除</Button>}
       </Space>
       {selected && (
-        <div style={{ marginTop: 8 }}>
-          {selected.type === "image" ? (
-            <Image
-              width={120}
-              src={assetURL(selected.url)}
-              alt={selected.name}
-            />
-          ) : (
-            <video
-              controls
-              preload="metadata"
-              width={200}
-              src={assetURL(selected.url)}
-            />
-          )}
+        <div style={{ marginTop: 10 }}>
+          <Image width={120} src={assetURL(selected.url)} alt={selected.name} />
           <div>{selected.name}</div>
         </div>
       )}
+      {error && (
+        <Typography.Paragraph type="danger">
+          {error}，请选择其他图片。
+        </Typography.Paragraph>
+      )}
       <Modal
-        title="选择媒体素材"
+        title="选择图片"
         open={open}
         onCancel={() => setOpen(false)}
         footer={null}
-        width={760}
+        width={1100}
         destroyOnHidden
       >
-        <Space>
-          {types.length > 1 && (
-            <Select
-              value={kind}
-              options={[
-                { value: "", label: "图片与视频" },
-                ...types.map((type) => ({
-                  value: type,
-                  label: type === "image" ? "图片" : "视频",
-                })),
-              ]}
-              onChange={(value) => {
-                setKind(value);
-                void load(1, value);
-              }}
-            />
-          )}
-          <Input.Search
-            placeholder="搜索名称"
-            onSearch={(value) => {
-              setQuery(value);
-              void load(1, kind, value);
+        {open && (
+          <MediaLibrary
+            onSelect={(media) => {
+              onChange?.(media.id);
+              onSelect?.(media);
+              setOpen(false);
             }}
           />
-          {allows(initialState?.identity, "media.upload") && (
-            <MediaUpload onUploaded={() => void load()} />
-          )}
-        </Space>
-        <Table<Media>
-          rowKey="id"
-          dataSource={data.items}
-          pagination={{
-            current: data.page,
-            pageSize: data.pageSize,
-            total: data.total,
-            onChange: (page) => void load(page),
-          }}
-          columns={[
-            {
-              title: "预览",
-              render: (_, row) =>
-                row.type === "image" ? (
-                  <Image width={72} src={assetURL(row.url)} />
-                ) : row.type === "video" ? (
-                  <video
-                    controls
-                    preload="metadata"
-                    src={assetURL(row.url)}
-                    width={140}
-                  />
-                ) : null,
-            },
-            { title: "名称", dataIndex: "name" },
-            {
-              title: "选择",
-              render: (_, row) => (
-                <Button
-                  disabled={!types.includes(row.type as "image" | "video")}
-                  onClick={() => {
-                    onChange?.(row.id);
-                    onSelect?.(row);
-                    setOpen(false);
-                  }}
-                >
-                  选择
-                </Button>
-              ),
-            },
-          ]}
-        />
+        )}
       </Modal>
     </>
   );

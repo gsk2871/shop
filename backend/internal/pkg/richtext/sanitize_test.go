@@ -13,11 +13,11 @@ func TestControlledMediaAndSanitizing(t *testing.T) {
 			return Media{"image", "/uploads/root/one.png"}, nil
 		}
 		if id == 2 {
-			return Media{"video", "/uploads/root/two.mp4"}, nil
+			return Media{"image", "https://media.example.com/shop/images/two.png"}, nil
 		}
 		return Media{}, errors.New("unknown")
 	}
-	input := Document{HTML: `<p onclick="evil()">Hello<script>alert(1)</script><strong>World</strong></p><img data-media-id="1"><video data-media-id="2" autoplay></video><a href="javascript:evil()">bad</a>`, MediaIDs: []string{"1", "2"}}
+	input := Document{HTML: `<p onclick="evil()">Hello<script>alert(1)</script><strong>World</strong></p><img data-media-id="1"><img data-media-id="2"><a href="javascript:evil()">bad</a>`, MediaIDs: []string{"1", "2"}}
 	clean, err := Sanitize(context.Background(), input, resolve)
 	if err != nil {
 		t.Fatal(err)
@@ -27,7 +27,7 @@ func TestControlledMediaAndSanitizing(t *testing.T) {
 			t.Fatal("unsafe HTML retained", bad)
 		}
 	}
-	if !strings.Contains(clean.HTML, `controls=""`) || !strings.Contains(clean.HTML, `src="/uploads/root/one.png"`) {
+	if !strings.Contains(clean.HTML, `src="https://media.example.com/shop/images/two.png"`) || !strings.Contains(clean.HTML, `src="/uploads/root/one.png"`) {
 		t.Fatal("media not resolved")
 	}
 	again, err := Sanitize(context.Background(), clean, resolve)

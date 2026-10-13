@@ -56,6 +56,10 @@
         {
           "method": "GET",
           "path": "/admin/api/v1/media/upload-policy"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/api/v1/media/groups"
         }
       ]
     },
@@ -230,7 +234,19 @@
       "apis": [
         {
           "method": "POST",
-          "path": "/admin/api/v1/media"
+          "path": "/admin/api/v1/media/upload/init"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/api/v1/media/upload/refresh"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/api/v1/media/{id}/complete"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/api/v1/media/{id}/cancel"
         }
       ]
     },
@@ -246,6 +262,22 @@
         {
           "method": "PATCH",
           "path": "/admin/api/v1/media/{id}"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/api/v1/media/groups"
+        },
+        {
+          "method": "PATCH",
+          "path": "/admin/api/v1/media/groups/{id}"
+        },
+        {
+          "method": "DELETE",
+          "path": "/admin/api/v1/media/groups/{id}"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/api/v1/media/batch-move"
         }
       ]
     },
@@ -261,6 +293,10 @@
         {
           "method": "DELETE",
           "path": "/admin/api/v1/media/{id}"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/api/v1/media/batch-delete"
         }
       ]
     },

@@ -155,7 +155,7 @@ func TestConfigFieldsDocumented(t *testing.T) {
 			t.Errorf("configuration field has no consumer registration: %s", field)
 		}
 	}
-	if len(fields) != 37 {
+	if len(fields) != 44 {
 		t.Fatalf("configuration field count changed; update matrix and consumer tests: %d", len(fields))
 	}
 }
@@ -209,6 +209,22 @@ func TestTemplateIncludesEveryRuntimeField(t *testing.T) {
 			if !ok {
 				t.Fatalf("template field missing: %s", field)
 			}
+		}
+	}
+}
+
+func TestCOSConfiguration(t *testing.T) {
+	c := defaults()
+	c.Data.Database.DSN = "test"
+	c.Data.Storage.COS = COS{Enabled: true, SecretID: "example-id", SecretKey: "example-key", Bucket: "images-12345", Region: "ap-hongkong", PublicDomain: "https://media.example.com", KeyPrefix: "site-a"}
+	if err := Validate(c); err != nil {
+		t.Fatal(err)
+	}
+	for _, change := range []func(*COS){func(c *COS) { c.SecretKey = "" }, func(c *COS) { c.Bucket = "bucket" }, func(c *COS) { c.Region = "host/path" }, func(c *COS) { c.PublicDomain = "https://user:pass@example.com" }, func(c *COS) { c.PublicDomain = "http://example.com" }, func(c *COS) { c.KeyPrefix = "../other" }} {
+		bad := c
+		change(&bad.Data.Storage.COS)
+		if Validate(bad) == nil {
+			t.Fatal("invalid COS configuration accepted")
 		}
 	}
 }

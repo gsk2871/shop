@@ -41,10 +41,8 @@ type SKU struct {
 }
 type Product struct {
 	ImageMediaID    string            `json:"imageMediaId"`
-	VideoMediaID    string            `json:"videoMediaId"`
 	ReportMediaID   string            `json:"reportMediaId"`
 	Image           string            `json:"image"`
-	Video           string            `json:"video"`
 	Report          string            `json:"report"`
 	ID              string            `json:"id,omitempty"`
 	Name            string            `json:"name"`
@@ -89,7 +87,7 @@ func Validate(p *Product, defaultCurrency string) error {
 	if id, err := ParseID(p.ImageMediaID); err != nil || id == 0 {
 		return errdef.Invalid()
 	}
-	for _, raw := range []string{p.VideoMediaID, p.ReportMediaID} {
+	for _, raw := range []string{p.ReportMediaID} {
 		if _, err := ParseID(raw); err != nil {
 			return err
 		}
@@ -219,5 +217,5 @@ func Public(p Product) map[string]any {
 		}
 		specs = append(specs, PublicSpec{spec.ID, spec.Key, spec.Name, values})
 	}
-	return map[string]any{"image": p.Image, "video": p.Video, "report": p.Report, "id": p.ID, "name": p.Name, "slug": p.Slug, "category": p.Category, "categoryId": p.CategoryID, "aliases": p.Aliases, "cas": p.CAS, "formula": p.Formula, "molecularWeight": p.MolecularWeight, "sequence": p.Sequence, "purity": p.Purity, "storage": p.Storage, "solubility": p.Solubility, "summary": p.Summary, "detail": p.Detail, "specs": specs, "skus": skus, "fromPrice": p.FromPrice, "seoTitle": p.SEOTitle, "seoDescription": p.SEODescription}
+	return map[string]any{"image": p.Image, "report": p.Report, "id": p.ID, "name": p.Name, "slug": p.Slug, "category": p.Category, "categoryId": p.CategoryID, "aliases": p.Aliases, "cas": p.CAS, "formula": p.Formula, "molecularWeight": p.MolecularWeight, "sequence": p.Sequence, "purity": p.Purity, "storage": p.Storage, "solubility": p.Solubility, "summary": p.Summary, "detail": p.Detail, "specs": specs, "skus": skus, "fromPrice": p.FromPrice, "seoTitle": p.SEOTitle, "seoDescription": p.SEODescription}
 }

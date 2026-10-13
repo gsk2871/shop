@@ -1,6 +1,6 @@
 # CMS 接口与首次部署
 
-管理接口前缀为 `/admin/api/v1`，公共接口前缀为 `/api/v1`。后台通过 `/backend` 代理访问；公共媒体路径为 `/uploads/{rootId}/{storageKey}`。所有实体 BIGINT ID 对前端使用十进制字符串；错误固定为 `{code,message,requestId}`，不返回 SQL、密码或连接串。
+管理接口前缀为 `/admin/api/v1`，公共接口前缀为 `/api/v1`。后台通过 `/backend` 代理访问；新图片使用 COS HTTPS 地址，历史本地媒体路径为 `/uploads/{rootId}/{storageKey}`。所有实体 BIGINT ID 对前端使用十进制字符串；错误固定为 `{code,message,requestId}`，不返回 SQL、密码或连接串。
 
 ## 身份与权限
 
@@ -10,7 +10,7 @@
 
 自助接口为 `POST /logout`、`POST /password`、`POST /totp/setup`、`POST /totp/activate` 和 `POST /me/reauth`。初始化二维码在本地生成。受限 scope 不能调用业务接口；改密、停用、角色修改、重置 MFA 均撤销相关会话和票据。重置他人密码／MFA 要求 5 分钟内的密码加新验证码再认证和操作原因。并发操作不能移除最后一位有效超管。
 
-完整路由与权限映射以 `backend/internal/data/seed/admin_permissions.json` 为唯一来源。包含 52 个节点、47 个业务权限、super_admin / content_admin / viewer 三种默认角色。未登记的业务路径默认拒绝；整份内容 PUT 也不能绕过独立的发布或价格权限。所有管理写请求要求 `X-Requested-With: peptide-admin`，并校验同源 Origin；仅信任配置中的代理 CIDR。
+完整路由与权限映射以 `backend/internal/data/seed/admin_permissions.json` 为唯一来源。包含 55 个节点、51 个业务权限、super_admin / content_admin / viewer 三种默认角色。未登记的业务路径默认拒绝；整份内容 PUT 也不能绕过独立的发布或价格权限。所有管理写请求要求 `X-Requested-With: peptide-admin`，并校验同源 Origin；仅信任配置中的代理 CIDR。
 
 ## 内容契约
 
@@ -24,7 +24,7 @@
 
 升级须先执行 000013_product_category migration，再运行 seed 更新菜单／权限登记，最后启动新版本。已有非空分类文字按去空白、忽略大小写归并为分类并回填 category_id；无分类的历史商品保持未分配，可出现在全部查询中，编辑保存须补选分类。种子不生成演示分类；超管自动补齐新权限，已有普通角色需在角色管理中授权。开发回退 down SQL 会将分类当前名称写回商品原 category 字段。
 
-产品 detail 和文章 body 为 `{html,mediaIds}`。HTML 只保留段落、h2–h4、强调、列表、引用、安全链接和受控图片／视频。媒体节点含 `data-media-id`，必须对应可用素材及后端生成的 URL；正文 ID 集合必须一致。脚本、iframe、SVG、事件属性和外部媒体会被删除或拒绝。`POST /products/preview`、`POST /articles/preview` 对当前表单进行同一套净化，返回公共 DTO，不保存、发布或创建持久引用。后台预览和官网共用 `@shop/content`。
+产品 detail 和文章 body 为 `{html,mediaIds}`。HTML 只保留段落、h2–h4、强调、列表、引用、安全链接和受控图片。媒体节点含 `data-media-id`，必须对应可用素材及后端生成的 URL；正文 ID 集合必须一致。脚本、iframe、SVG、事件属性和外部媒体会被删除或拒绝。`POST /products/preview`、`POST /articles/preview` 对当前表单进行同一套净化，返回公共 DTO，不保存、发布或创建持久引用。后台预览和官网共用 `@shop/content`。
 
 文章保存、发布、删除与正文／封面引用在同一事务完成。首次发布后保持 firstPublishedAt；公共列表按置顶、sort、首次发布时间及 ID 稳定排序，草稿、下线、软删除返回 404。公共产品只返回已发布且有启用定价组合的内容；公共 DTO 排除版本、状态、编辑者和 SKU 管理字段。
 
@@ -34,9 +34,11 @@ Banner 位仅种子 home_hero、products_header、research_header。投放字段
 
 ## 媒体
 
-`POST /media` 使用 multipart 的 file 字段，流式写入临时文件；内容嗅探、图片解码或视频容器校验成功后原子改名，最后事务写元数据和审计。默认图片 20 MiB、视频 200 MiB，通过私有 YAML 配置，`GET /media/upload-policy` 返回当前有效上传策略。支持 JPEG、PNG、WebP、GIF、MP4、WebM，不转码；PDF 不允许上传，也不在媒体库列表中展示。历史配置中的 `application/pdf` 和 `max_document_bytes` 仅保留解析兼容，不会开启 PDF 上传；已有 PDF 文件和直链保留。`GET /media/{id}/references` 显示引用；PATCH 重命名；DELETE 检查引用并加锁，使用中返回 MEDIA_IN_USE。逻辑删除立即禁止公共访问，物理删除失败由任务重试。24 小时后的崩溃临时文件或无元数据文件会清理，在途上传路径受保护。
+媒体库仅接收 JPEG、PNG、WebP、GIF 图片，使用腾讯云 COS 直传。后台提供单层目录、全部图片、未分组、重命名、批量移动、引用查看和批量删除；删除目录后图片归入未分组。产品及富文本只可选图片，不提供视频或转码功能。
 
-公共 GET/HEAD 支持视频 Range/206，校验素材可用性，设置 nosniff 与 sandbox CSP。上传目录改变后，历史 root 注册仍保留；文件不会自动搬迁。上传内容公开可访问。数据库、全部 storage_root.path 目录和历史加密密钥必须配套备份。
+上传先申请临时凭证，直传私有临时对象，再由后端读取、解码和校验后复制到正式图片路径。只有完成确认的图片可以选用。默认上限 20 MiB，配置最多 64 MiB；未配置 COS 时禁用新上传。旧 POST /media 本地上传入口已移除。完整接口、权限、状态和云侧配置见 [媒体库说明](MEDIA_LIBRARY.md)。
+
+删除仍受引用保护。逻辑删除立即从业务接口隐藏，COS 物理删除由任务重试；已公开的图片 URL 和 CDN 缓存不保证立即失效。历史本地 GET/HEAD 地址继续可读；显式迁移至 COS 后，原地址重定向到 COS，媒体 ID 和正文引用不变，本地文件保留。
 
 ## 首次部署
 
@@ -46,11 +48,11 @@ Banner 位仅种子 home_hero、products_header、research_header。投放字段
 4. 超管完成首次改密及 MFA，再创建运营和查看者账号。检查 readyz、运行配置版本和上传策略；创建业务内容之前官网显示默认品牌及英文空状态。
 5. 官网 output=standalone，生产运行 `.next/standalone/server.js`，并将 `.next/static`、public（若存在）复制到对应位置；后台 dist 静态发布，未知前端路径回退 index.html。
 
-后端上传默认视频上限为 200 MiB，Nginx 上传入口至少允许 201 MiB multipart 请求，并匹配实际配置的读取／代理超时。例如以下后台代理片段；官网 `/uploads/` 同样代理后端以保持 Range。
+浏览器直接向 COS 上传图片，后端只接收管理 JSON 请求。以下后台代理保留历史 `/uploads/` 地址；首次部署还需配置 COS 的权限、访问域名及跨域规则。
 
 ```nginx
 location /backend/ {
-    client_max_body_size 201m;
+    client_max_body_size 2m;
     proxy_read_timeout 100s;
     proxy_send_timeout 100s;
     proxy_set_header Host $http_host;
@@ -77,7 +79,7 @@ server -conf /path/config.yaml -recover-totp-user admin -recover-reason '经过�
 
 命令撤销该用户会话和票据、清除绑定，并记录系统审计及原因；用户重新登录并绑定。无需修改源码、写入明文密钥或关闭 MFA。
 
-配套恢复流程：停止后端写入 → pg_dump 自定义格式备份 → 备份每个媒体根目录及私有配置／全部历史密钥 → 在独立数据库 pg_restore → 将文件恢复到原注册路径（或受控调整注册目录后核对所有历史 root）→ 保留 site_identity → 验证 seed 幂等和启动 schema 检查 → 验证登录、旧文件、Range、已发布内容和加载状态。不要在文件未恢复时启动清理任务。down SQL 仅用于受控开发回退，不能代替配套备份恢复。
+配套恢复流程：停止后端写入 → pg_dump 自定义格式备份 → 备份 COS 对象、每个历史媒体根目录及私有配置／全部历史密钥 → 在独立数据库 pg_restore → 将文件恢复到原注册路径（或受控调整注册目录后核对所有历史 root）→ 保留 site_identity → 验证 seed 幂等和启动 schema 检查 → 验证登录、旧文件、Range、已发布内容和加载状态。不要在文件未恢复时启动清理任务。down SQL 仅用于受控开发回退，不能代替配套备份恢复。
 
 ## WhatsApp 客服入口
 

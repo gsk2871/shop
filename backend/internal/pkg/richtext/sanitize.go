@@ -33,7 +33,7 @@ func Sanitize(ctx context.Context, input Document, resolve Resolver) (Document, 
 	}
 	root := &html.Node{Type: html.ElementNode, Data: "div"}
 	refs := map[string]bool{}
-	allowed := map[string]bool{"p": true, "h2": true, "h3": true, "h4": true, "strong": true, "em": true, "u": true, "ul": true, "ol": true, "li": true, "blockquote": true, "br": true, "a": true, "img": true, "video": true}
+	allowed := map[string]bool{"p": true, "h2": true, "h3": true, "h4": true, "strong": true, "em": true, "u": true, "ul": true, "ol": true, "li": true, "blockquote": true, "br": true, "a": true, "img": true}
 	blocked := map[string]bool{"script": true, "style": true, "iframe": true, "object": true, "embed": true, "svg": true, "math": true, "template": true}
 	var clean func(*html.Node, *html.Node) error
 	clean = func(source, destination *html.Node) error {
@@ -56,6 +56,9 @@ func Sanitize(ctx context.Context, input Document, resolve Resolver) (Document, 
 		}
 		if blocked[tag] {
 			return nil
+		}
+		if tag == "video" {
+			return errdef.Invalid()
 		}
 		if !allowed[tag] {
 			for child := source.FirstChild; child != nil; child = child.NextSibling {
@@ -82,7 +85,7 @@ func Sanitize(ctx context.Context, input Document, resolve Resolver) (Document, 
 				}
 			}
 		}
-		if tag == "img" || tag == "video" {
+		if tag == "img" {
 			raw := attributes["data-media-id"]
 			id, err := strconv.ParseInt(raw, 10, 64)
 			if err != nil || id <= 0 || strconv.FormatInt(id, 10) != raw {
@@ -93,10 +96,7 @@ func Sanitize(ctx context.Context, input Document, resolve Resolver) (Document, 
 				return err
 			}
 			required := "image"
-			if tag == "video" {
-				required = "video"
-			}
-			if media.Type != required || !strings.HasPrefix(media.URL, "/uploads/") {
+			if media.Type != required || !safeMediaURL(media.URL) {
 				return errdef.Invalid()
 			}
 			if src := attributes["src"]; src != "" && src != media.URL {
@@ -104,18 +104,14 @@ func Sanitize(ctx context.Context, input Document, resolve Resolver) (Document, 
 			}
 			refs[raw] = true
 			target.Attr = append(target.Attr, html.Attribute{Key: "data-media-id", Val: raw}, html.Attribute{Key: "src", Val: media.URL})
-			if tag == "img" {
-				alt := attributes["alt"]
-				if len(alt) > 500 {
-					return errdef.Invalid()
-				}
-				target.Attr = append(target.Attr, html.Attribute{Key: "alt", Val: alt}, html.Attribute{Key: "loading", Val: "lazy"})
-			} else {
-				target.Attr = append(target.Attr, html.Attribute{Key: "controls", Val: ""}, html.Attribute{Key: "preload", Val: "metadata"})
+			alt := attributes["alt"]
+			if len(alt) > 500 {
+				return errdef.Invalid()
 			}
+			target.Attr = append(target.Attr, html.Attribute{Key: "alt", Val: alt}, html.Attribute{Key: "loading", Val: "lazy"})
 		}
 		destination.AppendChild(target)
-		if tag != "img" && tag != "video" && tag != "br" {
+		if tag != "img" && tag != "br" {
 			for child := source.FirstChild; child != nil; child = child.NextSibling {
 				if err := clean(child, target); err != nil {
 					return err
@@ -173,4 +169,13 @@ func IDs(d Document) []int64 {
 		result = append(result, value)
 	}
 	return result
+}
+
+// The resolver supplies a persisted, verified media URL; submitted src must still match it.
+func safeMediaURL(raw string) bool {
+	if strings.HasPrefix(raw, "/uploads/") {
+		return true
+	}
+	u, err := url.Parse(raw)
+	return err == nil && u.Scheme == "https" && u.Host != "" && u.User == nil && u.RawQuery == "" && u.Fragment == ""
 }

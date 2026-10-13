@@ -37,12 +37,20 @@ data:
     slow_sql_ms: 200 # 慢查询阈值，单位为毫秒，范围为 1–30000；慢查询记为 warn。
     # SQL 错误记为 error，不受 log_sql 开关影响，但仍遵守全局日志等级。
   storage:
-    upload_dir: ./storage/uploads # 本地上传目录；历史目录注册保留，切换目录不会搬迁旧文件。
+    cos:
+      enabled: false # 配置完成后启用；未启用时禁止新上传，历史图片仍可读取。
+      secret_id: "" # 专用子账号密钥 ID；需 STS 授权及指定桶读写清理权限。
+      secret_key: "" # 专用子账号密钥；只保存在私有 YAML，禁止提交或发送前端。
+      bucket: "" # 带 APPID 的桶名，如 shop-media-1250000000。
+      region: "" # 存储地域，如 ap-hongkong。
+      public_domain: "" # 图片 HTTPS 访问域名，不含路径、查询参数。
+      key_prefix: shop # 站点独立前缀；正式 images/ 公开读，temporary/ 私有。
+    upload_dir: ./storage/uploads # 历史本地图片目录；目录注册保留，切换目录不会搬迁旧文件。
     max_image_bytes: 20971520 # 单张图片上限，单位为字节，当前示例为 20 MiB。
-    max_video_bytes: 209715200 # 单个视频上限，单位为字节，当前示例为 200 MiB。
-    max_document_bytes: 20971520 # 兼容历史配置的保留字段，不再用于上传；媒体库仅支持图片和视频。
+    max_video_bytes: 209715200 # 仅解析历史配置；不允许上传视频。
+    max_document_bytes: 20971520 # 兼容历史配置的保留字段，不再用于上传；媒体库仅支持图片。
     # 接受的素材类型，必须来自以下受支持类型且不能重复；上传时校验实际文件内容。
-    allowed_types: [image/jpeg, image/png, image/webp, image/gif, video/mp4, video/webm]
+    allowed_types: [image/jpeg, image/png, image/webp, image/gif]
     cleanup_interval: 1m # 素材和认证过期记录清理间隔，范围为 100ms–1h。
 
 auth:

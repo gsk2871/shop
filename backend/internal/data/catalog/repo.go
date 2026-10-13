@@ -101,15 +101,13 @@ func (r *Repo) get(tx *gorm.DB, id int64) (biz.Product, error) {
 		MediaID int64
 		URL     string
 	}
-	if err := tx.Table("media_reference ref").Select("ref.field,ref.media_id,m.url").Joins("JOIN media m ON m.id=ref.media_id AND m.available AND m.deleted_at IS NULL").Where("ref.owner_type='product' AND ref.owner_id=? AND ref.field IN ?", p.ID, []string{"image", "video", "report"}).Scan(&assets).Error; err != nil {
+	if err := tx.Table("media_reference ref").Select("ref.field,ref.media_id,m.url").Joins("JOIN media m ON m.id=ref.media_id AND m.available AND m.deleted_at IS NULL").Where("ref.owner_type='product' AND ref.owner_id=? AND ref.field IN ?", p.ID, []string{"image", "report"}).Scan(&assets).Error; err != nil {
 		return p, err
 	}
 	for _, asset := range assets {
 		switch asset.Field {
 		case "image":
 			p.ImageMediaID, p.Image = strconv.FormatInt(asset.MediaID, 10), asset.URL
-		case "video":
-			p.VideoMediaID, p.Video = strconv.FormatInt(asset.MediaID, 10), asset.URL
 		case "report":
 			p.ReportMediaID, p.Report = strconv.FormatInt(asset.MediaID, 10), asset.URL
 		}
@@ -266,12 +264,12 @@ func (r *Repo) Prepare(ctx context.Context, p *biz.Product) error {
 		return err
 	}
 	p.Category = c.Name
-	p.Image, p.Video, p.Report = "", "", ""
+	p.Image, p.Report = "", ""
 	for _, field := range []struct {
 		id, kind string
 		url      *string
 	}{
-		{p.ImageMediaID, "image", &p.Image}, {p.VideoMediaID, "video", &p.Video}, {p.ReportMediaID, "image", &p.Report},
+		{p.ImageMediaID, "image", &p.Image}, {p.ReportMediaID, "image", &p.Report},
 	} {
 		if field.id == "" {
 			continue
@@ -533,7 +531,7 @@ func (r *Repo) Save(ctx context.Context, id int64, p biz.Product) (biz.Product, 
 			}
 		}
 		references := map[string][]int64{"detail": richtext.IDs(p.Detail)}
-		for field, raw := range map[string]string{"image": p.ImageMediaID, "video": p.VideoMediaID, "report": p.ReportMediaID} {
+		for field, raw := range map[string]string{"image": p.ImageMediaID, "report": p.ReportMediaID} {
 			if raw != "" {
 				mediaID, _ := biz.ParseID(raw)
 				references[field] = []int64{mediaID}

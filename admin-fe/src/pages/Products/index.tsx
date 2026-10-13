@@ -608,13 +608,10 @@ export default function Products() {
               label="产品图片"
               rules={[{ required: true, message: "请选择产品图片" }]}
             >
-              <MediaSelect types={["image"]} />
-            </Form.Item>
-            <Form.Item name="videoMediaId" label="产品视频（选填）">
-              <MediaSelect types={["video"]} />
+              <MediaSelect />
             </Form.Item>
             <Form.Item name="reportMediaId" label="检测报告图片（选填）">
-              <MediaSelect types={["image"]} />
+              <MediaSelect />
             </Form.Item>
           </div>
           <ContentHeading

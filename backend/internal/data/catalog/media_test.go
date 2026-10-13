@@ -37,13 +37,13 @@ func TestProductMediaAndAutomaticPath(t *testing.T) {
 	}
 	fixtureMedia(t, r, "document")
 	assets, total, err := r.Media.List(ctx, 1, 20, "", "")
-	if err != nil || total != 3 || len(assets) != 3 {
+	if err != nil || total != 2 || len(assets) != 2 {
 		t.Fatal("media list includes unsupported/unavailable assets", total, err)
 	}
 	if _, _, err := r.Media.List(ctx, 1, 20, "document", ""); err == nil {
 		t.Fatal("document filter accepted")
 	}
-	input := biz.Product{Name: "Test product", CategoryID: category.ID, Status: "draft", ImageMediaID: image, VideoMediaID: video, ReportMediaID: report}
+	input := biz.Product{Name: "Test product", CategoryID: category.ID, Status: "draft", ImageMediaID: image, ReportMediaID: report}
 	for _, test := range []struct {
 		name   string
 		change func(*biz.Product)
@@ -52,7 +52,6 @@ func TestProductMediaAndAutomaticPath(t *testing.T) {
 		{"deleted", func(p *biz.Product) { p.ImageMediaID = deleted }},
 		{"missing image", func(p *biz.Product) { p.ImageMediaID = "" }},
 		{"video as image", func(p *biz.Product) { p.ImageMediaID = video }},
-		{"image as video", func(p *biz.Product) { p.VideoMediaID = image }},
 		{"video as report", func(p *biz.Product) { p.ReportMediaID = video }},
 		{"missing asset", func(p *biz.Product) { p.ImageMediaID = "999999" }},
 	} {
@@ -68,14 +67,14 @@ func TestProductMediaAndAutomaticPath(t *testing.T) {
 		})
 	}
 	preview, err := r.Preview(ctx, input)
-	if err != nil || preview["image"] != "/uploads/test/image" || preview["video"] != "/uploads/test/video" {
+	if err != nil || preview["image"] != "/uploads/test/image" {
 		t.Fatal(preview, err)
 	}
 	p, err := r.Save(ctx, 0, input)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if p.Slug == "" || p.ImageMediaID != image || p.VideoMediaID != video || p.ReportMediaID != report || p.Report == "" {
+	if p.Slug == "" || p.ImageMediaID != image || p.ReportMediaID != report || p.Report == "" {
 		t.Fatal(p)
 	}
 	duplicate, err := r.Save(ctx, 0, input)
@@ -86,7 +85,7 @@ func TestProductMediaAndAutomaticPath(t *testing.T) {
 	if err := r.Delete(ctx, duplicateID, duplicate.Version); err != nil {
 		t.Fatal(err)
 	}
-	for _, raw := range []string{image, video, report} {
+	for _, raw := range []string{image, report} {
 		id, _ := strconv.ParseInt(raw, 10, 64)
 		if err := r.Media.Delete(ctx, id); err == nil {
 			t.Fatal("referenced media deleted")
@@ -96,13 +95,13 @@ func TestProductMediaAndAutomaticPath(t *testing.T) {
 	originalSlug := p.Slug
 	p.Slug = ""
 	p.Name = "Renamed"
-	p.VideoMediaID, p.ReportMediaID = "", ""
+	p.ReportMediaID = ""
 	id, _ := strconv.ParseInt(p.ID, 10, 64)
 	saved, err := r.Save(ctx, id, p)
-	if err != nil || saved.Slug != originalSlug || saved.Video != "" || saved.ReportMediaID != "" {
+	if err != nil || saved.Slug != originalSlug || saved.ReportMediaID != "" {
 		t.Fatal(saved, err)
 	}
-	for _, raw := range []string{video, report} {
+	for _, raw := range []string{report} {
 		assetID, _ := strconv.ParseInt(raw, 10, 64)
 		refs, err := r.Media.References(ctx, assetID)
 		if err != nil || len(refs) != 0 {

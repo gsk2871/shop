@@ -2,7 +2,11 @@ export type { Banner, Settings } from "./contracts";
 export type { Article } from "./contracts";
 export interface Media {
   id: string;
-  type: "image" | "video";
+  type: "image";
+  groupId: string | null;
+  width: number | null;
+  height: number | null;
+  status: "ready";
   available: boolean;
   name: string;
   url: string;
@@ -23,7 +27,7 @@ export async function api<T>(
       ...(body ? { "Content-Type": "application/json" } : {}),
     },
     body: body ? JSON.stringify(body) : undefined,
-    signal: AbortSignal.timeout(15000),
+    signal: AbortSignal.timeout(35000),
   });
   const data = await response.json();
   if (!response.ok)
@@ -58,6 +62,11 @@ const errors: Record<string, string> = {
   DEFAULT_GROUP_UNAVAILABLE: "默认配置必须启用且至少有一个带二维码的启用账号",
   VERSION_CONFLICT: "内容已被修改，请刷新后重试",
   CATEGORY_IN_USE: "分类正在被商品使用，请先调整商品分类再删除",
+  COS_NOT_CONFIGURED: "COS 尚未配置，请联系管理员配置图片存储",
+  MEDIA_FILE_INVALID: "图片内容、类型或大小不符合要求，请重新选择",
+  MEDIA_GROUP_EXISTS: "目录名称已存在",
+  MEDIA_UPLOAD_EXPIRED: "上传已过期，请重新上传",
+  MEDIA_UPLOAD_STATE: "上传状态已变化，请刷新媒体库",
   MEDIA_IN_USE: "素材正在使用，不能删除",
   CONFLICT: "操作冲突，请刷新后重试",
   LAST_SUPER_ADMIN: "不能停用、删除或降级最后一位有效超级管理员",

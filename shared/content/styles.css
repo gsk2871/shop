@@ -15,8 +15,7 @@
 .shop-richtext p {
   margin: 0.8em 0;
 }
-.shop-richtext img,
-.shop-richtext video {
+.shop-richtext img {
   display: block;
   max-width: 100%;
   height: auto;
@@ -115,7 +114,6 @@
 }
 
 .shop-product-image,
-.shop-product-video,
 .shop-product-report {
   display: block;
   max-width: 100%;

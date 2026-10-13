@@ -18,7 +18,7 @@ Go 定义位于 backend/internal/service/contract，TypeScript 的唯一公共�
 
 金额输入 salePrice 是十进制字符串，后端拒绝负值、超精度、指数表示与溢出。返回金额按币种精度保留小数；客户端显示 displayPrice。ID 字符串、分页与新错误响应在对应模块三端一起接入，不对现有处理器提前强行换协议。
 
-媒体节点示例为 img 或 video 上的 data-media-id 属性。客户端不可提交任意外部 src 来代替选库；服务端根据 ID 生成可用地址。引用 ID 列表必须与正文节点完全一致，HTML 净化不能保留未知引用。预览执行同一净化与金额处理流程，但不保存内容或持久引用。
+媒体节点示例为 img 上的 data-media-id 属性。客户端不可提交任意外部 src 来代替选库；服务端根据 ID 生成可用地址。引用 ID 列表必须与正文节点完全一致，HTML 净化不能保留未知引用。预览执行同一净化与金额处理流程，但不保存内容或持久引用。
 
 ## 当前与目标接口
 
@@ -30,7 +30,7 @@ Go 定义位于 backend/internal/service/contract，TypeScript 的唯一公共�
 | 用户角色 | 无 | users、roles、permissions、roles/{id}/permissions；完整目录树种子 | 用户、角色、树形授权页 | 公共 DTO 不携带管理字段 |
 | 审计 | GET audit | 分页，audit.read | 筛选及中文操作名称 | 公共错误 requestId 可用于查询，审计不公开 |
 | 配置状态 | 无 | GET config/status，config.read | 版本与加载状态 | 公共内容请求及媒体请求适配资源切换 |
-| 媒体 | GET/POST media，GET/HEAD /uploads/{name} | 详情、重命名、删除、references、upload-policy，按媒体动作授权 | 分页、预览、选库、限制刷新 | 媒体播放和 Range 请求 |
+| 媒体 | GET/POST media，GET/HEAD /uploads/{name} | 目录、重命名、批量操作、references、upload-policy、upload/init、upload/refresh、complete、cancel，按媒体动作授权 | 目录、分页、图片预览、选库、直传队列 | COS 图片显示与历史地址兼容 |
 | 产品 | GET/POST/PUT products、DELETE products/{id} | PUT products/{id}、状态 PATCH、SKU 改价、POST products/preview；发布和改价另验权限 | 规格、SKU、富文本、预览 | 分页搜索、规格选择、价格与详情 |
 | 新闻 | GET/POST/PUT articles、DELETE articles/{id} | PUT articles/{id}、状态 PATCH、POST articles/preview；发布另验权限 | 共用编辑器及媒体选择 | /news 列表和详情富文本 |
 | 主题 | GET/PUT settings | version、主题和 logo_media_id，site.read/update | 主题及 Logo 配置 | 所有业务色消费主题变量 |
@@ -154,11 +154,11 @@ HTTP 生成或复用经过格式校验的请求 ID，在响应 X-Request-ID 与�
 
 ## 富文本编辑及共享渲染决策
 
-采用 Lexical React 编辑器，后台封装工具栏、链接以及媒体库按钮；图片与视频使用自定义媒体节点，导出受控 HTML。所有 Lexical 包使用相同精确版本。当前验证候选为 0.52.0，React 19.2.5/19.3.0、TypeScript 6.0.3；最终锁文件在步骤 07 接入时保存。
+采用 Lexical React 编辑器，后台封装工具栏、链接以及媒体库按钮；图片使用自定义媒体节点，导出受控 HTML。所有 Lexical 包使用相同精确版本。当前验证候选为 0.52.0，React 19.2.5/19.3.0、TypeScript 6.0.3；最终锁文件在步骤 07 接入时保存。
 
 依据 [Lexical React 官方指南](https://lexical.dev/docs/getting-started/react) 和 [React 包说明](https://lexical.dev/docs/packages/lexical-react)，编辑器支持自定义 React UI 与节点。编辑器仅在后台客户端加载。官网和后台预览复用 shared/content 下的 React 渲染组件和样式，不引入编辑器运行时到官网正文展示；官网 SKU 交互是独立 Client Component。Umi 与 Next.js 分别编译共享源码，不在运行时相互调用。
 
-正文协议为 {html,mediaIds}。允许 p、h2/h3/h4、strong、em、u、ul/ol/li、blockquote、br、a、img、video；不允许 script、style、iframe、事件属性和任意 CSS。链接只接受受验证的站内路径或 https 地址；外链设置安全 rel。媒体节点仅接受 data-media-id，服务端解析媒体库后生成 src；video 使用 controls、preload=metadata，不允许任意 poster 或外部 source。复制粘贴的外部 img/video 不成为有效媒体。媒体类型必须与标签匹配，重复 ID 归一化，声明列表与实际节点集合不一致返回 INVALID_ARGUMENT。最终净化白名单和节点导入导出在步骤 07 测试固定。
+正文协议为 {html,mediaIds}。允许 p、h2/h3/h4、strong、em、u、ul/ol/li、blockquote、br、a、img；不允许 script、style、iframe、事件属性和任意 CSS。链接只接受受验证的站内路径或 https 地址；外链设置安全 rel。媒体节点仅接受 data-media-id，服务端解析媒体库后生成 src；不接受 video、poster 或 source。复制粘贴的外部 img/video 不成为有效媒体。媒体类型必须与标签匹配，重复 ID 归一化，声明列表与实际节点集合不一致返回 INVALID_ARGUMENT。最终净化白名单和节点导入导出在步骤 07 测试固定。
 
 ## 完整实现登记
 
@@ -197,10 +197,11 @@ PostgreSQL 建连、连接生命周期与空闲回收、SQL 执行和等锁超�
 ### 后台媒体与详情地址
 
 - 工作台不作为独立页面；登录与根路径进入当前账号有权限的首个菜单，历史 /overview 地址跳转到根路径。客户配置沿用 /whatsapp 和 whatsapp.* 权限，国家选择支持中文名称、英文名称和国家代码的大小写不敏感子串匹配。
-- 媒体库只列出和上传图片、视频。实际上传内容及有效上传策略排除 PDF；旧 PDF 文件不删除，已有直链仍可访问。历史 YAML 中的 max_document_bytes 和 application/pdf 可继续解析，但不会开启文档上传。
-- 产品写入字段 imageMediaId 必填且只能引用图片；videoMediaId 选填且只能引用视频；reportMediaId 选填且只能引用图片。省略或空串表示清除选填媒体。保存和预览校验媒体存在、可用及类型；产品发布还要求已配置主图。
-- 三个字段复用 media_reference，owner_type 为 product，field 分别为 image/video/report；详情富文本仍使用 detail。引用与产品在同一事务中保存，替换或清除媒体释放旧引用，删除产品释放全部引用；被引用素材不能删除。本次无需数据库结构迁移。
-- 产品管理详情返回三个媒体 ID 及服务端解析的 image/video/report URL；公开详情与预览仅返回 URL，列表返回 image URL。后台与官网的共用详情组件展示产品图片、视频和检测报告图片。已有无图产品仍可读取，编辑保存及再次发布前需要补齐图片。
+- 媒体库只列出和上传图片，支持 JPEG、PNG、WebP、GIF。新图片直传 COS；未配置 COS 时禁用上传。历史非图片记录及旧文件保留，不出现在媒体库，不提供视频管理或转码。
+- 产品写入字段 imageMediaId 必填、reportMediaId 选填，两者只能引用可用图片。省略或空串表示清除选填媒体。保存和预览校验媒体存在、可用及类型。
+- 两个字段复用 media_reference，owner_type 为 product，field 分别为 image/report；详情富文本使用 detail。引用与产品在同一事务中保存，替换或清除媒体释放旧引用，删除产品释放全部引用；被引用素材不能删除。
+- 产品管理详情返回两个媒体 ID 及服务端解析的 image/report URL；公开详情与预览仅返回 URL，列表返回 image URL。后台与官网共用图片详情组件。已有无图产品仍可读取，编辑保存及再次发布前需要补齐图片。
+- COS 上传协议、目录操作、状态与部署配置见 [媒体库说明](MEDIA_LIBRARY.md)，对应 migration 000015_media_cos。
 - 产品、新闻的官网地址由服务端在新建且未传 slug 时按名称加随机后缀生成；同名内容使用不同地址。更新时保留数据库中的既有 slug，不随改名或表单省略而变化。后台不提供官网路径输入。
 - 新闻保存不使用自定义 SEO 字段；官网可按标题和摘要生成页面元信息。旧记录中的字段保留兼容，后续保存置空。
 

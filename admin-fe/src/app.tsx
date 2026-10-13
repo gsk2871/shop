@@ -1,4 +1,5 @@
 import "./global.css";
+import MediaUploadHost from "./components/MediaUploadHost";
 import {
   AppstoreOutlined,
   FileTextOutlined,
@@ -55,6 +56,7 @@ function menus(nodes: PermissionNode[]): unknown[] {
   }));
 }
 export const layout = ({ initialState }: { initialState?: InitialState }) => ({
+  childrenRender: (children: ReactNode) => <>{children}<MediaUploadHost userId={initialState?.identity?.user.id}/></>,
   title: "Shop Admin",
   logo: <span className="admin-brand-mark">S</span>,
   navTheme: "light" as const,

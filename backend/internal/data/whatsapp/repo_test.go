@@ -46,8 +46,8 @@ func TestRoutingConcurrencyAndConfiguration(t *testing.T) {
 	if e = commit(); e != nil {
 		t.Fatal(e)
 	}
-	asset := mediaBiz.Media{Name: "QR", URL: "/uploads/" + root + "/0123456789abcdef0123456789abcdef.png", MIME: "image/png", MediaType: "image", Available: true, StorageRootID: root, StorageKey: "0123456789abcdef0123456789abcdef.png", Size: 1}
-	if e = mr.Save(ctx, &asset); e != nil {
+	asset := mediaBiz.Media{Status: "ready", StorageProvider: "local", Name: "QR", URL: "/uploads/" + root + "/0123456789abcdef0123456789abcdef.png", MIME: "image/png", MediaType: "image", Available: true, StorageRootID: root, StorageKey: "0123456789abcdef0123456789abcdef.png", Size: 1}
+	if e = d.DB.Table("media").Create(&asset).Error; e != nil {
 		t.Fatal(e)
 	}
 	makeAccount := func(n int) biz.AccountInput {

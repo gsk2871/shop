@@ -3,26 +3,20 @@ package server
 import (
 	"bytes"
 	"context"
-	"encoding/binary"
 	"encoding/json"
 	"io"
-	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 	"time"
 
 	"gopkg.in/yaml.v3"
 	"gorm.io/gorm"
-	mediaBiz "peptide-site/internal/biz/media"
 	"peptide-site/internal/conf"
 	"peptide-site/internal/data"
-	mediaData "peptide-site/internal/data/media"
 	"peptide-site/internal/pkg/configreload"
-	mediaService "peptide-site/internal/service/media"
 	"peptide-site/internal/testutil"
 )
 
@@ -45,7 +39,7 @@ func (b *pausedBody) Read(p []byte) (int, error) {
 	}
 	return b.rest.Read(p)
 }
-func TestReloadDrainsUploadAndTransaction(t *testing.T) {
+func TestReloadDrainsRequestAndTransaction(t *testing.T) {
 	_, c := testutil.Postgres(t)
 	ctx := context.Background()
 	path := filepath.Join(t.TempDir(), "runtime.yaml")
@@ -76,11 +70,6 @@ func TestReloadDrainsUploadAndTransaction(t *testing.T) {
 			closeDB()
 			return nil, err
 		}
-		media, err := mediaService.NewHandler(mediaData.NewRepo(db), c, root)
-		if err != nil {
-			closeDB()
-			return nil, err
-		}
 		first := generations == 0
 		generations++
 		if first {
@@ -89,7 +78,12 @@ func TestReloadDrainsUploadAndTransaction(t *testing.T) {
 		}
 		handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if r.URL.Path != "/transaction" {
-				media.ServeHTTP(w, r)
+				body, err := io.ReadAll(r.Body)
+				if err != nil || int64(len(body)) > c.Data.Storage.MaxImageBytes {
+					w.WriteHeader(400)
+					return
+				}
+				_ = json.NewEncoder(w).Encode(map[string]any{"root": root, "limit": c.Data.Storage.MaxImageBytes})
 				return
 			}
 			err := db.DB.WithContext(r.Context()).Transaction(func(tx *gorm.DB) error {
@@ -118,21 +112,7 @@ func TestReloadDrainsUploadAndTransaction(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer m.Close()
-	var video bytes.Buffer
-	for _, box := range []struct {
-		kind    string
-		payload []byte
-	}{{"ftyp", []byte("isom\x00\x00\x00\x00isommp42")}, {"moov", nil}, {"mdat", make([]byte, 2048)}} {
-		_ = binary.Write(&video, binary.BigEndian, uint32(8+len(box.payload)))
-		video.WriteString(box.kind)
-		video.Write(box.payload)
-	}
-	var body bytes.Buffer
-	form := multipart.NewWriter(&body)
-	part, _ := form.CreateFormFile("file", "video.mp4")
-	_, _ = part.Write(video.Bytes())
-	_ = form.Close()
-	payload := body.Bytes()
+	payload := bytes.Repeat([]byte("x"), 2048)
 	split := len(payload) - 1000
 	paused := &pausedBody{first: bytes.NewReader(payload[:split]), rest: bytes.NewReader(payload[split:]), waiting: make(chan struct{}), resume: make(chan struct{})}
 	// Always release blocked goroutines before Manager.Close, even on failure.
@@ -150,8 +130,7 @@ func TestReloadDrainsUploadAndTransaction(t *testing.T) {
 	}()
 	uploadDone, txDone := make(chan struct{}), make(chan struct{})
 	upload := httptest.NewRecorder()
-	req := httptest.NewRequest("POST", "/admin/api/v1/media", paused)
-	req.Header.Set("Content-Type", form.FormDataContentType())
+	req := httptest.NewRequest("POST", "/generation", paused)
 	go func() { defer close(uploadDone); m.ServeHTTP(upload, req) }()
 	transaction := httptest.NewRecorder()
 	go func() {
@@ -167,7 +146,7 @@ func TestReloadDrainsUploadAndTransaction(t *testing.T) {
 	}
 	next := c
 	next.Data.Storage.UploadDir = t.TempDir()
-	next.Data.Storage.MaxVideoBytes = 10
+	next.Data.Storage.MaxImageBytes = 10
 	next.Data.Database.DSN += " application_name=after-drain"
 	write(next)
 	if err = m.Reload(ctx, func(conf.Config) (func(), func(), error) { return nil, nil, nil }); err != nil {
@@ -182,10 +161,9 @@ func TestReloadDrainsUploadAndTransaction(t *testing.T) {
 	if err = pool.PingContext(ctx); err != nil {
 		t.Fatal("old pool unavailable", err)
 	}
-	// New requests use the new video limit while the old upload keeps its policy.
+	// New requests use the new limit while an in-flight request pins the old generation.
 	fresh := httptest.NewRecorder()
-	freshReq := httptest.NewRequest("POST", "/admin/api/v1/media", bytes.NewReader(payload))
-	freshReq.Header.Set("Content-Type", form.FormDataContentType())
+	freshReq := httptest.NewRequest("POST", "/generation", bytes.NewReader(payload))
 	m.ServeHTTP(fresh, freshReq)
 	if fresh.Code != 400 {
 		t.Fatal("new upload policy stale", fresh.Code)
@@ -199,31 +177,18 @@ func TestReloadDrainsUploadAndTransaction(t *testing.T) {
 			t.Fatal("generation failed to drain")
 		}
 	}
-	if upload.Code != 201 || transaction.Code != 200 {
+	if upload.Code != 200 || transaction.Code != 200 {
 		t.Fatal(upload.Code, upload.Body.String(), transaction.Code, transaction.Body.String())
 	}
-	var asset mediaBiz.Media
-	if err = json.Unmarshal(upload.Body.Bytes(), &asset); err != nil {
-		t.Fatal(err)
+	var result struct {
+		Root  string `json:"root"`
+		Limit int64  `json:"limit"`
 	}
-	if !strings.HasPrefix(asset.URL, "/uploads/"+oldRoot+"/") {
-		t.Fatal("upload root changed mid-request", asset.URL)
-	}
-	if _, err = os.Stat(filepath.Join(c.Data.Storage.UploadDir, filepath.Base(asset.URL))); err != nil {
-		t.Fatal("old upload lost", err)
+	if err := json.Unmarshal(upload.Body.Bytes(), &result); err != nil || result.Root != oldRoot || result.Limit != c.Data.Storage.MaxImageBytes {
+		t.Fatal("in-flight generation changed", err, result)
 	}
 	if err = pool.PingContext(ctx); err == nil {
 		t.Fatal("drained pool not closed")
-	}
-	var count int64
-	// The fixture connection is independent of the two retired runtime pools.
-	check, closeCheck, err := data.NewData(next)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer closeCheck()
-	if err = check.DB.Table("media").Where("id=? AND available", asset.ID).Count(&count).Error; err != nil || count != 1 {
-		t.Fatal("upload transaction missing", err, count)
 	}
 }
 

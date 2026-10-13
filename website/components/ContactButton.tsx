@@ -1,6 +1,11 @@
 "use client";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import type { WhatsAppContact } from "../lib/contracts";
+// Image addresses are resolved by the trusted backend from a media ID.
+function validImageURL(raw: string) {
+  if (/^\/uploads\/[a-f0-9]+\/[a-f0-9]+\.(png|jpg|webp|gif)$/.test(raw)) return true;
+  try { const u = new URL(raw); return u.protocol === 'https:' && !u.username && !u.password && !u.search && !u.hash; } catch { return false; }
+}
 export default function ContactButton({
   children = "Contact on WhatsApp ↗",
   className = "button",
@@ -69,9 +74,7 @@ export default function ContactButton({
         url.pathname !== `/${value.phoneNumber}` ||
         url.search ||
         url.hash ||
-        !/^\/uploads\/[a-f0-9]+\/[a-f0-9]+\.(png|jpg|webp|gif)$/.test(
-          value.qrCodeUrl,
-        )
+        !validImageURL(value.qrCodeUrl)
       )
         throw new Error("Invalid contact");
       if (productName)

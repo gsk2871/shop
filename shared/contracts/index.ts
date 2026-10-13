@@ -84,7 +84,6 @@ export interface PublicSKU {
 }
 export interface PublicProduct {
   image: string;
-  video: string;
   report: string;
   id?: EntityID;
   name: string;
@@ -109,7 +108,6 @@ export interface PublicProduct {
 }
 export interface Product extends Omit<PublicProduct, "specs" | "skus"> {
   imageMediaId: EntityID | "";
-  videoMediaId: EntityID | "";
   reportMediaId: EntityID | "";
   specs: ProductSpec[];
   skus: ProductSKU[];

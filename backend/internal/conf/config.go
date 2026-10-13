@@ -7,8 +7,10 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"net/url"
 	"os"
 	"reflect"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -82,14 +84,26 @@ type Database struct {
 	SlowSQLMS        int           `yaml:"slow_sql_ms"`
 }
 
-// Storage configures the local upload directory.
+// Storage configures COS uploads and retained local media.
 type Storage struct {
+	COS              COS           `yaml:"cos"`
 	UploadDir        string        `yaml:"upload_dir"`
 	MaxImageBytes    int64         `yaml:"max_image_bytes"`
 	MaxVideoBytes    int64         `yaml:"max_video_bytes"`
 	MaxDocumentBytes int64         `yaml:"max_document_bytes"`
 	AllowedTypes     []string      `yaml:"allowed_types"`
 	CleanupInterval  time.Duration `yaml:"cleanup_interval"`
+}
+
+// COS contains server-only credentials and the default location for new batches.
+type COS struct {
+	Enabled      bool   `yaml:"enabled"`
+	SecretID     string `yaml:"secret_id"`
+	SecretKey    string `yaml:"secret_key"`
+	Bucket       string `yaml:"bucket"`
+	Region       string `yaml:"region"`
+	PublicDomain string `yaml:"public_domain"`
+	KeyPrefix    string `yaml:"key_prefix"`
 }
 
 type TOTP struct {
@@ -117,7 +131,7 @@ func defaults() Config {
 		Log:    Log{Level: "info"},
 		App:    App{Name: "peptide-site"},
 		Server: Server{HTTP: HTTP{Addr: "127.0.0.1:8080", Timeout: 30 * time.Second, ReadHeaderTimeout: 10 * time.Second, ReadTimeout: 60 * time.Second, WriteTimeout: 90 * time.Second, IdleTimeout: 120 * time.Second}},
-		Data:   Data{Database: Database{MaxOpenConns: 10, MaxIdleConns: 5, ConnMaxLifetime: 30 * time.Minute, ConnMaxIdleTime: 15 * time.Minute, ConnectTimeout: 10 * time.Second, StatementTimeout: 5 * time.Second, LockTimeout: 3 * time.Second, SlowSQLMS: 200}, Storage: Storage{UploadDir: "./storage/uploads", MaxImageBytes: 20 << 20, MaxVideoBytes: 200 << 20, MaxDocumentBytes: 20 << 20, AllowedTypes: []string{"image/jpeg", "image/png", "image/webp", "image/gif", "video/mp4", "video/webm"}, CleanupInterval: time.Minute}},
+		Data:   Data{Database: Database{MaxOpenConns: 10, MaxIdleConns: 5, ConnMaxLifetime: 30 * time.Minute, ConnMaxIdleTime: 15 * time.Minute, ConnectTimeout: 10 * time.Second, StatementTimeout: 5 * time.Second, LockTimeout: 3 * time.Second, SlowSQLMS: 200}, Storage: Storage{UploadDir: "./storage/uploads", MaxImageBytes: 20 << 20, MaxVideoBytes: 200 << 20, MaxDocumentBytes: 20 << 20, AllowedTypes: []string{"image/jpeg", "image/png", "image/webp", "image/gif"}, CleanupInterval: time.Minute}},
 		Auth:   Auth{CookieSecure: true, SessionTTL: 8 * time.Hour, OnboardingTTL: 15 * time.Minute, MFATicketTTL: 5 * time.Minute, MFAMaxAttempts: 5, LoginLimit: 5, TOTP: TOTP{Enabled: true, Issuer: "Research Supply Admin"}},
 	}
 }
@@ -240,7 +254,14 @@ func (l *Loader) Decode(body []byte) (Config, error) {
 // Validate rejects invalid settings without including database credentials.
 func Validate(c Config) error {
 	storage := c.Data.Storage
-	if storage.MaxImageBytes <= 0 || storage.MaxVideoBytes <= 0 || storage.MaxDocumentBytes <= 0 || storage.MaxImageBytes > 1<<40 || storage.MaxVideoBytes > 1<<40 || storage.MaxDocumentBytes > 1<<40 || storage.CleanupInterval < 100*time.Millisecond || storage.CleanupInterval > time.Hour || len(storage.AllowedTypes) == 0 {
+	if storage.COS.Enabled || storage.COS.SecretID != "" || storage.COS.SecretKey != "" {
+		cs := storage.COS
+		u, err := url.Parse(cs.PublicDomain)
+		if cs.SecretID == "" || cs.SecretKey == "" || !regexp.MustCompile(`^[a-z0-9][a-z0-9-]*-[0-9]+$`).MatchString(cs.Bucket) || !regexp.MustCompile(`^[a-z]+-[a-z]+(?:-[0-9]+)?$`).MatchString(cs.Region) || !regexp.MustCompile(`^[a-zA-Z0-9_-]+(?:/[a-zA-Z0-9_-]+)*$`).MatchString(cs.KeyPrefix) || err != nil || u.Scheme != "https" || u.Hostname() == "" || u.User != nil || u.RawQuery != "" || u.Fragment != "" || (u.Path != "" && u.Path != "/") {
+			return errors.New("invalid data.storage.cos configuration")
+		}
+	}
+	if storage.MaxImageBytes <= 0 || storage.MaxVideoBytes <= 0 || storage.MaxDocumentBytes <= 0 || storage.MaxImageBytes > 64<<20 || storage.MaxVideoBytes > 1<<40 || storage.MaxDocumentBytes > 1<<40 || storage.CleanupInterval < 100*time.Millisecond || storage.CleanupInterval > time.Hour || len(storage.AllowedTypes) == 0 {
 		return errors.New("invalid storage upload policy")
 	}
 	allowed := map[string]bool{"image/jpeg": true, "image/png": true, "image/webp": true, "image/gif": true, "video/mp4": true, "video/webm": true, "application/pdf": true}

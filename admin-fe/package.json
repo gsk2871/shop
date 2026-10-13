@@ -21,6 +21,7 @@
     "@shop/content": "file:../shared/content",
     "@shop/contracts": "file:../shared/contracts",
     "antd": "^6.4.2",
+    "cos-js-sdk-v5": "1.10.1",
     "lexical": "0.52.0",
     "react": "^19.2.5",
     "react-dom": "^19.2.5"

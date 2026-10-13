@@ -1,300 +1,166 @@
-// Package media implements policy-controlled, streamed uploads and public files.
+// Package media serves image library, directories, COS uploads and retained local files.
 package media
 
 import (
-	"bytes"
-	"crypto/rand"
-	"encoding/binary"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
-	_ "golang.org/x/image/webp"
 	"gorm.io/gorm"
-	"image"
-	_ "image/gif"
-	_ "image/jpeg"
-	_ "image/png"
 	"io"
 	"net/http"
-	"os"
 	"path/filepath"
-	auth "peptide-site/internal/biz/admin"
-	biz "peptide-site/internal/biz/media"
 	"peptide-site/internal/conf"
 	repo "peptide-site/internal/data/media"
 	"peptide-site/internal/pkg/configreload"
+	"peptide-site/internal/pkg/cosstore"
 	"peptide-site/internal/pkg/errdef"
-	"peptide-site/internal/pkg/filestaging"
 	admin "peptide-site/internal/service/admin"
 	"strconv"
 	"strings"
-	"time"
 )
 
 type Handler struct {
 	Repo   *repo.Repo
 	Config conf.Config
-	Root   string
-	Dir    string
 }
 
-func NewHandler(r *repo.Repo, c conf.Config, root string) (*Handler, error) {
-	dir, err := filepath.EvalSymlinks(c.Data.Storage.UploadDir)
-	if err != nil {
-		return nil, err
+func NewHandler(r *repo.Repo, c conf.Config) (*Handler, error) {
+	if c.Data.Storage.COS.SecretID != "" && c.Data.Storage.COS.SecretKey != "" {
+		r.Store = cosstore.New(c.Data.Storage.COS)
 	}
-	return &Handler{r, c, root, dir}, nil
+	return &Handler{Repo: r, Config: c}, nil
 }
-func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	path := strings.TrimPrefix(r.URL.Path, "/admin/api/v1/media")
-	objectID, _ := strconv.ParseInt(r.PathValue("id"), 10, 64)
-	switch {
-	case path == "/upload-policy" && r.Method == "GET":
-		version := uint64(0)
-		if s, ok := configreload.FromContext(r.Context()); ok {
-			version = s.Status.Version
-		}
-		admin.Reply(w, 200, map[string]any{"version": version, "allowedTypes": allowedTypes(h.Config.Data.Storage.AllowedTypes), "maxImageBytes": h.Config.Data.Storage.MaxImageBytes, "maxVideoBytes": h.Config.Data.Storage.MaxVideoBytes})
-	case path == "" && r.Method == "GET":
-		page, size := 1, 20
-		var err error
-		if p := r.URL.Query().Get("page"); p != "" {
-			page, err = strconv.Atoi(p)
-		}
-		if err == nil {
-			if p := r.URL.Query().Get("pageSize"); p != "" {
-				size, err = strconv.Atoi(p)
-			}
-		}
-		if err != nil || page < 1 || page > 10000000 || size < 1 || size > 100 || len(r.URL.Query().Get("q")) > 200 {
-			admin.Failure(w, r, errdef.Invalid())
-			return
-		}
-		rows, total, err := h.Repo.List(r.Context(), page, size, r.URL.Query().Get("type"), r.URL.Query().Get("q"))
-		if err != nil {
-			admin.Failure(w, r, err)
-			return
-		}
-		admin.Reply(w, 200, map[string]any{"items": rows, "total": total, "page": page, "pageSize": size})
-	case path == "" && r.Method == "POST":
-		h.upload(w, r)
-	case objectID > 0 && strings.HasSuffix(path, "/references") && r.Method == "GET":
-		rows, err := h.Repo.References(r.Context(), objectID)
-		if err != nil {
-			admin.Failure(w, r, err)
-			return
-		}
-		admin.Reply(w, 200, map[string]any{"items": rows})
-	case objectID > 0 && r.Method == "GET":
-		row, err := h.Repo.Get(r.Context(), objectID)
-		if err != nil {
-			admin.Failure(w, r, err)
-			return
-		}
-		admin.Reply(w, 200, row)
-	case objectID > 0 && r.Method == "PATCH":
-		var in struct {
-			Name string `json:"name"`
-		}
-		r.Body = http.MaxBytesReader(w, r.Body, 4096)
-		decoder := json.NewDecoder(r.Body)
-		decoder.DisallowUnknownFields()
-		if decoder.Decode(&in) != nil || decoder.Decode(new(any)) != io.EOF {
-			admin.Failure(w, r, errdef.Invalid())
-			return
-		}
-		row, err := h.Repo.Rename(r.Context(), objectID, in.Name)
-		if err != nil {
-			admin.Failure(w, r, err)
-			return
-		}
-		admin.Reply(w, 200, row)
-	case objectID > 0 && r.Method == "DELETE":
-		if err := h.Repo.Delete(r.Context(), objectID); err != nil {
-			admin.Failure(w, r, err)
-			return
-		}
-		admin.Reply(w, 200, map[string]bool{"ok": true})
-	default:
-		admin.Failure(w, r, errdef.Invalid())
+func decode(w http.ResponseWriter, r *http.Request, v any) error {
+	r.Body = http.MaxBytesReader(w, r.Body, 32768)
+	d := json.NewDecoder(r.Body)
+	d.DisallowUnknownFields()
+	if d.Decode(v) != nil || d.Decode(new(any)) != io.EOF {
+		return errdef.Invalid()
 	}
+	return nil
 }
-
-// Ignore legacy document settings in the effective upload policy.
 func allowedTypes(configured []string) []string {
 	out := []string{}
 	for _, mime := range configured {
 		switch mime {
-		case "image/jpeg", "image/png", "image/webp", "image/gif", "video/mp4", "video/webm":
+		case "image/jpeg", "image/png", "image/webp", "image/gif":
 			out = append(out, mime)
 		}
 	}
 	return out
 }
-func (h *Handler) upload(w http.ResponseWriter, r *http.Request) {
-	policy := h.Config.Data.Storage
-	maxSize := max(policy.MaxImageBytes, policy.MaxVideoBytes)
-	r.Body = http.MaxBytesReader(w, r.Body, maxSize+(1<<20))
-	multipart, err := r.MultipartReader()
-	if err != nil {
-		admin.Failure(w, r, errdef.Invalid())
-		return
-	}
-	part, err := multipart.NextPart()
-	if err != nil || part.FormName() != "file" || part.FileName() == "" {
-		admin.Failure(w, r, errdef.Invalid())
-		return
-	}
-	prefix, err := io.ReadAll(io.LimitReader(part, 512))
-	if err != nil || len(prefix) == 0 {
-		admin.Failure(w, r, errdef.Invalid())
-		return
-	}
-	mime := http.DetectContentType(prefix)
-	allowed := false
-	for _, value := range allowedTypes(policy.AllowedTypes) {
-		if value == mime {
-			allowed = true
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	path := strings.TrimPrefix(r.URL.Path, "/admin/api/v1/media")
+	ctx := r.Context()
+	id, _ := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	var result any = map[string]bool{"ok": true}
+	var err error
+	status := 200
+	switch {
+	case path == "/upload-policy" && r.Method == "GET":
+		version := uint64(0)
+		if s, ok := configreload.FromContext(ctx); ok {
+			version = s.Status.Version
 		}
-	}
-	if !allowed {
-		admin.Failure(w, r, errdef.Invalid())
-		return
-	}
-	extensions := map[string]string{"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp", "image/gif": ".gif", "video/mp4": ".mp4", "video/webm": ".webm"}
-	kind := "image"
-	limit := policy.MaxImageBytes
-	if strings.HasPrefix(mime, "image/") {
-		kind = "image"
-		limit = policy.MaxImageBytes
-	} else if strings.HasPrefix(mime, "video/") {
-		kind = "video"
-		limit = policy.MaxVideoBytes
-	}
-	temporary, err := os.CreateTemp(h.Dir, ".upload-")
-	if err != nil {
-		admin.Failure(w, r, err)
-		return
-	}
-	temporaryPath := temporary.Name()
-	releaseTemporary := filestaging.Protect(temporaryPath)
-	defer releaseTemporary()
-	defer func() { _ = temporary.Close(); _ = os.Remove(temporaryPath) }()
-	size, err := io.Copy(temporary, io.LimitReader(io.MultiReader(bytes.NewReader(prefix), part), limit+1))
-	if err != nil || size <= 0 || size > limit {
-		admin.Failure(w, r, errdef.Invalid())
-		return
-	}
-	if _, err := multipart.NextPart(); err != io.EOF {
-		admin.Failure(w, r, errdef.Invalid())
-		return
-	}
-	var width, height *int
-	if _, err := temporary.Seek(0, io.SeekStart); err != nil {
-		admin.Failure(w, r, err)
-		return
-	}
-	if kind == "image" {
-		dimensions, _, err := image.DecodeConfig(temporary)
-		if err != nil || dimensions.Width <= 0 || dimensions.Height <= 0 || int64(dimensions.Width)*int64(dimensions.Height) > 20000000 {
-			admin.Failure(w, r, errdef.Invalid())
-			return
+		result = map[string]any{"version": version, "enabled": h.Config.Data.Storage.COS.Enabled, "allowedTypes": allowedTypes(h.Config.Data.Storage.AllowedTypes), "maxImageBytes": h.Config.Data.Storage.MaxImageBytes, "maxBatchFiles": 20}
+	case path == "/upload/init" && r.Method == "POST":
+		var in repo.UploadInput
+		if err = decode(w, r, &in); err == nil {
+			result, err = h.Repo.InitUpload(ctx, h.Config.Data.Storage, in)
+			status = 201
 		}
-		_, _ = temporary.Seek(0, io.SeekStart)
-		if _, _, err := image.Decode(temporary); err != nil {
-			admin.Failure(w, r, errdef.Invalid())
-			return
+	case path == "/upload/refresh" && r.Method == "POST":
+		var in struct {
+			BatchID string `json:"batchId"`
 		}
-		width, height = &dimensions.Width, &dimensions.Height
-	}
-	if mime == "video/mp4" && !validMP4(temporary, size) {
-		admin.Failure(w, r, errdef.Invalid())
-		return
-	}
-	if mime == "video/webm" && !bytes.Contains(prefix, []byte("webm")) {
-		admin.Failure(w, r, errdef.Invalid())
-		return
-	}
-	if err := temporary.Sync(); err != nil {
-		admin.Failure(w, r, err)
-		return
-	}
-	if err := temporary.Close(); err != nil {
-		admin.Failure(w, r, err)
-		return
-	}
-	raw := make([]byte, 16)
-	if _, err := rand.Read(raw); err != nil {
-		admin.Failure(w, r, err)
-		return
-	}
-	key := hex.EncodeToString(raw) + extensions[mime]
-	destination := filepath.Join(h.Dir, key)
-	releaseDestination := filestaging.Protect(destination)
-	defer releaseDestination()
-	if err := os.Rename(temporaryPath, destination); err != nil {
-		admin.Failure(w, r, err)
-		return
-	}
-	saved := false
-	defer func() {
-		if !saved {
-			_ = os.Remove(destination)
+		if err = decode(w, r, &in); err == nil {
+			result, err = h.Repo.RefreshUpload(ctx, in.BatchID)
 		}
-	}()
-	name := filepath.Base(strings.ReplaceAll(part.FileName(), "\\", "/"))
-	if len(name) > 255 {
-		name = key
-	}
-	now := time.Now().UTC()
-	i := auth.Current(r.Context())
-	var uploader *int64
-	if i != nil {
-		uploader = &i.User.ID
-	}
-	row := biz.Media{Name: name, URL: "/uploads/" + h.Root + "/" + key, MIME: mime, MediaType: kind, Size: size, Width: width, Height: height, Available: true, StorageRootID: h.Root, StorageKey: key, UploadedBy: uploader, CreatedAt: now, UpdatedAt: now}
-	if err := h.Repo.Save(r.Context(), &row); err != nil {
-		admin.Failure(w, r, err)
-		return
-	}
-	saved = true
-	admin.Reply(w, 201, row)
-}
-func validMP4(file *os.File, size int64) bool {
-	var offset int64
-	media, metadata := false, false
-	for boxes := 0; offset < size && boxes < 4096; boxes++ {
-		var header [16]byte
-		if _, err := file.ReadAt(header[:8], offset); err != nil {
-			return false
+	case id > 0 && path == "/"+strconv.FormatInt(id, 10)+"/complete" && r.Method == "POST":
+		result, err = h.Repo.CompleteUpload(ctx, id)
+	case id > 0 && path == "/"+strconv.FormatInt(id, 10)+"/cancel" && r.Method == "POST":
+		err = h.Repo.CancelUpload(ctx, id)
+	case path == "/groups" && r.Method == "GET":
+		var rows []repo.Group
+		rows, err = h.Repo.Groups(ctx)
+		result = map[string]any{"items": rows}
+	case (path == "/groups" && r.Method == "POST") || (strings.HasPrefix(path, "/groups/") && id > 0 && r.Method == "PATCH"):
+		var in struct {
+			Name string `json:"name"`
 		}
-		length := int64(binary.BigEndian.Uint32(header[:4]))
-		headerSize := int64(8)
-		if length == 1 {
-			if _, err := file.ReadAt(header[8:], offset+8); err != nil {
-				return false
+		if err = decode(w, r, &in); err == nil {
+			result, err = h.Repo.SaveGroup(ctx, id, in.Name)
+		}
+	case strings.HasPrefix(path, "/groups/") && id > 0 && r.Method == "DELETE":
+		err = h.Repo.DeleteGroup(ctx, id)
+	case (path == "/batch-move" || path == "/batch-delete") && r.Method == "POST":
+		var in struct {
+			IDs     []string `json:"ids"`
+			GroupID *int64   `json:"groupId,string"`
+		}
+		if err = decode(w, r, &in); err == nil {
+			ids := make([]int64, 0, len(in.IDs))
+			for _, raw := range in.IDs {
+				var n int64
+				n, err = strconv.ParseInt(raw, 10, 64)
+				if err != nil || n <= 0 {
+					err = errdef.Invalid()
+					break
+				}
+				ids = append(ids, n)
 			}
-			extended := binary.BigEndian.Uint64(header[8:])
-			if extended > uint64(size) {
-				return false
+			if err == nil {
+				if path == "/batch-move" {
+					err = h.Repo.Move(ctx, ids, in.GroupID)
+				} else {
+					err = h.Repo.DeleteBatch(ctx, ids)
+				}
 			}
-			length = int64(extended)
-			headerSize = 16
-		} else if length == 0 {
-			length = size - offset
 		}
-		if length < headerSize || length > size-offset {
-			return false
+	case path == "" && r.Method == "GET":
+		page, size := 1, 24
+		if p := r.URL.Query().Get("page"); p != "" {
+			page, err = strconv.Atoi(p)
 		}
-		switch string(header[4:8]) {
-		case "mdat":
-			media = true
-		case "moov":
-			metadata = true
+		if p := r.URL.Query().Get("pageSize"); p != "" && err == nil {
+			size, err = strconv.Atoi(p)
 		}
-		offset += length
+		group := r.URL.Query().Get("groupId")
+		if group != "" && group != "ungrouped" {
+			n, e := strconv.ParseInt(group, 10, 64)
+			if e != nil || n <= 0 {
+				err = errdef.Invalid()
+			}
+		}
+		if err != nil || page < 1 || page > 10000000 || size < 1 || size > 100 || len(r.URL.Query().Get("q")) > 200 {
+			err = errdef.Invalid()
+			break
+		}
+		rows, total, e := h.Repo.List(ctx, page, size, r.URL.Query().Get("type"), r.URL.Query().Get("q"), group)
+		err = e
+		result = map[string]any{"items": rows, "total": total, "page": page, "pageSize": size}
+	case id > 0 && strings.HasSuffix(path, "/references") && r.Method == "GET":
+		rows, e := h.Repo.References(ctx, id)
+		err = e
+		result = map[string]any{"items": rows}
+	case id > 0 && r.Method == "GET":
+		result, err = h.Repo.Get(ctx, id)
+	case id > 0 && r.Method == "PATCH":
+		var in struct {
+			Name string `json:"name"`
+		}
+		if err = decode(w, r, &in); err == nil {
+			result, err = h.Repo.Rename(ctx, id, in.Name)
+		}
+	case id > 0 && r.Method == "DELETE":
+		err = h.Repo.Delete(ctx, id)
+	default:
+		err = errdef.Invalid()
 	}
-	return offset == size && media && metadata
+	if err != nil {
+		admin.Failure(w, r, err)
+		return
+	}
+	admin.Reply(w, status, result)
 }
 func (h *Handler) PublicFiles() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -314,6 +180,11 @@ func (h *Handler) PublicFiles() http.Handler {
 		}
 		if err != nil {
 			admin.Failure(w, r, err)
+			return
+		}
+		if row.StorageProvider == "cos" {
+			w.Header().Set("Cache-Control", "no-store")
+			http.Redirect(w, r, path, http.StatusTemporaryRedirect)
 			return
 		}
 		w.Header().Set("X-Content-Type-Options", "nosniff")
