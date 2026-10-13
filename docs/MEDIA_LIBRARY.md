@@ -41,7 +41,7 @@ sequenceDiagram
 
 ## 数据与权限
 
-migration `000015_media_cos` 新建 media_group、media_upload_batch，给 media 增加 group_id、storage_provider、status、batch_id、temporary_cleaned。目录和上传状态使用数据库管理，不创建 COS 空文件夹。历史记录默认 local、ready、未分组。表之间使用逻辑引用，不增加外键。
+migration `000015_media_cos` 新建 media_group、media_upload_batch，给 media 增加 group_id、storage_provider、status、batch_id、temporary_cleaned。目录和上传状态使用数据库管理，不创建 COS 空文件夹。本地测试图片标记为 local，正式上传图片标记为 cos。表之间使用逻辑引用，不增加外键。
 
 接口前缀为 `/admin/api/v1/media`，ID 使用十进制字符串。写请求沿用登录会话、来源校验、`X-Requested-With: peptide-admin` 和权限中间件。
 
@@ -66,7 +66,7 @@ migration `000015_media_cos` 新建 media_group、media_upload_batch，给 media
 | MEDIA_UPLOAD_STATE | 当前状态不允许该操作 |
 | MEDIA_FILE_INVALID | 实际文件不符合图片声明或限制 |
 
-其他参数、权限和不存在错误沿用现有统一错误协议。新增审计操作涵盖目录增改删、移动、上传初始化／完成／失败／取消、删除与迁移；没有新增权限点，部署时必须 seed 更新现有权限的路由登记。
+其他参数、权限和不存在错误沿用现有统一错误协议。新增审计操作涵盖目录增改删、移动、上传初始化／完成／失败／取消、删除；没有新增权限点，部署时必须 seed 更新现有权限的路由登记。
 
 ## 配置与部署
 
@@ -78,30 +78,18 @@ migration `000015_media_cos` 新建 media_group、media_upload_batch，给 media
 - 建议为 temporary 前缀配置 7 天对象过期规则，兜底清理极端延迟写入；不要对 images 前缀配置这一规则。确认正式图片的 CDN 或域名回源路径保持对象 key。
 - 临时凭证按精确资源与最小权限申请，依据 [腾讯云临时密钥指引](https://cloud.tencent.com/document/product/436/14048)。自定义图片域名应先验证浏览器预览，参见 [腾讯云域名提示](https://cloud.tencent.com/document/product/436/35651)。
 
-部署顺序：备份数据库和媒体文件 → 配置私有 YAML 与云侧权限 → 停止旧服务并执行 migration → seed 更新权限路由 → 启动新后端 → 发布新后台及官网。当前可以先保持 COS 禁用完成代码部署。开启后验证一次图片直传、选用、网页显示、引用删除保护、取消与清理。
+首次部署顺序：配置私有 YAML 与云侧权限 → 执行 migration 初始化数据库结构 → seed 初始化账号及权限 → 启动后端 → 发布后台及官网。当前可以先保持 COS 禁用完成代码部署。开启后验证一次图片直传、选用、网页显示、引用删除保护、取消与清理。
 
 切换密钥后，新请求使用新密钥；仍有旧批次或图片时，新身份必须保留其所在桶和路径的读写、清理权限。更换域名不会重写已有图片 URL 或批次快照，应保留历史域名可访问性。
 
-## 历史图片迁移
+## 初始化与测试数据
 
-现有本地图片继续可用。迁移是独立显式命令，不随启动自动执行。先执行 migration 并备份数据库、所有 storage_root 目录和 COS 对象；在 backend 目录盘点：
+这是全新项目，没有历史图片搬迁需求，不提供本地文件迁移到 COS 的命令。正式图片从首次上传开始使用 COS；seed-demo 仅用于本地开发测试，其图片由本地文件服务提供。
 
-```sh
-go run ./cmd/media-migrate -conf /path/config.yaml
-```
-
-确认 COS 配置启用后执行复制：
-
-```sh
-go run ./cmd/media-migrate -conf /path/config.yaml -apply
-```
-
-命令按图片逐条上传和回读验证，成功后更新存储元数据，保留媒体 ID、引用和原 URL。原 `/uploads/...` 地址经后端 307 跳转到 COS，因此历史正文无需改写。原本地文件保留，重复执行跳过已迁移图片；失败可重跑，确定性对象 key 避免重复产生正式图片。验证失败时数据库记录保留原状；已写入的迁移对象可由重跑覆盖并验证。
-
-不迁移或删除历史非图片文件。业务数据中如有历史视频内容，应单独盘点；本次不执行破坏性清库。存在任何 COS 媒体记录时 down SQL 会拒绝回滚，避免丢失云对象归属；生产恢复使用配套备份。
+数据库 migration 用于创建和更新表结构，与历史图片搬迁无关，首次部署仍需执行。存在 COS 媒体记录时 down SQL 会拒绝删除相关结构，避免丢失对象归属。
 
 ## 验证记录
 
-2026-10-13：本地真实 PostgreSQL 的全量 `go test -race ./...` 通过，覆盖目录唯一性／归组、引用与删除竞争、上传所有权／状态／过期、坏图拒绝、批次配置快照、清理超时进度和迁移引用及本地文件保留。COS SDK 适配层使用 HTTP 测试服务验证精确权限、ETag 条件读取和复制；云对象生命周期使用测试替身，不代表真实腾讯云联调。
+2026-10-13：本地真实 PostgreSQL 的全量 `go test -race ./...` 通过，覆盖目录唯一性／归组、引用与删除竞争、上传所有权／状态／过期、坏图拒绝、批次配置快照、清理超时进度。COS SDK 适配层使用 HTTP 测试服务验证精确权限、ETag 条件读取和复制；云对象生命周期使用测试替身，不代表真实腾讯云联调。
 
-后台与官网完成 TypeScript 检查和生产构建。尚未配置真实 COS 桶、密钥与域名，真实直传、CORS、公开图片访问与云侧清理待配置补齐后验证；本次不执行真实对象迁移或生产发布。
+后台与官网完成 TypeScript 检查和生产构建。尚未配置真实 COS 桶、密钥与域名，真实直传、CORS、公开图片访问与云侧清理待配置补齐后验证；本次不执行生产发布。

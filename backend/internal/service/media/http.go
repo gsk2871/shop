@@ -182,11 +182,6 @@ func (h *Handler) PublicFiles() http.Handler {
 			admin.Failure(w, r, err)
 			return
 		}
-		if row.StorageProvider == "cos" {
-			w.Header().Set("Cache-Control", "no-store")
-			http.Redirect(w, r, path, http.StatusTemporaryRedirect)
-			return
-		}
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		w.Header().Set("Content-Security-Policy", "default-src 'none'; sandbox")
 		w.Header().Set("Content-Type", row.MIME)

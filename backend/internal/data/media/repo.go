@@ -67,13 +67,9 @@ func (r *Repo) Get(ctx context.Context, id int64) (biz.Media, error) {
 }
 func (r *Repo) FindFile(ctx context.Context, root, key string) (biz.Media, string, error) {
 	var row biz.Media
-	err := r.Data.DB.WithContext(ctx).Table("media").Where("((storage_provider='local' AND storage_root_id=? AND storage_key=?) OR url=?) AND available AND deleted_at IS NULL", root, key, "/uploads/"+root+"/"+key).Take(&row).Error
+	err := r.Data.DB.WithContext(ctx).Table("media").Where("storage_provider='local' AND storage_root_id=? AND storage_key=? AND available AND deleted_at IS NULL", root, key).Take(&row).Error
 	if err != nil {
 		return row, "", err
-	}
-	if row.StorageProvider == "cos" && row.BatchID != nil {
-		batch, err := r.Batch(ctx, *row.BatchID)
-		return row, strings.TrimRight(batch.PublicDomain, "/") + "/" + row.StorageKey, err
 	}
 	path, err := r.Data.StoragePath(ctx, root)
 	return row, filepath.Join(path, key), err
@@ -240,7 +236,7 @@ func (r *Repo) cleanupOrphans(ctx context.Context) error {
 			}
 			if !strings.HasPrefix(name, ".upload-") {
 				var count int64
-				if err := r.Data.DB.WithContext(ctx).Table("media").Where("(storage_root_id=? AND storage_key=?) OR url=?", root.ID, name, "/uploads/"+root.ID+"/"+name).Count(&count).Error; err != nil {
+				if err := r.Data.DB.WithContext(ctx).Table("media").Where("storage_root_id=? AND storage_key=?", root.ID, name).Count(&count).Error; err != nil {
 					return err
 				}
 				if count > 0 {

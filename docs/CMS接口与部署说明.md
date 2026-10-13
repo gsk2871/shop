@@ -1,6 +1,6 @@
 # CMS 接口与首次部署
 
-管理接口前缀为 `/admin/api/v1`，公共接口前缀为 `/api/v1`。后台通过 `/backend` 代理访问；新图片使用 COS HTTPS 地址，历史本地媒体路径为 `/uploads/{rootId}/{storageKey}`。所有实体 BIGINT ID 对前端使用十进制字符串；错误固定为 `{code,message,requestId}`，不返回 SQL、密码或连接串。
+管理接口前缀为 `/admin/api/v1`，公共接口前缀为 `/api/v1`。后台通过 `/backend` 代理访问；新图片使用 COS HTTPS 地址，本地测试图片路径为 `/uploads/{rootId}/{storageKey}`。所有实体 BIGINT ID 对前端使用十进制字符串；错误固定为 `{code,message,requestId}`，不返回 SQL、密码或连接串。
 
 ## 身份与权限
 
@@ -38,7 +38,7 @@ Banner 位仅种子 home_hero、products_header、research_header。投放字段
 
 上传先申请临时凭证，直传私有临时对象，再由后端读取、解码和校验后复制到正式图片路径。只有完成确认的图片可以选用。默认上限 20 MiB，配置最多 64 MiB；未配置 COS 时禁用新上传。旧 POST /media 本地上传入口已移除。完整接口、权限、状态和云侧配置见 [媒体库说明](MEDIA_LIBRARY.md)。
 
-删除仍受引用保护。逻辑删除立即从业务接口隐藏，COS 物理删除由任务重试；已公开的图片 URL 和 CDN 缓存不保证立即失效。历史本地 GET/HEAD 地址继续可读；显式迁移至 COS 后，原地址重定向到 COS，媒体 ID 和正文引用不变，本地文件保留。
+删除仍受引用保护。逻辑删除立即从业务接口隐藏，COS 物理删除由任务重试；已公开的图片 URL 和 CDN 缓存不保证立即失效。本地测试图片由 /uploads/ 的 GET/HEAD 接口提供。全新项目不需要历史图片搬迁工具，正式图片直接上传 COS。
 
 ## 首次部署
 
@@ -48,7 +48,7 @@ Banner 位仅种子 home_hero、products_header、research_header。投放字段
 4. 超管完成首次改密及 MFA，再创建运营和查看者账号。检查 readyz、运行配置版本和上传策略；创建业务内容之前官网显示默认品牌及英文空状态。
 5. 官网 output=standalone，生产运行 `.next/standalone/server.js`，并将 `.next/static`、public（若存在）复制到对应位置；后台 dist 静态发布，未知前端路径回退 index.html。
 
-浏览器直接向 COS 上传图片，后端只接收管理 JSON 请求。以下后台代理保留历史 `/uploads/` 地址；首次部署还需配置 COS 的权限、访问域名及跨域规则。
+浏览器直接向 COS 上传图片，后端只接收管理 JSON 请求。以下后台代理提供本地测试图片的 `/uploads/` 地址；首次部署还需配置 COS 的权限、访问域名及跨域规则。
 
 ```nginx
 location /backend/ {

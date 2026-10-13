@@ -2,7 +2,6 @@
 package cosstore
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	cos "github.com/tencentyun/cos-go-sdk-v5"
@@ -110,15 +109,6 @@ func (c *Client) Delete(ctx context.Context, l Location, key string) error {
 			return nil
 		}
 		return errors.New("COS cleanup failed")
-	}
-	return nil
-}
-
-// PutImage is used only by the explicit local-file migration command.
-func (c *Client) PutImage(ctx context.Context, l Location, key, mime string, body []byte) error {
-	_, err := c.client(l).Object.Put(ctx, key, bytes.NewReader(body), &cos.ObjectPutOptions{ObjectPutHeaderOptions: &cos.ObjectPutHeaderOptions{ContentType: mime, CacheControl: "public, max-age=86400", ContentDisposition: "inline"}})
-	if err != nil {
-		return errors.New("COS migration upload failed")
 	}
 	return nil
 }

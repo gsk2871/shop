@@ -1,6 +1,6 @@
 # 管理后台与英文官网
 
-单个 Go 服务提供公共 API、管理 API 和历史本地媒体；PostgreSQL 存储用户、角色、会话、内容及媒体引用。后台使用 React / Umi Max / Ant Design，固定中文；官网使用 Next.js，固定英文。三端共用 `shared/contracts` 和 `shared/content`，需要一起安装、构建和发布。
+单个 Go 服务提供公共 API、管理 API 和本地测试图片；PostgreSQL 存储用户、角色、会话、内容及媒体引用。后台使用 React / Umi Max / Ant Design，固定中文；官网使用 Next.js，固定英文。三端共用 `shared/contracts` 和 `shared/content`，需要一起安装、构建和发布。
 
 已实现用户与角色权限树、密码加 TOTP 登录、首次改密绑定、敏感操作再认证、操作审计、COS 图片直传、目录管理和引用保护、自定义规格与 SKU、USD 精确金额、产品和文章富文本、未保存内容预览、官网搜索与分页、三个不限条数 Banner 位、品牌 Logo 与主题、完整 YAML 热加载。产品支持必填主图和选填检测报告图片，素材从媒体库选择；不含颜色、独立图库、库存或交易。
 
@@ -110,4 +110,4 @@ WhatsApp 国家配置、二维码、轮询、更新时间防覆盖及官网 H5 �
 
 backend/bin/server 是 make build 生成的本机可执行文件，backend/bin/ 已由 Git 忽略。代码库只保存源码，部署构建产物通过发布流程交付。
 
-媒体库仅支持图片，COS 配置、目录规则、上传接口及历史图片迁移见 [媒体库说明](docs/MEDIA_LIBRARY.md)。未配置 COS 时禁用新上传，已有图片与目录管理可继续使用。
+媒体库仅支持图片，COS 配置、目录规则及上传接口见 [媒体库说明](docs/MEDIA_LIBRARY.md)。未配置 COS 时禁用新上传，已有图片与目录管理可继续使用。

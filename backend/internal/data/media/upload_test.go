@@ -7,8 +7,6 @@ import (
 	"gorm.io/gorm"
 	"image"
 	"image/png"
-	"os"
-	"path/filepath"
 	auth "peptide-site/internal/biz/admin"
 	biz "peptide-site/internal/biz/media"
 	"peptide-site/internal/conf"
@@ -286,12 +284,6 @@ func TestDirectoriesAndReferenceRace(t *testing.T) {
 	}
 }
 
-func (s *testStore) PutImage(_ context.Context, _ cosstore.Location, key, mime string, body []byte) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.objects[key] = append([]byte(nil), body...)
-	return nil
-}
 func TestCleanupPersistsProgressAcrossDeadlines(t *testing.T) {
 	r, c, ctx, s := testSetup(t)
 	body := imageBytes(t)
@@ -331,58 +323,5 @@ func TestCleanupPersistsProgressAcrossDeadlines(t *testing.T) {
 	r.Data.DB.Table("media_upload_batch").Where("id=?", b.BatchID).Take(&batch)
 	if batch.CleanedAt == nil {
 		t.Fatal("cleanup not completed")
-	}
-}
-func TestLocalMigrationPreservesReferencesAndFiles(t *testing.T) {
-	r, c, ctx, s := testSetup(t)
-	pool, err := r.Data.DB.DB()
-	if err != nil {
-		t.Fatal(err)
-	}
-	pool.SetMaxOpenConns(1)
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-	_, _, root, commit, err := r.Data.RuntimeMetadata(ctx, c.UploadDir)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err = commit(); err != nil {
-		t.Fatal(err)
-	}
-	body := imageBytes(t)
-	key := "0123456789abcdef0123456789abcdef.png"
-	path := filepath.Join(c.UploadDir, key)
-	if err = os.WriteFile(path, body, 0600); err != nil {
-		t.Fatal(err)
-	}
-	old := time.Now().Add(-48 * time.Hour)
-	os.Chtimes(path, old, old)
-	row := biz.Media{Name: "local.png", URL: "/uploads/" + root + "/" + key, MIME: "image/png", Size: int64(len(body)), MediaType: "image", Available: true, Status: "ready", StorageProvider: "local", StorageRootID: root, StorageKey: key}
-	if err = r.Data.DB.Table("media").Create(&row).Error; err != nil {
-		t.Fatal(err)
-	}
-	if err = r.Data.DB.Transaction(func(tx *gorm.DB) error {
-		return SyncReferences(tx, "product", "1", map[string][]int64{"image": {row.ID}})
-	}); err != nil {
-		t.Fatal(err)
-	}
-	for i := 0; i < 2; i++ {
-		if err = r.MigrateLocal(ctx, c, row.ID, s); err != nil {
-			t.Fatal(err)
-		}
-	}
-	migrated, target, err := r.FindFile(ctx, root, key)
-	if err != nil || migrated.ID != row.ID || migrated.URL != row.URL || migrated.StorageProvider != "cos" || !strings.HasPrefix(target, "https://media.example.com/site-a/images/") {
-		t.Fatal(migrated, target, err)
-	}
-	refs, err := r.References(ctx, row.ID)
-	if err != nil || len(refs) != 1 {
-		t.Fatal("references lost", err)
-	}
-	if err = r.Cleanup(ctx); err != nil {
-		t.Fatal(err)
-	}
-	if _, err = os.Stat(path); err != nil {
-		t.Fatal("local backup removed", err)
 	}
 }
