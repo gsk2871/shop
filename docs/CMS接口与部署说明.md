@@ -34,7 +34,7 @@ Banner 位仅种子 home_hero、products_header、research_header。投放字段
 
 ## 媒体
 
-`POST /media` 使用 multipart 的 file 字段，流式写入临时文件；内容嗅探、图片解码或视频容器校验成功后原子改名，最后事务写元数据和审计。默认图片／PDF 20 MiB、视频 200 MiB，可通过私有 YAML 和 `/media/upload-policy` 更新。支持 JPEG、PNG、WebP、GIF、PDF、MP4、WebM，不转码。`GET /media/{id}/references` 显示引用；PATCH 重命名；DELETE 检查引用并加锁，使用中返回 MEDIA_IN_USE。逻辑删除立即禁止公共访问，物理删除失败由任务重试。24 小时后的崩溃临时文件或无元数据文件会清理，在途上传路径受保护。
+`POST /media` 使用 multipart 的 file 字段，流式写入临时文件；内容嗅探、图片解码或视频容器校验成功后原子改名，最后事务写元数据和审计。默认图片 20 MiB、视频 200 MiB，通过私有 YAML 配置，`GET /media/upload-policy` 返回当前有效上传策略。支持 JPEG、PNG、WebP、GIF、MP4、WebM，不转码；PDF 不允许上传，也不在媒体库列表中展示。历史配置中的 `application/pdf` 和 `max_document_bytes` 仅保留解析兼容，不会开启 PDF 上传；已有 PDF 文件和直链保留。`GET /media/{id}/references` 显示引用；PATCH 重命名；DELETE 检查引用并加锁，使用中返回 MEDIA_IN_USE。逻辑删除立即禁止公共访问，物理删除失败由任务重试。24 小时后的崩溃临时文件或无元数据文件会清理，在途上传路径受保护。
 
 公共 GET/HEAD 支持视频 Range/206，校验素材可用性，设置 nosniff 与 sandbox CSP。上传目录改变后，历史 root 注册仍保留；文件不会自动搬迁。上传内容公开可访问。数据库、全部 storage_root.path 目录和历史加密密钥必须配套备份。
 
