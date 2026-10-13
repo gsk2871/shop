@@ -48,7 +48,7 @@ const errors: Record<string, string> = {
   MFA_TICKET_INVALID: "登录票据已失效，请重新输入密码",
   PERMISSION_DENIED: "没有操作权限",
   ONBOARDING_REQUIRED: "请先完成改密和验证器绑定",
-  REAUTHENTICATION_REQUIRED: "请在安全中心再次验证身份，并填写操作原因",
+  REAUTHENTICATION_REQUIRED: "请在个人中心再次验证身份，并填写操作原因",
   NOT_FOUND: "内容不存在",
   UPDATE_CONFLICT: "配置已被其他人修改，请刷新后重新确认",
   COUNTRY_ALREADY_ASSIGNED: "此国家已被其他配置占用",

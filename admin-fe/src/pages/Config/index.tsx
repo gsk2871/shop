@@ -23,7 +23,7 @@ export default function ConfigPage() {
   }, []);
   return (
     <Card
-      title="运行配置"
+      title="运行配置状态"
       extra={
         <Button loading={busy} onClick={load}>
           刷新

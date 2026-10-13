@@ -16,6 +16,7 @@ import {
 import { api } from "../../services/cms";
 import { allows, type Role } from "../../services/auth";
 import type { Page, PermissionNode } from "../../services/contracts";
+import { groupPermissionMenus } from "../../navigation";
 function tree(
   nodes: PermissionNode[],
 ): { key: string; title: string; children: ReturnType<typeof tree> }[] {
@@ -81,7 +82,7 @@ export default function Roles() {
   }
   return (
     <Card
-      title="角色管理"
+      title="角色权限管理"
       extra={
         can("role.create") && (
           <Button type="primary" onClick={() => edit(null)}>
@@ -202,7 +203,7 @@ export default function Roles() {
         <Tree
           checkable
           defaultExpandAll
-          treeData={tree(nodes)}
+          treeData={tree(groupPermissionMenus(nodes))}
           checkedKeys={checked}
           onCheck={(keys) =>
             setChecked((Array.isArray(keys) ? keys : keys.checked).map(String))

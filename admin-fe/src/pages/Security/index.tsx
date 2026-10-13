@@ -27,7 +27,7 @@ export default function Security() {
     <Space orientation="vertical" style={{ width: "100%" }}>
       {context}
       <Card
-        title="个人安全中心"
+        title="个人中心"
         extra={
           <Button
             onClick={() =>

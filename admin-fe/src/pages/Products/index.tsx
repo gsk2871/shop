@@ -305,7 +305,7 @@ export default function Products() {
   }
   return (
     <ContentPage
-      title="产品管理"
+      title="商品管理"
       description="维护产品资料、规格与官网上架状态"
       error={error}
       extra={

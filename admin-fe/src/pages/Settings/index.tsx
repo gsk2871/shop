@@ -25,7 +25,7 @@ export default function SettingsPage() {
       .catch((e) => msg.error(e.message));
   }, []);
   return (
-    <Card title="品牌、主题与官网内容">
+    <Card title="品牌与主题">
       {context}
       <Form
         form={form}
@@ -117,7 +117,7 @@ export default function SettingsPage() {
         <Form.Item name="description" label="英文公司介绍">
           <Input.TextArea maxLength={5000} />
         </Form.Item>
-        <p>Home 主视觉在「Banner 投放」的 home_hero 配置。Products 数据来自「产品管理」；News 展示「文章管理」中已发布的文章，页头使用 research_header 投放位。页面正文为纯文本，保留换行；留空不展示。</p>
+        <p>Home 主视觉在「Banner管理」的 home_hero 配置。Products 数据来自「商品管理」；News 展示「新闻管理」中已发布的文章，页头使用 research_header 投放位。页面正文为纯文本，保留换行；留空不展示。</p>
         {([
           ["homeTitle", "Home 介绍标题", 200],
           ["homeContent", "Home 介绍正文", 20000],
@@ -136,7 +136,7 @@ export default function SettingsPage() {
         ))}
         {editable && (
           <Button type="primary" htmlType="submit" loading={busy}>
-            保存官网配置
+            保存品牌与主题
           </Button>
         )}
       </Form>

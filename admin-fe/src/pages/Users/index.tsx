@@ -203,7 +203,7 @@ export default function Users() {
         destroyOnHidden
       >
         <p>
-          先在个人安全中心完成近期身份验证。操作会撤销目标用户的全部会话与票据。
+          先在个人中心完成近期身份验证。操作会撤销目标用户的全部会话与票据。
         </p>
         <Form
           layout="vertical"

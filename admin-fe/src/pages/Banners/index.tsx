@@ -88,7 +88,7 @@ export default function BannersPage() {
   }
   return (
     <Card
-      title="Banner 投放"
+      title="Banner管理"
       extra={
         can("banner.create") && (
           <Button type="primary" onClick={() => void edit()}>

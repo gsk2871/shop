@@ -21,6 +21,12 @@ export default defineConfig({
   model: {},
   routes: [
     {
+      path: "/faqs",
+      name: "问答配置",
+      component: "./FAQs",
+      wrappers: ["@/components/Auth"],
+    },
+    {
       path: "/categories",
       name: "商品分类",
       component: "./Categories",
@@ -28,13 +34,13 @@ export default defineConfig({
     },
     {
       path: "/whatsapp",
-      name: "客户配置",
+      name: "客服配置",
       component: "./WhatsApp",
       wrappers: ["@/components/Auth"],
     },
     {
       path: "/banners",
-      name: "Banner 投放",
+      name: "Banner管理",
       component: "./Banners",
       wrappers: ["@/components/Auth"],
     },
@@ -46,7 +52,7 @@ export default defineConfig({
     },
     {
       path: "/system/roles",
-      name: "角色管理",
+      name: "角色权限管理",
       component: "./Roles",
       wrappers: ["@/components/Auth"],
     },
@@ -58,13 +64,13 @@ export default defineConfig({
     },
     {
       path: "/system/security",
-      name: "个人安全中心",
+      name: "个人中心",
       component: "./Security",
       wrappers: ["@/components/Auth"],
     },
     {
       path: "/system/config",
-      name: "运行配置",
+      name: "运行配置状态",
       component: "./Config",
       wrappers: ["@/components/Auth"],
     },
@@ -73,7 +79,7 @@ export default defineConfig({
     { path: "/overview", redirect: "/" },
     {
       path: "/media",
-      name: "素材库",
+      name: "媒体库",
       component: "./Media",
       wrappers: ["@/components/Auth"],
     },
@@ -85,13 +91,13 @@ export default defineConfig({
     },
     {
       path: "/settings",
-      name: "官网配置",
+      name: "品牌与主题",
       component: "./Settings",
       wrappers: ["@/components/Auth"],
     },
     {
       path: "/products",
-      name: "产品管理",
+      name: "商品管理",
       component: "./Products",
       wrappers: ["@/components/Auth"],
     },

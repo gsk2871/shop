@@ -188,7 +188,7 @@ export default function WhatsAppPage() {
   }
   return (
     <Card
-      title="客户配置"
+      title="客服配置"
       extra={
         can("whatsapp.create") && (
           <Button type="primary" onClick={() => void edit()}>
@@ -365,7 +365,7 @@ export default function WhatsAppPage() {
       />
       <Modal
         open={open}
-        title={editing ? "编辑客户配置" : "新增客户配置"}
+        title={editing ? "编辑客服配置" : "新增客服配置"}
         width={850}
         onCancel={() => {
           if (!busy) setOpen(false);

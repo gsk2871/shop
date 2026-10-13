@@ -17,6 +17,7 @@ import type { ReactNode } from "react";
 import "@shop/content/styles.css";
 import { me, type InitialState } from "./services/auth";
 import type { PermissionNode } from "./services/contracts";
+import { groupPermissionMenus } from "./navigation";
 export async function getInitialState(): Promise<InitialState> {
   try {
     return { identity: await me() };
@@ -25,6 +26,10 @@ export async function getInitialState(): Promise<InitialState> {
   }
 }
 const menuIcons: Record<string, ReactNode> = {
+  "navigation.operations": <AppstoreOutlined />,
+  "navigation.settings": <SettingOutlined />,
+  "navigation.users": <TeamOutlined />,
+  "navigation.maintenance": <AuditOutlined />,
   "/products": <AppstoreOutlined />,
   "/categories": <TagsOutlined />,
   "/articles": <FileTextOutlined />,
@@ -39,26 +44,15 @@ const menuIcons: Record<string, ReactNode> = {
   "/system/config": <SettingOutlined />,
 };
 function menus(nodes: PermissionNode[]): unknown[] {
-  return nodes
-    .filter((node) => node.type !== "action" && node.route !== "/overview")
-    .flatMap((node) =>
-      node.type === "directory"
-        ? menus(node.children)
-        : [
-            {
-              key: node.code,
-              name:
-                node.route === "/articles"
-                  ? "新闻管理"
-                  : node.route === "/whatsapp"
-                    ? "客户配置"
-                    : node.name,
-              icon: menuIcons[node.route || ""],
-              path: node.route || undefined,
-              children: node.children.length ? menus(node.children) : undefined,
-            },
-          ],
-    );
+  return nodes.filter((node) => node.type !== "action").map((node) => ({
+    key: node.code,
+    name: node.name,
+    icon: menuIcons[node.route || node.code],
+    path: node.route || undefined,
+    children: node.children.some((child) => child.type !== "action")
+      ? menus(node.children)
+      : undefined,
+  }));
 }
 export const layout = ({ initialState }: { initialState?: InitialState }) => ({
   title: "Shop Admin",
@@ -85,9 +79,9 @@ export const layout = ({ initialState }: { initialState?: InitialState }) => ({
     >
       {initialState?.identity?.user.displayName ||
         initialState?.identity?.user.username ||
-        "安全中心"}
+        "个人中心"}
     </Button>,
   ],
   menu: { locale: false },
-  menuDataRender: () => menus(initialState?.identity?.menu || []),
+  menuDataRender: () => menus(groupPermissionMenus(initialState?.identity?.menu || [])),
 });

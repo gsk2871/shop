@@ -3,6 +3,8 @@ import { history, useModel } from "@umijs/max";
 import { Spin } from "antd";
 import type { PermissionNode } from "../../services/contracts";
 
+import { groupPermissionMenus } from "../../navigation";
+
 function firstRoute(nodes: PermissionNode[]): string | undefined {
   for (const node of nodes) {
     if (node.type === "menu" && node.route && node.route !== "/overview")
@@ -20,7 +22,7 @@ export default function Home() {
         ? "/login"
         : identity.scope !== "full"
           ? "/system/security"
-          : firstRoute(identity.menu) || "/system/security",
+          : firstRoute(groupPermissionMenus(identity.menu)) || "/system/security",
     );
   }, [initialState]);
   return <Spin />;
