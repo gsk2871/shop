@@ -12,7 +12,7 @@ import (
 	"strings"
 )
 
-type Handler struct{ administration, catalog, news, branding, whatsapp, mediaHandler, publicMedia http.Handler }
+type Handler struct{ administration, catalog, faq, news, branding, whatsapp, mediaHandler, publicMedia http.Handler }
 
 func NewHandler(c conf.Config) *Handler { return &Handler{} }
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -37,6 +37,11 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	switch {
+	case r.URL.Path == "/api/v1/faqs":
+		if h.faq != nil {
+			h.faq.ServeHTTP(w, r)
+			return
+		}
 	case r.URL.Path == "/api/v1/contact" || r.URL.Path == "/api/v1/whatsapp-status":
 		if h.whatsapp != nil {
 			h.whatsapp.ServeHTTP(w, r)
@@ -64,6 +69,11 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 func (h *Handler) admin(w http.ResponseWriter, r *http.Request) {
 	switch {
+	case r.URL.Path == "/admin/api/v1/faqs" || strings.HasPrefix(r.URL.Path, "/admin/api/v1/faqs/"):
+		if h.faq != nil {
+			h.faq.ServeHTTP(w, r)
+			return
+		}
 	case strings.HasPrefix(r.URL.Path, "/admin/api/v1/whatsapp-"):
 		if h.whatsapp != nil {
 			h.whatsapp.ServeHTTP(w, r)
@@ -116,3 +126,5 @@ func (h *Handler) PublicFiles() http.Handler {
 }
 
 func (h *Handler) SetWhatsApp(v http.Handler) { h.whatsapp = v }
+
+func (h *Handler) SetFAQ(v http.Handler) { h.faq = v }

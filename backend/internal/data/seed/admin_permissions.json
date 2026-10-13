@@ -819,6 +819,70 @@
           "path": "/admin/api/v1/categories/{id}"
         }
       ]
+    },
+    {
+      "code": "menu.faqs",
+      "parentCode": "directory.content",
+      "name": "问答配置",
+      "type": "menu",
+      "sort": 60,
+      "route": "/faqs",
+      "permissionCode": "faq.read",
+      "apis": [
+        {
+          "method": "GET",
+          "path": "/admin/api/v1/faqs"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/api/v1/faqs/{id}"
+        }
+      ]
+    },
+    {
+      "code": "action.faq.create",
+      "parentCode": "menu.faqs",
+      "name": "新增问答",
+      "type": "action",
+      "sort": 10,
+      "route": null,
+      "permissionCode": "faq.create",
+      "apis": [
+        {
+          "method": "POST",
+          "path": "/admin/api/v1/faqs"
+        }
+      ]
+    },
+    {
+      "code": "action.faq.update",
+      "parentCode": "menu.faqs",
+      "name": "修改问答",
+      "type": "action",
+      "sort": 20,
+      "route": null,
+      "permissionCode": "faq.update",
+      "apis": [
+        {
+          "method": "PUT",
+          "path": "/admin/api/v1/faqs/{id}"
+        }
+      ]
+    },
+    {
+      "code": "action.faq.delete",
+      "parentCode": "menu.faqs",
+      "name": "删除问答",
+      "type": "action",
+      "sort": 30,
+      "route": null,
+      "permissionCode": "faq.delete",
+      "apis": [
+        {
+          "method": "DELETE",
+          "path": "/admin/api/v1/faqs/{id}"
+        }
+      ]
     }
   ],
   "roles": [
@@ -873,7 +937,11 @@
         "category.read",
         "category.create",
         "category.update",
-        "category.delete"
+        "category.delete",
+        "faq.read",
+        "faq.create",
+        "faq.update",
+        "faq.delete"
       ]
     },
     {
@@ -913,7 +981,11 @@
         "category.read",
         "category.create",
         "category.update",
-        "category.delete"
+        "category.delete",
+        "faq.read",
+        "faq.create",
+        "faq.update",
+        "faq.delete"
       ]
     },
     {
@@ -927,7 +999,8 @@
         "site.read",
         "banner.read",
         "whatsapp.read",
-        "category.read"
+        "category.read",
+        "faq.read"
       ]
     }
   ],

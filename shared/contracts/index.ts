@@ -279,3 +279,15 @@ export interface Category extends PublicCategory {
   version: number;
   expectedVersion?: number;
 }
+
+export interface PublicFAQ {
+  id: EntityID;
+  question: string;
+  answer: string;
+}
+export interface FAQ extends PublicFAQ {
+  sort: number;
+  enabled: boolean;
+  version: number;
+  expectedVersion?: number;
+}

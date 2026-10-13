@@ -203,3 +203,23 @@ PostgreSQL 建连、连接生命周期与空闲回收、SQL 执行和等锁超�
 - 产品管理详情返回三个媒体 ID 及服务端解析的 image/video/report URL；公开详情与预览仅返回 URL，列表返回 image URL。后台与官网的共用详情组件展示产品图片、视频和检测报告图片。已有无图产品仍可读取，编辑保存及再次发布前需要补齐图片。
 - 产品、新闻的官网地址由服务端在新建且未传 slug 时按名称加随机后缀生成；同名内容使用不同地址。更新时保留数据库中的既有 slug，不随改名或表单省略而变化。后台不提供官网路径输入。
 - 新闻保存不使用自定义 SEO 字段；官网可按标题和摘要生成页面元信息。旧记录中的字段保留兼容，后续保存置空。
+
+
+## 问答配置
+
+后台入口为「运营管理 → 问答配置」（`/faqs`）。问题、答案必填，答案使用文本并保留内部换行；新建默认关闭。排序值越小越靠前，同值按 ID 升序。官网首页以可折叠区块展示，内容按文本转义，不解释 HTML；无开启内容时隐藏区块，公共请求不缓存。
+
+| 接口 | 权限 | 行为 |
+| --- | --- | --- |
+| GET /admin/api/v1/faqs | faq.read | 分页列表；支持 page、pageSize、q（问题子串搜索） |
+| GET /admin/api/v1/faqs/{id} | faq.read | 读取未删除问答 |
+| POST /admin/api/v1/faqs | faq.create | 新建，写入 question、answer、sort、enabled |
+| PUT /admin/api/v1/faqs/{id} | faq.update | 修改四个业务字段；必须提供 expectedVersion |
+| DELETE /admin/api/v1/faqs/{id} | faq.delete | 软删除；必须提供 expectedVersion |
+| GET /api/v1/faqs | 无需登录 | 返回全部开启且未删除的问答，items 内仅 id、question、answer |
+
+管理接口返回 id（十进制字符串）、question、answer、sort、enabled、version。校验失败返回 INVALID_ARGUMENT；版本冲突返回 VERSION_CONFLICT；已删除或不存在返回 NOT_FOUND。问题与答案长度上限由 biz/faq 常量控制，当前分别为 500、10000 字节。新增、修改和删除与审计记录在同一事务中提交，审计动作是 faq.create、faq.update、faq.delete。
+
+数据表 `faq`（迁移 `000014_faq`）包含：id bigint identity 主键，question/answer text 非空，sort integer，enabled boolean 默认 false，version bigint 默认 1，以及 created_at/updated_at/deleted_at timestamptz、created_by/updated_by bigint。时间与操作人记录创建、修改、删除的来源，deleted_at 为空代表有效数据。活动记录和公开记录分别建立 (sort,id) 部分索引，不涉及其他业务表关系。回滚 SQL 为对应的 down 文件，删除 faq 表及问答内容，需在停用功能并备份后执行。
+
+权限种子注册菜单及四个权限。新建默认内容管理员获得全部问答权限，只读角色获得 faq.read；重复 seed 仅为超级管理员补齐权限，已有普通角色需显式授权。

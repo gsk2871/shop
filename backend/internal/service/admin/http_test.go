@@ -96,10 +96,13 @@ func TestLoginScopesPermissionsAndRevocation(t *testing.T) {
 	if e = d.DB.Exec("INSERT INTO admin_session(token_hash,user_id,scope,auth_version,expires_at) VALUES(?,?,'full',1,now()+interval '1 hour')", repo.Hash(readerToken), userID).Error; e != nil {
 		t.Fatal(e)
 	}
+	if request("GET", "faqs", readerToken, nil).Code != 200 {
+		t.Fatal("reader FAQ list denied")
+	}
 	if request("GET", "products", readerToken, nil).Code != 200 {
 		t.Fatal("reader list denied")
 	}
-	for _, entry := range []struct{ method, path string }{{"POST", "products"}, {"POST", "products/preview"}, {"PUT", "settings"}, {"POST", "media"}, {"PATCH", "banners/1/enabled"}} {
+	for _, entry := range []struct{ method, path string }{{"POST", "faqs"}, {"PUT", "faqs/1"}, {"DELETE", "faqs/1"}, {"POST", "products"}, {"POST", "products/preview"}, {"PUT", "settings"}, {"POST", "media"}, {"PATCH", "banners/1/enabled"}} {
 		if request(entry.method, entry.path, readerToken, nil).Code != 403 {
 			t.Fatal("reader mutation allowed", entry)
 		}
