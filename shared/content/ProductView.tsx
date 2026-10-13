@@ -38,6 +38,31 @@ export function ProductView({
     <article className="shop-product-view">
       <h1>{product.name}</h1>
       <p>{product.summary}</p>
+      {product.image && (
+        <img
+          className="shop-product-image"
+          src={`${mediaPrefix}${product.image}`}
+          alt={product.name}
+        />
+      )}
+      {product.video && (
+        <video
+          className="shop-product-video"
+          src={`${mediaPrefix}${product.video}`}
+          controls
+          preload="metadata"
+        />
+      )}
+      {product.report && (
+        <section>
+          <h2>Test report</h2>
+          <img
+            className="shop-product-report"
+            src={`${mediaPrefix}${product.report}`}
+            alt={`${product.name} test report`}
+          />
+        </section>
+      )}
       <dl className="shop-product-facts">
         {[
           ["Category", product.category],

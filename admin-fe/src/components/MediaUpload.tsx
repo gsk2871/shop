@@ -6,7 +6,6 @@ export interface UploadPolicy {
   allowedTypes: string[];
   maxImageBytes: number;
   maxVideoBytes: number;
-  maxDocumentBytes: number;
 }
 export function useUploadPolicy() {
   const [policy, setPolicy] = useState<UploadPolicy>();
@@ -55,9 +54,7 @@ export default function MediaUpload({
           }
           const limit = file.type.startsWith("video/")
             ? policy.maxVideoBytes
-            : file.type.startsWith("image/")
-              ? policy.maxImageBytes
-              : policy.maxDocumentBytes;
+            : policy.maxImageBytes;
           if (file.size > limit) {
             msg.error(
               `文件超过当前限制 ${(limit / 1024 / 1024).toFixed(0)} MiB`,

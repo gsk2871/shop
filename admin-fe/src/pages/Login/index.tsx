@@ -24,7 +24,7 @@ export default function Login() {
     const identity = await me();
     await setInitialState({ identity });
     history.replace(
-      identity.scope === "full" ? "/overview" : "/system/security",
+      identity.scope === "full" ? "/" : "/system/security",
     );
   }
   return (

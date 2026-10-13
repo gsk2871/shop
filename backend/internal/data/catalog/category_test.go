@@ -15,6 +15,7 @@ import (
 func TestCategoriesAndProductFilters(t *testing.T) {
 	d, c := testutil.Postgres(t)
 	r := NewRepo(d, c)
+	imageID := fixtureMedia(t, r, "image")
 	ctx := auth.WithIdentity(context.Background(), &auth.Identity{User: auth.User{ID: 1}, Permissions: []string{"product.publish", "product.price.update"}})
 	first, err := r.SaveCategory(ctx, 0, biz.Category{Name: " Compounds ", Sort: 2})
 	if err != nil {
@@ -37,7 +38,7 @@ func TestCategoriesAndProductFilters(t *testing.T) {
 	}
 	price := "12.00"
 	makeProduct := func(name, slug, category string) biz.Product {
-		p, err := r.Save(ctx, 0, biz.Product{Name: name, Slug: slug, CategoryID: category, Aliases: "hidden-alias", Status: "draft", Detail: richtext.Document{MediaIDs: []string{}}, SKUs: []biz.SKU{{Key: "default", Enabled: true, Currency: "USD", SalePrice: &price, SpecValueKeys: []string{}}}})
+		p, err := r.Save(ctx, 0, biz.Product{ImageMediaID: imageID, Name: name, Slug: slug, CategoryID: category, Aliases: "hidden-alias", Status: "draft", Detail: richtext.Document{MediaIDs: []string{}}, SKUs: []biz.SKU{{Key: "default", Enabled: true, Currency: "USD", SalePrice: &price, SpecValueKeys: []string{}}}})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -119,6 +120,7 @@ func TestCategoriesAndProductFilters(t *testing.T) {
 func TestCategoryDeleteRacesProductCreation(t *testing.T) {
 	d, c := testutil.Postgres(t)
 	r := NewRepo(d, c)
+	imageID := fixtureMedia(t, r, "image")
 	ctx := auth.WithIdentity(context.Background(), &auth.Identity{User: auth.User{ID: 1}})
 	cat, err := r.SaveCategory(ctx, 0, biz.Category{Name: "Race"})
 	if err != nil {
@@ -133,7 +135,7 @@ func TestCategoryDeleteRacesProductCreation(t *testing.T) {
 	go func() {
 		defer wg.Done()
 		<-start
-		_, err := r.Save(ctx, 0, biz.Product{Name: "Race", Slug: "race", CategoryID: cat.ID, Status: "draft", Detail: richtext.Document{MediaIDs: []string{}}, SKUs: []biz.SKU{{Key: "default", Enabled: false, Currency: "USD", SpecValueKeys: []string{}}}})
+		_, err := r.Save(ctx, 0, biz.Product{ImageMediaID: imageID, Name: "Race", Slug: "race", CategoryID: cat.ID, Status: "draft", Detail: richtext.Document{MediaIDs: []string{}}, SKUs: []biz.SKU{{Key: "default", Enabled: false, Currency: "USD", SpecValueKeys: []string{}}}})
 		errs <- err
 	}()
 	close(start)
@@ -193,6 +195,7 @@ func TestLegacyCategoryMigration(t *testing.T) {
 func TestCurrencyDictionaryDrivesOptionsAndDefaultSKU(t *testing.T) {
 	d, c := testutil.Postgres(t)
 	r := NewRepo(d, c)
+	imageID := fixtureMedia(t, r, "image")
 	ctx := auth.WithIdentity(context.Background(), &auth.Identity{User: auth.User{ID: 1}})
 	cat, err := r.SaveCategory(ctx, 0, biz.Category{Name: "Currency"})
 	if err != nil {
@@ -205,7 +208,7 @@ func TestCurrencyDictionaryDrivesOptionsAndDefaultSKU(t *testing.T) {
 	if err != nil || len(rows) != 3 || rows[0].Code != "EUR" || rows[2].Code != "USD" {
 		t.Fatal("enabled dictionary options", rows, err)
 	}
-	product := biz.Product{Name: "Default", Slug: "default", CategoryID: cat.ID, Status: "draft", Detail: richtext.Document{MediaIDs: []string{}}}
+	product := biz.Product{ImageMediaID: imageID, Name: "Default", Slug: "default", CategoryID: cat.ID, Status: "draft", Detail: richtext.Document{MediaIDs: []string{}}}
 	if err = r.Prepare(ctx, &product); err != nil || len(product.SKUs) != 1 || product.SKUs[0].Currency != "EUR" {
 		t.Fatal("dictionary default SKU", product, err)
 	}

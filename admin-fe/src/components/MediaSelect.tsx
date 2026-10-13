@@ -27,6 +27,22 @@ export default function MediaSelect({
 }) {
   const { initialState } = useModel("@@initialState");
   const [open, setOpen] = useState(false);
+  const [selected, setSelected] = useState<Media>();
+  useEffect(() => {
+    let active = true;
+    setSelected(undefined);
+    if (value)
+      api<Media>(`media/${value}`)
+        .then((asset) => {
+          if (active) setSelected(asset);
+        })
+        .catch((e: Error) => {
+          if (active) msg.error(e.message);
+        });
+    return () => {
+      active = false;
+    };
+  }, [value]);
   const [data, setData] = useState<Page<Media>>({
     items: [],
     total: 0,
@@ -59,6 +75,25 @@ export default function MediaSelect({
         </Button>
         {value && <Button onClick={() => onChange?.("")}>清除</Button>}
       </Space>
+      {selected && (
+        <div style={{ marginTop: 8 }}>
+          {selected.type === "image" ? (
+            <Image
+              width={120}
+              src={assetURL(selected.url)}
+              alt={selected.name}
+            />
+          ) : (
+            <video
+              controls
+              preload="metadata"
+              width={200}
+              src={assetURL(selected.url)}
+            />
+          )}
+          <div>{selected.name}</div>
+        </div>
+      )}
       <Modal
         title="选择媒体素材"
         open={open}

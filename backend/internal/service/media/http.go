@@ -54,7 +54,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if s, ok := configreload.FromContext(r.Context()); ok {
 			version = s.Status.Version
 		}
-		admin.Reply(w, 200, map[string]any{"version": version, "allowedTypes": h.Config.Data.Storage.AllowedTypes, "maxImageBytes": h.Config.Data.Storage.MaxImageBytes, "maxVideoBytes": h.Config.Data.Storage.MaxVideoBytes, "maxDocumentBytes": h.Config.Data.Storage.MaxDocumentBytes})
+		admin.Reply(w, 200, map[string]any{"version": version, "allowedTypes": allowedTypes(h.Config.Data.Storage.AllowedTypes), "maxImageBytes": h.Config.Data.Storage.MaxImageBytes, "maxVideoBytes": h.Config.Data.Storage.MaxVideoBytes})
 	case path == "" && r.Method == "GET":
 		page, size := 1, 20
 		var err error
@@ -119,9 +119,21 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		admin.Failure(w, r, errdef.Invalid())
 	}
 }
+
+// Ignore legacy document settings in the effective upload policy.
+func allowedTypes(configured []string) []string {
+	out := []string{}
+	for _, mime := range configured {
+		switch mime {
+		case "image/jpeg", "image/png", "image/webp", "image/gif", "video/mp4", "video/webm":
+			out = append(out, mime)
+		}
+	}
+	return out
+}
 func (h *Handler) upload(w http.ResponseWriter, r *http.Request) {
 	policy := h.Config.Data.Storage
-	maxSize := max(policy.MaxImageBytes, policy.MaxVideoBytes, policy.MaxDocumentBytes)
+	maxSize := max(policy.MaxImageBytes, policy.MaxVideoBytes)
 	r.Body = http.MaxBytesReader(w, r.Body, maxSize+(1<<20))
 	multipart, err := r.MultipartReader()
 	if err != nil {
@@ -140,7 +152,7 @@ func (h *Handler) upload(w http.ResponseWriter, r *http.Request) {
 	}
 	mime := http.DetectContentType(prefix)
 	allowed := false
-	for _, value := range policy.AllowedTypes {
+	for _, value := range allowedTypes(policy.AllowedTypes) {
 		if value == mime {
 			allowed = true
 		}
@@ -149,9 +161,9 @@ func (h *Handler) upload(w http.ResponseWriter, r *http.Request) {
 		admin.Failure(w, r, errdef.Invalid())
 		return
 	}
-	extensions := map[string]string{"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp", "image/gif": ".gif", "video/mp4": ".mp4", "video/webm": ".webm", "application/pdf": ".pdf"}
-	kind := "document"
-	limit := policy.MaxDocumentBytes
+	extensions := map[string]string{"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp", "image/gif": ".gif", "video/mp4": ".mp4", "video/webm": ".webm"}
+	kind := "image"
+	limit := policy.MaxImageBytes
 	if strings.HasPrefix(mime, "image/") {
 		kind = "image"
 		limit = policy.MaxImageBytes

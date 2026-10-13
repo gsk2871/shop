@@ -2,7 +2,7 @@ export type { Banner, Settings } from "./contracts";
 export type { Article } from "./contracts";
 export interface Media {
   id: string;
-  type: "image" | "video" | "document";
+  type: "image" | "video";
   available: boolean;
   name: string;
   url: string;

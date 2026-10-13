@@ -28,7 +28,7 @@
 | data.storage.upload_dir | ./storage/uploads；可写目录 | 上传路径和持久 root 注册 | TestRuntimePostgres：切换、旧文件和 Range；配套恢复演练 |
 | data.storage.max_image_bytes | 20 MiB；>0，≤1 TiB | 图片流写入限制／策略接口 | TestStreamingUploadPolicyAndReferences；TestReloadResourceConsumers |
 | data.storage.max_video_bytes | 200 MiB；同上 | 视频流写入限制／策略接口 | 分类限额拒绝；TestReloadDrainsUploadAndTransaction：在途视频保留旧策略；真实 MP4 官网 readyState=4 |
-| data.storage.max_document_bytes | 20 MiB；同上 | 文档流写入限制／策略接口 | TestStreamingUploadPolicyAndReferences：PDF 分类限额拒绝 |
+| data.storage.max_document_bytes | 历史兼容字段 | 不影响有效上传策略，PDF 始终拒绝 | TestPDFRejectedEvenByLegacyPolicy |
 | data.storage.allowed_types | JPEG/PNG/WebP/GIF/PDF/MP4/WebM；无重复、受支持 | 内容嗅探允许集 | PNG 被更新策略拒绝、SVG 拒绝 |
 | data.storage.cleanup_interval | 1m；100ms–1h | 新版本后台任务、旧任务取消 | TestReloadResourceConsumers；删除和崩溃临时文件测试 |
 | auth.cookie_secure | true；环境 COOKIE_SECURE 可覆盖 | 新签发／注销 Cookie | TestReloadResourceConsumers；HttpOnly/SameSite 测试 |

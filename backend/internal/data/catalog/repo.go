@@ -12,6 +12,7 @@ import (
 	"peptide-site/internal/conf"
 	"peptide-site/internal/data"
 	media "peptide-site/internal/data/media"
+	"peptide-site/internal/pkg/contentslug"
 	"peptide-site/internal/pkg/errdef"
 	"peptide-site/internal/pkg/money"
 	"peptide-site/internal/pkg/richtext"
@@ -94,6 +95,24 @@ func (r *Repo) get(tx *gorm.DB, id int64) (biz.Product, error) {
 		}
 		p.CategoryID = strconv.FormatInt(c.ID, 10)
 		p.Category = c.Name
+	}
+	var assets []struct {
+		Field   string
+		MediaID int64
+		URL     string
+	}
+	if err := tx.Table("media_reference ref").Select("ref.field,ref.media_id,m.url").Joins("JOIN media m ON m.id=ref.media_id AND m.available AND m.deleted_at IS NULL").Where("ref.owner_type='product' AND ref.owner_id=? AND ref.field IN ?", p.ID, []string{"image", "video", "report"}).Scan(&assets).Error; err != nil {
+		return p, err
+	}
+	for _, asset := range assets {
+		switch asset.Field {
+		case "image":
+			p.ImageMediaID, p.Image = strconv.FormatInt(asset.MediaID, 10), asset.URL
+		case "video":
+			p.VideoMediaID, p.Video = strconv.FormatInt(asset.MediaID, 10), asset.URL
+		case "report":
+			p.ReportMediaID, p.Report = strconv.FormatInt(asset.MediaID, 10), asset.URL
+		}
 	}
 	var refs []int64
 	if err := tx.Table("media_reference").Where("owner_type='product' AND owner_id=? AND field='detail'", p.ID).Order("media_id").Pluck("media_id", &refs).Error; err != nil {
@@ -198,7 +217,7 @@ func (r *Repo) List(ctx context.Context, public bool, page, size int, search str
 			if err != nil {
 				return err
 			}
-			item := map[string]any{"id": p.ID, "name": p.Name, "slug": p.Slug, "category": p.Category, "categoryId": p.CategoryID, "summary": p.Summary, "fromPrice": p.FromPrice}
+			item := map[string]any{"image": p.Image, "id": p.ID, "name": p.Name, "slug": p.Slug, "category": p.Category, "categoryId": p.CategoryID, "summary": p.Summary, "fromPrice": p.FromPrice}
 			if !public {
 				item["status"] = p.Status
 				item["version"] = p.Version
@@ -221,6 +240,13 @@ func audit(tx *gorm.DB, ctx context.Context, action string, id int64) error {
 }
 func can(ctx context.Context, p string) bool { i := auth.Current(ctx); return i != nil && i.Allows(p) }
 func (r *Repo) Prepare(ctx context.Context, p *biz.Product) error {
+	if p.Slug == "" {
+		value, err := contentslug.New(p.Name)
+		if err != nil {
+			return err
+		}
+		p.Slug = value
+	}
 	rows, err := r.Currencies(ctx)
 	if err != nil {
 		return err
@@ -240,6 +266,29 @@ func (r *Repo) Prepare(ctx context.Context, p *biz.Product) error {
 		return err
 	}
 	p.Category = c.Name
+	p.Image, p.Video, p.Report = "", "", ""
+	for _, field := range []struct {
+		id, kind string
+		url      *string
+	}{
+		{p.ImageMediaID, "image", &p.Image}, {p.VideoMediaID, "video", &p.Video}, {p.ReportMediaID, "image", &p.Report},
+	} {
+		if field.id == "" {
+			continue
+		}
+		id, _ := biz.ParseID(field.id)
+		asset, err := r.Media.Get(ctx, id)
+		if err == gorm.ErrRecordNotFound {
+			return errdef.Invalid()
+		}
+		if err != nil {
+			return err
+		}
+		if asset.MediaType != field.kind {
+			return errdef.Invalid()
+		}
+		*field.url = asset.URL
+	}
 	clean, err := r.Sanitize(ctx, p.Detail)
 	if err != nil {
 		return err
@@ -375,6 +424,9 @@ func (r *Repo) Save(ctx context.Context, id int64, p biz.Product) (biz.Product, 
 		} else if p.ExpectedVersion != 0 || p.ID != "" {
 			return errdef.Invalid()
 		}
+		if id != 0 {
+			p.Slug = old.Slug
+		}
 		if err := validateOwnership(old, p); err != nil {
 			return err
 		}
@@ -480,7 +532,14 @@ func (r *Repo) Save(ctx context.Context, id int64, p biz.Product) (biz.Product, 
 				}
 			}
 		}
-		if err := media.SyncReferences(tx, "product", strconv.FormatInt(id, 10), map[string][]int64{"detail": richtext.IDs(p.Detail)}); err != nil {
+		references := map[string][]int64{"detail": richtext.IDs(p.Detail)}
+		for field, raw := range map[string]string{"image": p.ImageMediaID, "video": p.VideoMediaID, "report": p.ReportMediaID} {
+			if raw != "" {
+				mediaID, _ := biz.ParseID(raw)
+				references[field] = []int64{mediaID}
+			}
+		}
+		if err := media.SyncReferences(tx, "product", strconv.FormatInt(id, 10), references); err != nil {
 			return err
 		}
 		action := "product.update"
@@ -518,7 +577,7 @@ func (r *Repo) Status(ctx context.Context, id, version int64, status string) (bi
 		if err != nil {
 			return err
 		}
-		if status == "published" && p.FromPrice == nil {
+		if status == "published" && (p.FromPrice == nil || p.ImageMediaID == "") {
 			return errdef.Invalid()
 		}
 		if err := tx.Exec("UPDATE product SET status=?,version=version+1,updated_at=now(),updated_by=? WHERE id=?", status, actor(ctx), id).Error; err != nil {

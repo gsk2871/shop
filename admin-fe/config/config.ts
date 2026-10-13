@@ -28,7 +28,7 @@ export default defineConfig({
     },
     {
       path: "/whatsapp",
-      name: "WhatsApp 客服配置",
+      name: "客户配置",
       component: "./WhatsApp",
       wrappers: ["@/components/Auth"],
     },
@@ -69,13 +69,8 @@ export default defineConfig({
       wrappers: ["@/components/Auth"],
     },
     { path: "/login", component: "./Login", layout: false },
-    { path: "/", redirect: "/overview" },
-    {
-      path: "/overview",
-      name: "工作台",
-      component: "./Overview",
-      wrappers: ["@/components/Auth"],
-    },
+    { path: "/", component: "./Home" },
+    { path: "/overview", redirect: "/" },
     {
       path: "/media",
       name: "素材库",

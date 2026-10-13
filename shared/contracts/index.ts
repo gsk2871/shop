@@ -83,6 +83,9 @@ export interface PublicSKU {
   price: Price;
 }
 export interface PublicProduct {
+  image: string;
+  video: string;
+  report: string;
   id?: EntityID;
   name: string;
   slug: string;
@@ -105,6 +108,9 @@ export interface PublicProduct {
   fromPrice?: Price | null;
 }
 export interface Product extends Omit<PublicProduct, "specs" | "skus"> {
+  imageMediaId: EntityID | "";
+  videoMediaId: EntityID | "";
+  reportMediaId: EntityID | "";
   specs: ProductSpec[];
   skus: ProductSKU[];
   id: EntityID;
@@ -114,6 +120,7 @@ export interface Product extends Omit<PublicProduct, "specs" | "skus"> {
   updatedAt: string;
 }
 export interface ProductSummary {
+  image: string;
   id: EntityID;
   name: string;
   slug: string;

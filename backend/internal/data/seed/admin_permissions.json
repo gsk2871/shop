@@ -3,17 +3,6 @@
   "purpose": "全新项目权限目录树及默认角色种子，步骤03由种子加载器导入数据库",
   "nodes": [
     {
-      "code": "menu.overview",
-      "parentCode": null,
-      "name": "工作台",
-      "type": "menu",
-      "sort": 10,
-      "route": "/overview",
-      "permissionCode": null,
-      "apis": [],
-      "visibility": "authenticated"
-    },
-    {
       "code": "directory.content",
       "parentCode": null,
       "name": "内容管理",
@@ -679,7 +668,7 @@
     {
       "code": "menu.whatsapp",
       "parentCode": "directory.site",
-      "name": "WhatsApp 客服配置",
+      "name": "客户配置",
       "type": "menu",
       "sort": 40,
       "route": "/whatsapp",

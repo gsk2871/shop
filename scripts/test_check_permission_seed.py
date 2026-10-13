@@ -15,7 +15,7 @@ class PermissionSeedTests(unittest.TestCase):
             / "backend/internal/data/seed/admin_permissions.json").read_text())
 
     def test_repository_seed(self):
-        self.assertEqual(validate_seed(self.seed), (52, 47, 3))
+        self.assertEqual(validate_seed(self.seed), (51, 47, 3))
 
     def test_invalid_authorization_changes(self):
         mutations = {

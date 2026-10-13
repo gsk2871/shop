@@ -183,3 +183,29 @@ func TestStreamingUploadPolicyAndReferences(t *testing.T) {
 		t.Fatal("cleanup failed", entries)
 	}
 }
+
+func TestPDFRejectedEvenByLegacyPolicy(t *testing.T) {
+	c := conf.Config{}
+	c.Data.Storage.AllowedTypes = []string{"application/pdf", "image/png"}
+	c.Data.Storage.MaxImageBytes = 1 << 20
+	c.Data.Storage.MaxVideoBytes = 1 << 20
+	h := &Handler{Config: c}
+	var body bytes.Buffer
+	writer := multipart.NewWriter(&body)
+	part, _ := writer.CreateFormFile("file", "report.pdf")
+	_, _ = part.Write([]byte("%PDF-1.7\n" + strings.Repeat("x", 600)))
+	_ = writer.Close()
+	req := httptest.NewRequest("POST", "/admin/api/v1/media", &body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	response := httptest.NewRecorder()
+	h.ServeHTTP(response, req)
+	if response.Code != 400 {
+		t.Fatal("PDF accepted", response.Code)
+	}
+	policy := httptest.NewRecorder()
+	h.ServeHTTP(policy, httptest.NewRequest("GET", "/admin/api/v1/media/upload-policy", nil))
+	if strings.Contains(policy.Body.String(), "pdf") || strings.Contains(policy.Body.String(), "Document") {
+		t.Fatal(policy.Body.String())
+	}
+
+}

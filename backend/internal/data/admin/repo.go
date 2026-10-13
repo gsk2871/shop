@@ -158,6 +158,12 @@ func (r *Repo) Tree(ctx context.Context, permissions []string, all bool) ([]biz.
 	build = func(parent *int64) []biz.Permission {
 		children := []biz.Permission{}
 		for _, n := range nodes {
+			if n.Code == "menu.overview" {
+				continue
+			}
+			if n.Code == "menu.whatsapp" {
+				n.Name = "客户配置"
+			}
 			if (parent == nil && n.ParentID != nil) || (parent != nil && (n.ParentID == nil || *n.ParentID != *parent)) {
 				continue
 			}

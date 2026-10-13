@@ -36,6 +36,7 @@ import type {
   ProductSummary,
   PublicProduct,
 } from "../../services/contracts";
+import MediaSelect from "../../components/MediaSelect";
 import RichTextEditor from "../../components/RichTextEditor";
 function newKey() {
   return crypto.randomUUID();
@@ -578,15 +579,6 @@ export default function Products() {
               <Input />
             </Form.Item>
             <Form.Item
-              name="slug"
-              label="官网路径（小写字母、数字及连字符）"
-              rules={[
-                { required: true, pattern: /^[a-z0-9]+(?:-[a-z0-9]+)*$/ },
-              ]}
-            >
-              <Input />
-            </Form.Item>
-            <Form.Item
               name="categoryId"
               label="商品分类"
               rules={[{ required: true, message: "请选择商品分类" }]}
@@ -609,39 +601,21 @@ export default function Products() {
               <Input.TextArea rows={3} />
             </Form.Item>
           </div>
-          <ContentHeading title="理化信息" />
-          <div className="content-spec-grid">
-            {(
-              [
-                "aliases",
-                "cas",
-                "formula",
-                "molecularWeight",
-                "sequence",
-                "purity",
-                "storage",
-                "solubility",
-              ] as const
-            ).map((key) => (
-              <Form.Item
-                key={key}
-                name={key}
-                label={
-                  {
-                    aliases: "别名",
-                    cas: "CAS",
-                    formula: "分子式",
-                    molecularWeight: "分子量",
-                    sequence: "序列",
-                    purity: "纯度",
-                    storage: "存储条件",
-                    solubility: "溶解性",
-                  }[key]
-                }
-              >
-                <Input />
-              </Form.Item>
-            ))}
+          <ContentHeading title="产品媒体" />
+          <div className="content-form-grid">
+            <Form.Item
+              name="imageMediaId"
+              label="产品图片"
+              rules={[{ required: true, message: "请选择产品图片" }]}
+            >
+              <MediaSelect types={["image"]} />
+            </Form.Item>
+            <Form.Item name="videoMediaId" label="产品视频（选填）">
+              <MediaSelect types={["video"]} />
+            </Form.Item>
+            <Form.Item name="reportMediaId" label="检测报告图片（选填）">
+              <MediaSelect types={["image"]} />
+            </Form.Item>
           </div>
           <ContentHeading
             title="规格与价格"
@@ -803,7 +777,7 @@ export default function Products() {
           <Form.Item name="detail" label="产品详情（英文，媒体从库选择）">
             <RichTextEditor />
           </Form.Item>
-          <ContentHeading title="发布与搜索展示" />
+          <ContentHeading title="发布设置" />
           <div className="content-form-grid">
             <Form.Item name="status" label="状态">
               <Select
@@ -813,16 +787,6 @@ export default function Products() {
                   label,
                 }))}
               />
-            </Form.Item>
-            <Form.Item name="seoTitle" label="SEO 标题">
-              <Input />
-            </Form.Item>
-            <Form.Item
-              className="full-width"
-              name="seoDescription"
-              label="SEO 描述"
-            >
-              <Input.TextArea rows={3} />
             </Form.Item>
           </div>
         </Form>

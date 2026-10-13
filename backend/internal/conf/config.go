@@ -117,7 +117,7 @@ func defaults() Config {
 		Log:    Log{Level: "info"},
 		App:    App{Name: "peptide-site"},
 		Server: Server{HTTP: HTTP{Addr: "127.0.0.1:8080", Timeout: 30 * time.Second, ReadHeaderTimeout: 10 * time.Second, ReadTimeout: 60 * time.Second, WriteTimeout: 90 * time.Second, IdleTimeout: 120 * time.Second}},
-		Data:   Data{Database: Database{MaxOpenConns: 10, MaxIdleConns: 5, ConnMaxLifetime: 30 * time.Minute, ConnMaxIdleTime: 15 * time.Minute, ConnectTimeout: 10 * time.Second, StatementTimeout: 5 * time.Second, LockTimeout: 3 * time.Second, SlowSQLMS: 200}, Storage: Storage{UploadDir: "./storage/uploads", MaxImageBytes: 20 << 20, MaxVideoBytes: 200 << 20, MaxDocumentBytes: 20 << 20, AllowedTypes: []string{"image/jpeg", "image/png", "image/webp", "image/gif", "video/mp4", "video/webm", "application/pdf"}, CleanupInterval: time.Minute}},
+		Data:   Data{Database: Database{MaxOpenConns: 10, MaxIdleConns: 5, ConnMaxLifetime: 30 * time.Minute, ConnMaxIdleTime: 15 * time.Minute, ConnectTimeout: 10 * time.Second, StatementTimeout: 5 * time.Second, LockTimeout: 3 * time.Second, SlowSQLMS: 200}, Storage: Storage{UploadDir: "./storage/uploads", MaxImageBytes: 20 << 20, MaxVideoBytes: 200 << 20, MaxDocumentBytes: 20 << 20, AllowedTypes: []string{"image/jpeg", "image/png", "image/webp", "image/gif", "video/mp4", "video/webm"}, CleanupInterval: time.Minute}},
 		Auth:   Auth{CookieSecure: true, SessionTTL: 8 * time.Hour, OnboardingTTL: 15 * time.Minute, MFATicketTTL: 5 * time.Minute, MFAMaxAttempts: 5, LoginLimit: 5, TOTP: TOTP{Enabled: true, Issuer: "Research Supply Admin"}},
 	}
 }

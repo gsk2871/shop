@@ -79,13 +79,10 @@ export default function ArticlesPage() {
       form.setFieldsValue(
         article || {
           title: "",
-          slug: "",
           summary: "",
           body: { html: "", mediaIds: [] },
           coverMediaId: "",
           status: "draft",
-          seoTitle: "",
-          seoDescription: "",
           pinned: false,
           sort: 0,
         },
@@ -437,20 +434,6 @@ export default function ArticlesPage() {
               <Input maxLength={200} showCount />
             </Form.Item>
             <Form.Item
-              name="slug"
-              label="官网路径"
-              extra="仅支持小写字母、数字和连字符"
-              rules={[
-                {
-                  required: true,
-                  max: 120,
-                  pattern: /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
-                },
-              ]}
-            >
-              <Input addonBefore="/news/" maxLength={120} />
-            </Form.Item>
-            <Form.Item
               className="full-width"
               name="summary"
               label="摘要（英文）"
@@ -484,13 +467,6 @@ export default function ArticlesPage() {
               <InputNumber precision={0} min={-2147483648} max={2147483647} />
             </Form.Item>
           </div>
-          <ContentHeading title="搜索展示" />
-          <Form.Item name="seoTitle" label="SEO 标题（英文）">
-            <Input maxLength={200} showCount />
-          </Form.Item>
-          <Form.Item name="seoDescription" label="SEO 描述（英文）">
-            <Input.TextArea rows={3} maxLength={5000} showCount />
-          </Form.Item>
         </Form>
       </Modal>
       <Modal

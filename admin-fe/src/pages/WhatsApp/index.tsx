@@ -5,7 +5,6 @@ import {
   Button,
   Card,
   Form,
-  Image,
   Input,
   Modal,
   Popconfirm,
@@ -18,7 +17,7 @@ import {
   message,
 } from "antd";
 import MediaSelect from "../../components/MediaSelect";
-import { api, assetURL, APIException } from "../../services/cms";
+import { api, APIException } from "../../services/cms";
 import { allows } from "../../services/auth";
 import type {
   WhatsAppAccount,
@@ -27,34 +26,6 @@ import type {
   WhatsAppGroupPage,
 } from "../../services/contracts";
 
-function QRPicker({
-  value,
-  onChange,
-}: {
-  value?: string;
-  onChange?: (v: string) => void;
-}) {
-  const [url, setURL] = useState("");
-  useEffect(() => {
-    let active = true;
-    setURL("");
-    if (value)
-      api<{ url: string }>(`media/${value}`)
-        .then((m) => {
-          if (active) setURL(m.url);
-        })
-        .catch(() => {});
-    return () => {
-      active = false;
-    };
-  }, [value]);
-  return (
-    <Space direction="vertical">
-      <MediaSelect value={value} onChange={onChange} />
-      {url && <Image width={140} src={assetURL(url)} />}
-    </Space>
-  );
-}
 const regionNames = new Intl.DisplayNames(["zh-CN"], { type: "region" });
 const region = (code: string) => `${regionNames.of(code) || code} (${code})`;
 const empty: WhatsAppGroupPage = {
@@ -217,7 +188,7 @@ export default function WhatsAppPage() {
   }
   return (
     <Card
-      title="WhatsApp 客服配置"
+      title="客户配置"
       extra={
         can("whatsapp.create") && (
           <Button type="primary" onClick={() => void edit()}>
@@ -394,7 +365,7 @@ export default function WhatsAppPage() {
       />
       <Modal
         open={open}
-        title={editing ? "编辑客服配置" : "新增客服配置"}
+        title={editing ? "编辑客户配置" : "新增客户配置"}
         width={850}
         onCancel={() => {
           if (!busy) setOpen(false);
@@ -435,10 +406,16 @@ export default function WhatsAppPage() {
             <Select
               mode="multiple"
               showSearch
-              optionFilterProp="label"
+              placeholder="搜索中文、英文名称或国家代码"
+              filterOption={(input, option) =>
+                (option?.searchText || "").includes(
+                  input.trim().toLocaleLowerCase(),
+                )
+              }
               options={countries.map((c) => ({
                 value: c.code,
                 label: region(c.code),
+                searchText: `${region(c.code)} ${c.name}`.toLocaleLowerCase(),
               }))}
             />
           </Form.Item>
@@ -490,7 +467,7 @@ export default function WhatsAppPage() {
                         { required: true, message: "请选择账号二维码图片" },
                       ]}
                     >
-                      <QRPicker />
+                      <MediaSelect />
                     </Form.Item>
                     <Form.Item
                       name={[field.name, "enabled"]}

@@ -78,7 +78,7 @@ export default function MediaPage() {
       {error && <Alert type="error" title={error} />}
       <p>
         {policy
-          ? `上传策略版本 ${policy.version}；图片 ${(policy.maxImageBytes / 1024 / 1024).toFixed(0)} MiB，视频 ${(policy.maxVideoBytes / 1024 / 1024).toFixed(0)} MiB，PDF ${(policy.maxDocumentBytes / 1024 / 1024).toFixed(0)} MiB。`
+          ? `上传策略版本 ${policy.version}；图片 ${(policy.maxImageBytes / 1024 / 1024).toFixed(0)} MiB，视频 ${(policy.maxVideoBytes / 1024 / 1024).toFixed(0)} MiB。`
           : "正在读取上传限制…"}
       </p>
       <Space>
@@ -89,7 +89,6 @@ export default function MediaPage() {
             { value: "", label: "全部类型" },
             { value: "image", label: "图片" },
             { value: "video", label: "视频" },
-            { value: "document", label: "PDF" },
           ]}
           onChange={(value) => {
             setKind(value);
@@ -128,11 +127,7 @@ export default function MediaPage() {
                   src={assetURL(row.url)}
                   style={{ width: 180, maxWidth: "100%" }}
                 />
-              ) : (
-                <a href={assetURL(row.url)} target="_blank" rel="noreferrer">
-                  打开 PDF
-                </a>
-              ),
+              ) : null,
           },
           { title: "名称", dataIndex: "name" },
           { title: "类型", dataIndex: "mime" },

@@ -40,9 +40,9 @@ data:
     upload_dir: ./storage/uploads # 本地上传目录；历史目录注册保留，切换目录不会搬迁旧文件。
     max_image_bytes: 20971520 # 单张图片上限，单位为字节，当前示例为 20 MiB。
     max_video_bytes: 209715200 # 单个视频上限，单位为字节，当前示例为 200 MiB。
-    max_document_bytes: 20971520 # 单份文档上限，单位为字节，当前示例为 20 MiB。
+    max_document_bytes: 20971520 # 兼容历史配置的保留字段，不再用于上传；媒体库仅支持图片和视频。
     # 接受的素材类型，必须来自以下受支持类型且不能重复；上传时校验实际文件内容。
-    allowed_types: [image/jpeg, image/png, image/webp, image/gif, application/pdf, video/mp4, video/webm]
+    allowed_types: [image/jpeg, image/png, image/webp, image/gif, video/mp4, video/webm]
     cleanup_interval: 1m # 素材和认证过期记录清理间隔，范围为 100ms–1h。
 
 auth:

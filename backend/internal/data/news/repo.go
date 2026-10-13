@@ -13,6 +13,7 @@ import (
 	"peptide-site/internal/data"
 	catalog "peptide-site/internal/data/catalog"
 	media "peptide-site/internal/data/media"
+	"peptide-site/internal/pkg/contentslug"
 	"peptide-site/internal/pkg/errdef"
 	"peptide-site/internal/pkg/richtext"
 	"strconv"
@@ -51,6 +52,14 @@ func audit(tx *gorm.DB, ctx context.Context, action string, id int64) error {
 }
 func can(ctx context.Context, p string) bool { i := auth.Current(ctx); return i != nil && i.Allows(p) }
 func (r *Repo) prepare(ctx context.Context, a *biz.Article) error {
+	if a.Slug == "" {
+		value, err := contentslug.New(a.Title)
+		if err != nil {
+			return err
+		}
+		a.Slug = value
+	}
+	a.SEOTitle, a.SEODescription = "", ""
 	if err := biz.Validate(*a); err != nil {
 		return err
 	}
@@ -183,6 +192,7 @@ func (r *Repo) Save(ctx context.Context, id int64, a biz.Article) (biz.Article, 
 			if old.Version != a.ExpectedVersion {
 				return errdef.New(409, "VERSION_CONFLICT")
 			}
+			a.Slug = old.Slug
 			version = old.Version + 1
 		} else if a.ID != "" || a.ExpectedVersion != 0 {
 			return errdef.Invalid()

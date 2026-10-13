@@ -4,7 +4,6 @@ import {
   FileTextOutlined,
   PictureOutlined,
   SettingOutlined,
-  DashboardOutlined,
   TeamOutlined,
   SafetyOutlined,
   AuditOutlined,
@@ -26,7 +25,6 @@ export async function getInitialState(): Promise<InitialState> {
   }
 }
 const menuIcons: Record<string, ReactNode> = {
-  "/overview": <DashboardOutlined />,
   "/products": <AppstoreOutlined />,
   "/categories": <TagsOutlined />,
   "/articles": <FileTextOutlined />,
@@ -42,14 +40,19 @@ const menuIcons: Record<string, ReactNode> = {
 };
 function menus(nodes: PermissionNode[]): unknown[] {
   return nodes
-    .filter((node) => node.type !== "action")
+    .filter((node) => node.type !== "action" && node.route !== "/overview")
     .flatMap((node) =>
       node.type === "directory"
         ? menus(node.children)
         : [
             {
               key: node.code,
-              name: node.route === "/articles" ? "新闻管理" : node.name,
+              name:
+                node.route === "/articles"
+                  ? "新闻管理"
+                  : node.route === "/whatsapp"
+                    ? "客户配置"
+                    : node.name,
               icon: menuIcons[node.route || ""],
               path: node.route || undefined,
               children: node.children.length ? menus(node.children) : undefined,

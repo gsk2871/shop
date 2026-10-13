@@ -33,9 +33,9 @@ func audit(tx *gorm.DB, ctx context.Context, action string, id int64) error {
 func (r *Repo) List(ctx context.Context, page, size int, kind, search string) ([]biz.Media, int64, error) {
 	rows := []biz.Media{}
 	var total int64
-	q := r.Data.DB.WithContext(ctx).Table("media").Where("available AND deleted_at IS NULL")
+	q := r.Data.DB.WithContext(ctx).Table("media").Where("available AND deleted_at IS NULL AND media_type IN ?", []string{"image", "video"})
 	if kind != "" {
-		if kind != "image" && kind != "video" && kind != "document" {
+		if kind != "image" && kind != "video" {
 			return nil, 0, errdef.Invalid()
 		}
 		q = q.Where("media_type=?", kind)

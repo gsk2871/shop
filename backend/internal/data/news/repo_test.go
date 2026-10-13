@@ -122,3 +122,26 @@ func TestManagementFiltersAndPublicIsolation(t *testing.T) {
 		t.Fatal("management timestamp missing")
 	}
 }
+
+func TestAutomaticPathAndRemovedSEOFields(t *testing.T) {
+	d, c := testutil.Postgres(t)
+	r := NewRepo(d, c)
+	ctx := context.Background()
+	input := biz.Article{Title: "Same title", Status: "draft", SEOTitle: "Custom", SEODescription: "Custom description"}
+	first, err := r.Save(ctx, 0, input)
+	if err != nil || first.Slug == "" || first.SEOTitle != "" || first.SEODescription != "" {
+		t.Fatal(first, err)
+	}
+	second, err := r.Save(ctx, 0, input)
+	if err != nil || first.Slug == second.Slug {
+		t.Fatal(second, err)
+	}
+	original := first.Slug
+	first.Title, first.Slug = "Changed title", ""
+	first.ExpectedVersion = first.Version
+	id, _ := strconv.ParseInt(first.ID, 10, 64)
+	saved, err := r.Save(ctx, id, first)
+	if err != nil || saved.Slug != original {
+		t.Fatal(saved, err)
+	}
+}
