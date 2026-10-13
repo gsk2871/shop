@@ -17,6 +17,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"gorm.io/gorm"
 	auth "peptide-site/internal/biz/admin"
+	bb "peptide-site/internal/biz/branding"
 	cb "peptide-site/internal/biz/catalog"
 	fb "peptide-site/internal/biz/faq"
 	mb "peptide-site/internal/biz/media"
@@ -24,6 +25,7 @@ import (
 	wb "peptide-site/internal/biz/whatsapp"
 	"peptide-site/internal/conf"
 	"peptide-site/internal/data"
+	br "peptide-site/internal/data/branding"
 	cr "peptide-site/internal/data/catalog"
 	fr "peptide-site/internal/data/faq"
 	mr "peptide-site/internal/data/media"
@@ -51,7 +53,7 @@ func main() {
 	d, closeDB, err := data.NewData(c)
 	must(err)
 	defer closeDB()
-	for _, table := range []string{"media", "product_category", "product", "article", "faq", "whatsapp_group"} {
+	for _, table := range []string{"media", "product_category", "product", "article", "banner", "faq", "whatsapp_group"} {
 		var count int64
 		must(d.DB.Table(table).Where("deleted_at IS NULL").Count(&count).Error)
 		fmt.Printf("%s: %d existing rows\n", table, count)
@@ -59,7 +61,7 @@ func main() {
 	if !*apply {
 		return
 	}
-	ctx := auth.WithIdentity(context.Background(), &auth.Identity{User: auth.User{ID: -1}, Permissions: []string{"product.publish", "product.price.update", "article.publish"}})
+	ctx := auth.WithIdentity(context.Background(), &auth.Identity{User: auth.User{ID: -1}, Permissions: []string{"product.publish", "product.price.update", "article.publish", "banner.publish"}})
 	var storage struct {
 		ID   string
 		Path string
@@ -70,6 +72,7 @@ func main() {
 	err = d.DB.Transaction(func(tx *gorm.DB) error {
 		local := &data.Data{DB: tx}
 		catalog := cr.NewRepo(local, c)
+		branding := br.NewRepo(local)
 		news := nr.NewRepo(local, c)
 		faqs := fr.NewRepo(local)
 		media := mr.NewRepo(local)
@@ -117,6 +120,23 @@ func main() {
 				counts["media"]++
 			}
 			assets = append(assets, strconv.FormatInt(id, 10))
+		}
+		for i, entry := range []struct{ title, subtitle, cta, link string }{
+			{"Explore the demonstration catalog", "Browse sample products and packaging options. All displayed items are fictional test content.", "Explore products", "/products"},
+			{"Discover our latest sample news", "Read demonstration articles and explore the website's news section.", "Read news", "/news"},
+		} {
+			title := "[TEST] " + entry.title
+			if exists("banner", "title", title) != 0 {
+				continue
+			}
+			if _, e := branding.Save(ctx, 0, bb.Banner{
+				SlotCode: "home_hero", Title: title, Subtitle: entry.subtitle,
+				ImageMediaID: assets[i], CTAText: entry.cta, Link: entry.link,
+				Sort: (i + 1) * 10, Enabled: true,
+			}); e != nil {
+				return fmt.Errorf("home banner %d: %w", i+1, e)
+			}
+			counts["banners"]++
 		}
 		categories := []string{}
 		for i, name := range []string{"[TEST] Research Samples", "[TEST] Reference Materials", "[TEST] Laboratory Supplies"} {

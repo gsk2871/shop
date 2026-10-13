@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-export default function Navigation({ showFAQ = false }: { showFAQ?: boolean }) {
+export default function Navigation() {
   const [open, setOpen] = useState(false);
   return (
     <>
@@ -23,7 +23,7 @@ export default function Navigation({ showFAQ = false }: { showFAQ?: boolean }) {
           ["/", "Home"],
           ["/products", "Products"],
           ["/news", "News"],
-          ...(showFAQ ? [["/#faq", "FAQ"]] : []),
+          ["/faq", "FAQ"],
           ["/about", "About"],
         ].map(([path, name]) => (
           <Link href={path} key={path} onClick={() => setOpen(false)}>

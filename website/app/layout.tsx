@@ -2,8 +2,7 @@ import "@shop/content/styles.css";
 import type { Metadata } from "next";
 import type { CSSProperties, ReactNode } from "react";
 import Link from "next/link";
-import { settings, content } from "../lib/content";
-import type { PublicFAQ } from "../lib/contracts";
+import { settings } from "../lib/content";
 import ContactButton from "../components/ContactButton";
 import Navigation from "../components/Navigation";
 import CookieNotice from "../components/CookieNotice";
@@ -17,10 +16,7 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 export default async function Layout({ children }: { children: ReactNode }) {
-  const [s, faqs] = await Promise.all([
-    settings(),
-    content<{ items: PublicFAQ[] }>("faqs"),
-  ]);
+  const s = await settings();
   const style = {
     "--primary": s.theme.primary,
     "--surface": s.theme.surface,
@@ -43,7 +39,7 @@ export default async function Layout({ children }: { children: ReactNode }) {
             ) : null}
             <span>{s.brand}</span>
           </Link>
-          <Navigation showFAQ={!!faqs?.items.length} />
+          <Navigation />
           <ContactButton className="nav-contact">Contact us ↗</ContactButton>
         </header>
         <main>{children}</main>
@@ -59,6 +55,7 @@ export default async function Layout({ children }: { children: ReactNode }) {
             <Link href="/">Home</Link>
             <Link href="/products">Products</Link>
             <Link href="/news">News</Link>
+            <Link href="/faq">FAQ</Link>
           </div>
           <div>
             <span className="eyebrow">GET IN TOUCH</span>
