@@ -208,7 +208,7 @@ PostgreSQL 建连、连接生命周期与空闲回收、SQL 执行和等锁超�
 
 ## 问答配置
 
-后台入口为「运营管理 → 问答配置」（`/faqs`）。问题、答案必填，答案使用文本并保留内部换行；新建默认关闭。排序值越小越靠前，同值按 ID 升序。官网在独立 FAQ 页面（`/faq`）以可折叠问答列表展示，导航和页脚提供入口；Home（`/`）展示首页 Banner 和首页配置内容，不包含问答。问答内容按文本转义，不解释 HTML；无开启内容时显示暂无内容提示，请求失败时显示暂时不可用提示，公共请求不缓存。
+后台入口为「运营管理 → 问答配置」（`/faqs`）。问题、答案必填，答案使用文本并保留内部换行；新建默认关闭。排序值越小越靠前，同值按 ID 升序。官网在独立 FAQ 页面（`/faq`）以可折叠问答列表展示，导航和页脚提供入口；Home（`/`）展示 Banner、产品分类、精选产品、品牌介绍、新闻和联系咨询，不包含问答和品质检测区块。问答内容按文本转义，不解释 HTML；无开启内容时显示暂无内容提示，请求失败时显示暂时不可用提示，公共请求不缓存。
 
 | 接口 | 权限 | 行为 |
 | --- | --- | --- |
@@ -224,3 +224,13 @@ PostgreSQL 建连、连接生命周期与空闲回收、SQL 执行和等锁超�
 数据表 `faq`（迁移 `000014_faq`）包含：id bigint identity 主键，question/answer text 非空，sort integer，enabled boolean 默认 false，version bigint 默认 1，以及 created_at/updated_at/deleted_at timestamptz、created_by/updated_by bigint。时间与操作人记录创建、修改、删除的来源，deleted_at 为空代表有效数据。活动记录和公开记录分别建立 (sort,id) 部分索引，不涉及其他业务表关系。回滚 SQL 为对应的 down 文件，删除 faq 表及问答内容，需在停用功能并备份后执行。
 
 权限种子注册菜单及四个权限。新建默认内容管理员获得全部问答权限，只读角色获得 faq.read；重复 seed 仅为超级管理员补齐权限，已有普通角色需显式授权。
+
+### 首页商品推荐与内容组合
+
+商品管理新增 homeFeatured（首页推荐，默认 false）和 homeSort（首页排序，默认 0，非负整数）。创建及编辑沿用 product.create/product.update 权限、expectedVersion 校验与商品审计。管理详情及列表返回两个字段；公共商品响应不暴露这两个管理字段。
+
+GET /admin/api/v1/products 和 GET /api/v1/products 新增 homeFeatured 筛选，接受 true/false，空值不筛选，非法值返回 INVALID_ARGUMENT。筛选 true 时按 home_sort、id 升序，否则维持原列表排序；筛选与分页、分类、名称及管理状态条件共同生效。公共列表继续要求已发布、未删除且具有启用并有效定价的 SKU，下架或删除后自动不再展示。
+
+product 表迁移 000016_product_home 增加 home_featured boolean 和 home_sort integer；默认关闭推荐，排序默认 0。部分索引 product_home_featured 按 home_sort、id 排序，范围为已发布、未删除且开启推荐的商品。up/down 成对；先应用迁移再部署应用，回滚先回退应用再执行 down。
+
+首页按以下顺序展示：home_hero Banner、全部公开分类、最多 6 个推荐商品、首页配置的品牌介绍、最多 3 篇已发布新闻、联系咨询。新闻沿用置顶、排序和发布时间规则；分类跳转带 categoryId 的产品列表，商品跳转详情，品牌介绍链接 About，资讯链接 News，联系区复用 WhatsApp 客服分流并链接独立 FAQ。无分类、推荐商品或文章时隐藏对应区块，品牌标题及正文均为空时隐藏介绍。首页不展示检测区块或问答列表。

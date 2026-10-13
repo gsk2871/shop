@@ -8,7 +8,7 @@ export default function Hero({ banners }: { banners: Banner[] }) {
   const b = banners[index] || banners[0];
   if (!b) return null;
   return (
-    <section className="hero">
+    <section className="hero" data-ruler-title="Introduction">
       <div className="hero-copy">
         <h1>{b.title}</h1>
         <p>{b.subtitle}</p>

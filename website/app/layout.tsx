@@ -4,6 +4,7 @@ import type { CSSProperties, ReactNode } from "react";
 import Link from "next/link";
 import { settings } from "../lib/content";
 import ContactButton from "../components/ContactButton";
+import SectionRuler from "../components/SectionRuler";
 import Navigation from "../components/Navigation";
 import CookieNotice from "../components/CookieNotice";
 import "./globals.css";
@@ -43,21 +44,30 @@ export default async function Layout({ children }: { children: ReactNode }) {
           <ContactButton className="nav-contact">Contact us ↗</ContactButton>
         </header>
         <main>{children}</main>
-        <footer>
-          <div>
-            <Link className="footer-brand" href="/" aria-label={s.brand || "Home"}>
-              {s.brand}
-            </Link>
-            <p>{s.description}</p>
-          </div>
-          <div>
+        <SectionRuler />
+        <footer className="site-footer">
+          {(s.brand || s.description) && (
+            <div className="footer-identity">
+              {s.brand && (
+                <Link
+                  className="footer-brand"
+                  href="/"
+                  aria-label={s.brand || "Home"}
+                >
+                  {s.brand}
+                </Link>
+              )}
+              {s.description && <p>{s.description}</p>}
+            </div>
+          )}
+          <nav className="footer-group" aria-label="Footer navigation">
             <span className="eyebrow">EXPLORE</span>
             <Link href="/">Home</Link>
             <Link href="/products">Products</Link>
             <Link href="/news">News</Link>
             <Link href="/faq">FAQ</Link>
-          </div>
-          <div>
+          </nav>
+          <div className="footer-group">
             <span className="eyebrow">GET IN TOUCH</span>
             <ContactButton className="footer-contact">
               Contact on WhatsApp ↗

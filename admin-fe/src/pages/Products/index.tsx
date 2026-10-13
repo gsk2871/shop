@@ -7,6 +7,7 @@ import {
   Card,
   Form,
   Input,
+  InputNumber,
   Modal,
   Popconfirm,
   Select,
@@ -190,6 +191,8 @@ export default function Products() {
       form.setFieldsValue(
         product || {
           status: "draft",
+          homeFeatured: false,
+          homeSort: 0,
           detail: { html: "", mediaIds: [] },
           specs: [],
           skus: [
@@ -329,6 +332,7 @@ export default function Products() {
               q: values.q?.trim() || "",
               categoryId: values.categoryId || "",
               status: values.status || "",
+              homeFeatured: values.homeFeatured || "",
             })
           }
         >
@@ -355,6 +359,16 @@ export default function Products() {
                 value,
                 label,
               }))}
+            />
+          </Form.Item>
+          <Form.Item name="homeFeatured" label="首页推荐">
+            <Select
+              allowClear
+              placeholder="全部"
+              options={[
+                { value: "true", label: "已推荐" },
+                { value: "false", label: "未推荐" },
+              ]}
             />
           </Form.Item>
           <Form.Item>
@@ -392,7 +406,7 @@ export default function Products() {
       </div>
       <Table<ProductSummary>
         loading={loading}
-        scroll={{ x: 1140 }}
+        scroll={{ x: 1360 }}
         rowKey="id"
         dataSource={data.items}
         pagination={{
@@ -440,6 +454,16 @@ export default function Products() {
                 text={row.status ? labels[row.status] : "—"}
               />
             ),
+          },
+          {
+            title: "首页推荐",
+            width: 120,
+            render: (_, row) => (row.homeFeatured ? "已推荐" : "未推荐"),
+          },
+          {
+            title: "首页排序",
+            width: 100,
+            dataIndex: "homeSort",
           },
           {
             title: "更新时间",
@@ -774,6 +798,34 @@ export default function Products() {
           <Form.Item name="detail" label="产品详情（英文，媒体从库选择）">
             <RichTextEditor />
           </Form.Item>
+          <ContentHeading
+            title="首页展示"
+            description="已上架且开启推荐的商品按首页排序升序展示，相同排序按商品 ID 升序，首页最多展示 6 个。"
+          />
+          <div className="content-form-grid">
+            <Form.Item
+              name="homeFeatured"
+              label="首页推荐"
+              valuePropName="checked"
+            >
+              <Switch />
+            </Form.Item>
+            <Form.Item
+              name="homeSort"
+              label="首页排序"
+              rules={[
+                {
+                  required: true,
+                  type: "integer",
+                  min: 0,
+                  max: 2147483647,
+                  message: "请输入有效的非负整数",
+                },
+              ]}
+            >
+              <InputNumber min={0} max={2147483647} precision={0} />
+            </Form.Item>
+          </div>
           <ContentHeading title="发布设置" />
           <div className="content-form-grid">
             <Form.Item name="status" label="状态">

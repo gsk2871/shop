@@ -61,7 +61,7 @@ func TestCategoriesAndProductFilters(t *testing.T) {
 		cat  int64
 		want int64
 	}{{"", 0, 3}, {"", id, 1}, {"ALPHA", 0, 2}, {"alpha", id, 1}, {"hidden-alias", 0, 0}, {"Compounds", 0, 0}, {"%", 0, 1}, {"supply", id, 0}, {"", 999999, 0}} {
-		rows, n, err := r.List(ctx, true, 1, 20, tt.q, tt.cat, "")
+		rows, n, err := r.List(ctx, true, 1, 20, tt.q, tt.cat, "", nil)
 		if err != nil || n != tt.want || int64(len(rows)) != tt.want {
 			t.Fatalf("filter %+v: %v %d %v", tt, rows, n, err)
 		}
@@ -73,7 +73,7 @@ func TestCategoriesAndProductFilters(t *testing.T) {
 	}{
 		{"draft", false, 0}, {"published", false, 3}, {"offline", false, 0}, {"draft", true, 3},
 	} {
-		rows, total, err := r.List(ctx, tt.public, 1, 1, "", 0, tt.status)
+		rows, total, err := r.List(ctx, tt.public, 1, 1, "", 0, tt.status, nil)
 		if err != nil || total != tt.want || len(rows) != min(1, int(tt.want)) {
 			t.Fatal(tt, rows, total, err)
 		}

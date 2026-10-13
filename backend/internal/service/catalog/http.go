@@ -85,7 +85,16 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
-		rows, total, err := h.Repo.List(r.Context(), public, p, size, strings.TrimSpace(r.URL.Query().Get("q")), categoryID, status)
+		var homeFeatured *bool
+		if raw := r.URL.Query().Get("homeFeatured"); raw != "" {
+			if raw != "true" && raw != "false" {
+				admin.Failure(w, r, errdef.Invalid())
+				return
+			}
+			value := raw == "true"
+			homeFeatured = &value
+		}
+		rows, total, err := h.Repo.List(r.Context(), public, p, size, strings.TrimSpace(r.URL.Query().Get("q")), categoryID, status, homeFeatured)
 		if err != nil {
 			admin.Failure(w, r, err)
 			return

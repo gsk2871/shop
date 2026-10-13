@@ -56,6 +56,8 @@ func (r *Repo) Sanitize(ctx context.Context, d richtext.Document) (richtext.Docu
 }
 
 type productRow struct {
+	HomeFeatured                                                                                                                                               bool
+	HomeSort                                                                                                                                                   int
 	CategoryID                                                                                                                                                 *int64
 	ID                                                                                                                                                         int64
 	Name, Slug, Category, Aliases, CAS, Formula, MolecularWeight, Sequence, Purity, Storage, Solubility, Summary, DetailHTML, Status, SEOTitle, SEODescription string
@@ -87,7 +89,7 @@ func (r *Repo) get(tx *gorm.DB, id int64) (biz.Product, error) {
 	if err := tx.Table("product").Where("id=? AND deleted_at IS NULL", id).Take(&row).Error; err != nil {
 		return biz.Product{}, err
 	}
-	p := biz.Product{ID: strconv.FormatInt(row.ID, 10), Name: row.Name, Slug: row.Slug, Category: row.Category, Aliases: row.Aliases, CAS: row.CAS, Formula: row.Formula, MolecularWeight: row.MolecularWeight, Sequence: row.Sequence, Purity: row.Purity, Storage: row.Storage, Solubility: row.Solubility, Summary: row.Summary, Status: row.Status, SEOTitle: row.SEOTitle, SEODescription: row.SEODescription, Version: row.Version, UpdatedAt: row.UpdatedAt.UTC().Format(time.RFC3339), Specs: []biz.Spec{}, SKUs: []biz.SKU{}, Detail: richtext.Document{HTML: row.DetailHTML, MediaIDs: []string{}}}
+	p := biz.Product{HomeFeatured: row.HomeFeatured, HomeSort: row.HomeSort, ID: strconv.FormatInt(row.ID, 10), Name: row.Name, Slug: row.Slug, Category: row.Category, Aliases: row.Aliases, CAS: row.CAS, Formula: row.Formula, MolecularWeight: row.MolecularWeight, Sequence: row.Sequence, Purity: row.Purity, Storage: row.Storage, Solubility: row.Solubility, Summary: row.Summary, Status: row.Status, SEOTitle: row.SEOTitle, SEODescription: row.SEODescription, Version: row.Version, UpdatedAt: row.UpdatedAt.UTC().Format(time.RFC3339), Specs: []biz.Spec{}, SKUs: []biz.SKU{}, Detail: richtext.Document{HTML: row.DetailHTML, MediaIDs: []string{}}}
 	if row.CategoryID != nil {
 		c, err := category(tx, *row.CategoryID, false)
 		if err != nil {
@@ -186,7 +188,7 @@ func (r *Repo) Public(ctx context.Context, slug string) (map[string]any, error) 
 	}, &sql.TxOptions{Isolation: sql.LevelRepeatableRead, ReadOnly: true})
 	return output, err
 }
-func (r *Repo) List(ctx context.Context, public bool, page, size int, search string, categoryID int64, status string) ([]map[string]any, int64, error) {
+func (r *Repo) List(ctx context.Context, public bool, page, size int, search string, categoryID int64, status string, homeFeatured *bool) ([]map[string]any, int64, error) {
 	output := []map[string]any{}
 	var total int64
 	err := r.Data.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
@@ -204,10 +206,17 @@ func (r *Repo) List(ctx context.Context, public bool, page, size int, search str
 		if categoryID != 0 {
 			q = q.Where("p.category_id=?", categoryID)
 		}
+		if homeFeatured != nil {
+			q = q.Where("p.home_featured=?", *homeFeatured)
+		}
 		if err := q.Count(&total).Error; err != nil {
 			return err
 		}
-		if err := q.Select("p.id").Order("p.updated_at DESC,p.id DESC").Offset((page - 1) * size).Limit(size).Scan(&rows).Error; err != nil {
+		order := "p.updated_at DESC,p.id DESC"
+		if homeFeatured != nil && *homeFeatured {
+			order = "p.home_sort,p.id"
+		}
+		if err := q.Select("p.id").Order(order).Offset((page - 1) * size).Limit(size).Scan(&rows).Error; err != nil {
 			return err
 		}
 		for _, row := range rows {
@@ -217,6 +226,8 @@ func (r *Repo) List(ctx context.Context, public bool, page, size int, search str
 			}
 			item := map[string]any{"image": p.Image, "id": p.ID, "name": p.Name, "slug": p.Slug, "category": p.Category, "categoryId": p.CategoryID, "summary": p.Summary, "fromPrice": p.FromPrice}
 			if !public {
+				item["homeFeatured"] = p.HomeFeatured
+				item["homeSort"] = p.HomeSort
 				item["status"] = p.Status
 				item["version"] = p.Version
 				item["updatedAt"] = p.UpdatedAt
@@ -437,7 +448,7 @@ func (r *Repo) Save(ctx context.Context, id int64, p biz.Product) (biz.Product, 
 		if pricesDiffer(old, p) && !can(ctx, "product.price.update") {
 			return errdef.Denied()
 		}
-		columns := map[string]any{"name": p.Name, "slug": p.Slug, "category": p.Category, "category_id": categoryID, "aliases": p.Aliases, "cas": p.CAS, "formula": p.Formula, "molecular_weight": p.MolecularWeight, "sequence": p.Sequence, "purity": p.Purity, "storage": p.Storage, "solubility": p.Solubility, "summary": p.Summary, "detail_html": p.Detail.HTML, "status": p.Status, "seo_title": p.SEOTitle, "seo_description": p.SEODescription, "updated_at": time.Now().UTC(), "updated_by": actor(ctx)}
+		columns := map[string]any{"home_featured": p.HomeFeatured, "home_sort": p.HomeSort, "name": p.Name, "slug": p.Slug, "category": p.Category, "category_id": categoryID, "aliases": p.Aliases, "cas": p.CAS, "formula": p.Formula, "molecular_weight": p.MolecularWeight, "sequence": p.Sequence, "purity": p.Purity, "storage": p.Storage, "solubility": p.Solubility, "summary": p.Summary, "detail_html": p.Detail.HTML, "status": p.Status, "seo_title": p.SEOTitle, "seo_description": p.SEODescription, "updated_at": time.Now().UTC(), "updated_by": actor(ctx)}
 		if id == 0 {
 			columns["created_by"] = actor(ctx)
 			columns["version"] = 1

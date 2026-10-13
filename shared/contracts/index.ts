@@ -107,6 +107,8 @@ export interface PublicProduct {
   fromPrice?: Price | null;
 }
 export interface Product extends Omit<PublicProduct, "specs" | "skus"> {
+  homeFeatured: boolean;
+  homeSort: number;
   imageMediaId: EntityID | "";
   reportMediaId: EntityID | "";
   specs: ProductSpec[];
@@ -118,6 +120,8 @@ export interface Product extends Omit<PublicProduct, "specs" | "skus"> {
   updatedAt: string;
 }
 export interface ProductSummary {
+  homeFeatured?: boolean;
+  homeSort?: number;
   image: string;
   id: EntityID;
   name: string;

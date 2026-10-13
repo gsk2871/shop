@@ -40,6 +40,8 @@ type SKU struct {
 	Price         *money.Price `json:"price,omitempty"`
 }
 type Product struct {
+	HomeFeatured    bool              `json:"homeFeatured"`
+	HomeSort        int               `json:"homeSort"`
 	ImageMediaID    string            `json:"imageMediaId"`
 	ReportMediaID   string            `json:"reportMediaId"`
 	Image           string            `json:"image"`
@@ -84,6 +86,9 @@ func ParseID(raw string) (int64, error) {
 	return value, nil
 }
 func Validate(p *Product, defaultCurrency string) error {
+	if p.HomeSort < 0 || p.HomeSort > 2147483647 {
+		return errdef.Invalid()
+	}
 	if id, err := ParseID(p.ImageMediaID); err != nil || id == 0 {
 		return errdef.Invalid()
 	}
