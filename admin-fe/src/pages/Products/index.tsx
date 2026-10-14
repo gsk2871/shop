@@ -481,14 +481,30 @@ export default function Products() {
                     {can("product.update") ? "编辑" : "查看"}
                   </Button>
                 )}
-                {row.status === "published" && (
-                  <a
-                    href={`${process.env.UMI_APP_WEBSITE_URL || (process.env.NODE_ENV === "development" ? "http://127.0.0.1:3000" : window.location.origin)}/products/${encodeURIComponent(row.slug)}`}
-                    target="_blank"
-                    rel="noreferrer"
+                {can("product.update") && (
+                  <Popconfirm
+                    title={`确认${row.homeFeatured ? "取消推荐" : "设置推荐"}此产品？`}
+                    description={row.name}
+                    onConfirm={async () => {
+                      try {
+                        const product = await api<Product>(`products/${row.id}`);
+                        await api(`products/${row.id}`, "PUT", {
+                          ...product,
+                          homeFeatured: !row.homeFeatured,
+                          expectedVersion: row.version,
+                        });
+                        msg.success(row.homeFeatured ? "已取消推荐" : "已设置推荐");
+                        refresh();
+                      } catch (e) {
+                        msg.error((e as Error).message);
+                        throw e;
+                      }
+                    }}
                   >
-                    查看官网
-                  </a>
+                    <Button type="link">
+                      {row.homeFeatured ? "取消推荐" : "设置推荐"}
+                    </Button>
+                  </Popconfirm>
                 )}
                 {can("product.publish") && (
                   <Popconfirm
