@@ -65,7 +65,14 @@ command -v docker >/dev/null
 docker compose version >/dev/null
 docker info >/dev/null
 export RELEASE_TAG=local
-compose() { docker compose --env-file "$ENV_FILE" -f "$ROOT/deploy/compose.prod.yaml" "$@"; }
+compose() {
+  local -a files=(-f "$ROOT/deploy/compose.prod.yaml")
+  # 服务器持久覆盖配置用于 HTTPS 等入口设置，所有维护命令使用同一配置。
+  if [[ -f $SHOP_DATA_DIR/compose.override.yaml ]]; then
+    files+=(-f "$SHOP_DATA_DIR/compose.override.yaml")
+  fi
+  docker compose --env-file "$ENV_FILE" "${files[@]}" "$@"
+}
 compose config --quiet
 mkdir -p "$SHOP_DATA_DIR/releases" "$SHOP_DATA_DIR/backups"
 CURRENT="$SHOP_DATA_DIR/releases/current"
@@ -82,6 +89,12 @@ backup() {
   mv "$destination/database.dump.partial" "$destination/database.dump"
   tar -C "$SHOP_DATA_DIR" -czf "$destination/files.tar.gz" config geoip uploads releases
   cp "$ENV_FILE" "$destination/deploy.env"
+  if [[ -f $SHOP_DATA_DIR/compose.override.yaml ]]; then
+    cp "$SHOP_DATA_DIR/compose.override.yaml" "$destination/compose.override.yaml"
+  fi
+  if [[ -d $SHOP_DATA_DIR/nginx ]]; then
+    tar -C "$SHOP_DATA_DIR" -czf "$destination/nginx.tar.gz" nginx
+  fi
   if [[ -f $CURRENT ]]; then cp "$CURRENT" "$destination/release"; fi
   touch "$destination/COMPLETE"
 }

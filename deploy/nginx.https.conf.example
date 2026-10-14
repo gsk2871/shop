@@ -1,0 +1,49 @@
+# 将 __DOMAIN__ 替换为已签发证书的官网域名；后台仍走 SSH 隧道。
+resolver 127.0.0.11 valid=10s ipv6=off;
+server {
+    listen 80;
+    server_name __DOMAIN__;
+    location = /healthz { access_log off; return 200 "ok\n"; }
+    location ^~ /.well-known/acme-challenge/ {
+        root /var/www/acme;
+        try_files $uri =404;
+    }
+    location / { return 301 https://__DOMAIN__$request_uri; }
+}
+server {
+    listen 443 ssl;
+    server_name __DOMAIN__;
+    ssl_certificate /etc/letsencrypt/live/__DOMAIN__/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/__DOMAIN__/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    location / {
+        set $website http://website:3000;
+        proxy_pass $website;
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Client-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_buffering off;
+    }
+}
+server {
+    listen 8000;
+    server_name _;
+    root /usr/share/nginx/html;
+    location / { try_files $uri $uri/ /index.html; }
+    location /backend/ {
+        set $backend http://backend:8080;
+        rewrite ^/backend/(.*)$ /$1 break;
+        proxy_pass $backend;
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        client_max_body_size 2m;
+        proxy_read_timeout 100s;
+        proxy_send_timeout 100s;
+    }
+    location /uploads/ {
+        set $backend http://backend:8080;
+        proxy_pass $backend;
+    }
+}

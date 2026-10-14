@@ -1,0 +1,10 @@
+# 复制到服务器 SHOP_DATA_DIR/compose.override.yaml 后由 deploy.sh 自动加载。
+# 首次签发证书前先在 nginx/default.conf 放置 HTTP 配置，签发后替换为 HTTPS 配置。
+services:
+  nginx:
+    ports:
+      - "0.0.0.0:443:443"
+    volumes:
+      - ${SHOP_DATA_DIR}/nginx:/etc/nginx/conf.d:ro
+      - ${SHOP_DATA_DIR}/acme:/var/www/acme:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
