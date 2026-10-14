@@ -78,7 +78,7 @@ backup() {
   destination="$SHOP_DATA_DIR/backups/$(date -u +%Y%m%dT%H%M%SZ)-$$"
   mkdir -m 700 "$destination"
   echo "备份到 $destination"
-  compose exec -T postgres pg_dump -U admin -d peptide -Fc > "$destination/database.dump.partial"
+  compose exec -T postgres pg_dump -U admin -d peptide -Fc < /dev/null > "$destination/database.dump.partial"
   mv "$destination/database.dump.partial" "$destination/database.dump"
   tar -C "$SHOP_DATA_DIR" -czf "$destination/files.tar.gz" config geoip uploads releases
   cp "$ENV_FILE" "$destination/deploy.env"
@@ -87,7 +87,7 @@ backup() {
 }
 build() {
   # 每次生成独立镜像标签，保留旧镜像供人工回退。
-  RELEASE_TAG="$(date -u +%Y%m%dT%H%M%SZ)-$(git -C "$ROOT" rev-parse --short HEAD)-$$"
+  RELEASE_TAG="$(date -u +%Y%m%dT%H%M%SZ)-$(git -c safe.directory="$ROOT" -C "$ROOT" rev-parse --short HEAD)-$$"
   export RELEASE_TAG
   for service in backend website nginx; do compose build "$service"; done
   printf '%s\n' "$RELEASE_TAG" > "$SHOP_DATA_DIR/releases/last-built"
