@@ -22,3 +22,6 @@ website/.next/
 
 **/__pycache__/
 **/*.pyc
+
+# Server-local deployment settings
+/deploy/runtime/

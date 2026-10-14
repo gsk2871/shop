@@ -1,0 +1,13 @@
+**/node_modules
+**/.next
+**/dist
+**/.umi*
+**/.env*
+.git
+.claude
+.agents
+backend/configs/*
+backend/storage
+backend/bin
+deploy/runtime
+**/*.tsbuildinfo

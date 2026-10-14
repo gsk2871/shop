@@ -1,0 +1,79 @@
+name: shop
+x-common: &common
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+services:
+  postgres:
+    <<: *common
+    image: postgres:17-bookworm
+    environment:
+      POSTGRES_DB: peptide
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?required}
+    volumes:
+      - ${SHOP_DATA_DIR:?required}/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U admin -d peptide]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+  backend:
+    <<: *common
+    image: shop-backend:${RELEASE_TAG:-local}
+    build:
+      context: ..
+      dockerfile: deploy/backend.Dockerfile
+    volumes:
+      - ${SHOP_DATA_DIR}/config:/etc/shop:ro
+      - ${SHOP_DATA_DIR}/geoip:/var/lib/shop/geoip:ro
+      - ${SHOP_DATA_DIR}/uploads:/var/lib/shop/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, curl, -fsS, http://127.0.0.1:8080/readyz]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+  website:
+    <<: *common
+    image: shop-website:${RELEASE_TAG:-local}
+    build:
+      context: ..
+      dockerfile: deploy/website.Dockerfile
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:3000').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+  nginx:
+    <<: *common
+    image: shop-nginx:${RELEASE_TAG:-local}
+    build:
+      context: ..
+      dockerfile: deploy/nginx.Dockerfile
+      args:
+        WEBSITE_URL: ${WEBSITE_URL:?required}
+    ports:
+      - "${HTTP_BIND:-0.0.0.0:80}:80"
+      - "${ADMIN_BIND:-127.0.0.1:8000}:8000"
+    depends_on:
+      website:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD-SHELL, "wget -q -O /dev/null http://127.0.0.1:8000/ && wget -q -O /dev/null http://127.0.0.1/"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: 172.30.80.0/24

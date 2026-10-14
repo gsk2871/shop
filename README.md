@@ -96,6 +96,8 @@ pnpm run build
 
 ## 部署与配置
 
+腾讯云 Ubuntu 单机容器部署、构建、首次初始化、更新和备份命令见 [部署与维护](docs/部署与维护.md)。生产使用 deploy/compose.prod.yaml，本地 compose.yaml 仍仅启动开发数据库。
+
 后端逐版准备独立数据库池、目录及监听；全部校验成功才发布。新请求使用新版本，在途请求和事务固定旧版本，旧资源排空后释放。修改失败保留最后可用版本，运行配置页可查看版本、成功时间、失败原因及字段来源；页面不返回密钥或数据库凭据。DSN 只允许切换到相同站点身份及相同 schema 的数据库。
 
 环境覆盖在启动时固定捕获：`HTTP_ADDRESS`、`DATABASE_DSN`、`UPLOAD_DIR`、`COOKIE_SECURE`、`SEED_ADMIN_PASSWORD`。被覆盖的 YAML 字段不会取代环境值。需要运行时轮换的密钥放在受保护 YAML 文件中。
