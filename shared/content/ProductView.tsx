@@ -55,26 +55,11 @@ export function ProductView({
           />
         </section>
       )}
-      <dl className="shop-product-facts">
-        {[
-          ["Category", product.category],
-          ["Aliases", product.aliases],
-          ["CAS", product.cas],
-          ["Formula", product.formula],
-          ["Molecular weight", product.molecularWeight],
-          ["Sequence", product.sequence],
-          ["Purity", product.purity],
-          ["Storage", product.storage],
-          ["Solubility", product.solubility],
-        ]
-          .filter(([, value]) => value)
-          .map(([label, value]) => (
-            <div key={label}>
-              <dt>{label}</dt>
-              <dd>{value}</dd>
-            </div>
-          ))}
-      </dl>
+      {product.category && (
+        <dl className="shop-product-facts">
+          <div><dt>Category</dt><dd>{product.category}</dd></div>
+        </dl>
+      )}
       {product.specs.map((spec) => (
         <fieldset className="shop-spec" key={spec.key}>
           <legend>{spec.name}</legend>

@@ -38,7 +38,7 @@ ID 为十进制字符串，时间为 UTC RFC 3339，保留数据库微秒精度�
 
 ## 数据与部署
 
-迁移为 `backend/internal/data/migration/000012_whatsapp.up.sql` 及配对 down。五表：whatsapp_group、whatsapp_group_country、whatsapp_account、whatsapp_routing_setting、whatsapp_cursor；业务软删除，无物理外键。二维码逻辑指向 media，media_reference 的 owner_type 为 whatsapp_account，field 为 qr_code。没有访客资料或短期分配结果表，不持久化访客 IP。媒体图片不因列表省略缩略图而移除。
+五张表定义于 `backend/internal/data/migration/000001_schema.up.sql`；配对 down 删除全站业务结构。五表：whatsapp_group、whatsapp_group_country、whatsapp_account、whatsapp_routing_setting、whatsapp_cursor；业务软删除，无物理外键。二维码逻辑指向 media，media_reference 的 owner_type 为 whatsapp_account，field 为 qr_code。没有访客资料或短期分配结果表，不持久化访客 IP。媒体图片不因列表省略缩略图而移除。
 
 执行后端 `-migrate` 再 `-seed`，普通已有运营角色由超级管理员授权新权限。后端 Go 保持 1.25，MMDB Reader 固定使用 maxminddb-golang/v2 v2.0.0；参考[库文档](https://github.com/oschwald/maxminddb-golang/tree/v2.0.0)。
 

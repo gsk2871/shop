@@ -13,8 +13,8 @@ export async function generateMetadata({
     `products/${encodeURIComponent(slug)}`,
   );
   return {
-    title: result.data?.seoTitle || result.data?.name || "Product",
-    description: result.data?.seoDescription || result.data?.summary,
+    title: result.data?.name || "Product",
+    description: result.data?.summary,
     robots: result.error ? { index: false, follow: false } : undefined,
   };
 }

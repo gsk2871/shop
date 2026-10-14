@@ -162,7 +162,7 @@ HTTP 生成或复用经过格式校验的请求 ID，在响应 X-Request-ID 与�
 
 ## 完整实现登记
 
-后台预览与官网详情使用 @shop/content 0.1.2，类型来自 @shop/contracts 0.1.2。产品公共 SKU 仅包含 id/key/specValueKeys/price；公共规格和值不包含 sort，顺序由后端数组确定。新闻公共 DTO 不包含 status/version/coverMediaId；Banner 公共 DTO 不包含启用开关、排期或素材管理 ID；品牌公共接口不含配置版本及 Logo 管理 ID。
+后台预览与官网详情使用 @shop/content 0.1.3，类型来自 @shop/contracts 0.1.3。产品公共 SKU 仅包含 id/key/specValueKeys/price；公共规格和值不包含 sort，顺序由后端数组确定。新闻公共 DTO 不包含 status/version/coverMediaId；Banner 公共 DTO 不包含启用开关、排期或素材管理 ID；品牌公共接口不含配置版本及 Logo 管理 ID。
 
 POST /me/reauth 为 full scope 自助接口，接收 password/code；独立于角色业务权限，为敏感用户重置建立五分钟身份验证。配置运行状态需要 config.read，所有业务写入口均经精确方法和路径授权。完整字段行为与验收证据见 CONFIG_RELOAD_MATRIX.md 和 IMPLEMENTATION_ACCEPTANCE.md。
 
@@ -172,7 +172,7 @@ POST /me/reauth 为 full scope 自助接口，接收 password/code；独立于�
 
 ### 商品分类契约
 
-product_category 使用 identity 主键、软删除、版本检查和有效名称大小写不敏感唯一索引。product.category_id 为逻辑关联；创建及编辑保存必选有效分类，旧空分类商品继续展示。分类删除事务持有行排他锁，商品保存事务持有分类共享锁，防止并发创建和删除造成失效引用。分类重命名通过关联查询即时展示，product.category 保留名称快照以支持开发回退。000013 迁移归并并回填历史非空分类。
+product_category 使用 identity 主键、软删除、版本检查和有效名称大小写不敏感唯一索引。product.category_id 为非空逻辑关联；创建及编辑保存必选有效分类，分类名称通过关联查询返回。分类删除事务持有行排他锁，商品保存事务持有分类共享锁，防止并发创建和删除造成失效引用。
 
 管理 API：GET/POST /categories，GET/PUT/DELETE /categories/{id}，对应 category.read/create/update/delete；GET /categories/options 对应 product.read。创建返回 201，更新返回 200，删除返回 ok；更新和删除要求 expectedVersion，被商品使用返回 CATEGORY_IN_USE。公共分类仅返回 id/name，产品列表 categoryId 未传或空值不加条件，q 仅按名称进行字面子串查询。
 
@@ -191,7 +191,7 @@ PostgreSQL 建连、连接生命周期与空闲回收、SQL 执行和等锁超�
 - GET /admin/api/v1/articles：支持 q 标题字面子串搜索、status 状态及 pinned=true/false 置顶筛选；空值不筛选。q 大小写不敏感，百分号和下划线按普通字符匹配。管理列表返回 updatedAt。
 - 列表筛选在数据库分页前执行，total 为筛选后的全量数量；修改筛选或每页条数时回到第一页，删除末页最后一项时回到有效页码。非法状态和非法置顶值返回 INVALID_ARGUMENT。
 - 公共产品和新闻接口始终限制已发布内容，管理状态和置顶筛选不会扩大公开范围；新闻公共列表不接受后台标题筛选，且不返回 updatedAt 等管理字段。
-- 产品编辑分为基础信息、产品媒体、规格与价格、详情和发布设置，不提供理化信息、SEO 标题与 SEO 描述的编辑入口；新闻编辑分为基础信息、正文和展示设置，不提供 SEO 标题与描述的编辑入口。操作保持原权限检查和 expectedVersion 乐观锁。
+- 产品编辑分为基础信息、产品媒体、规格与价格、详情和发布设置，数据模型与接口不包含独立理化字段或自定义 SEO 字段；新闻编辑分为基础信息、正文和展示设置，数据模型与接口不包含自定义 SEO 字段。操作保持原权限检查和 expectedVersion 乐观锁。
 - 表单有修改时关闭会提示放弃；产品独立改价前必须先保存聚合表单修改，避免改价响应覆盖未保存内容。预览仍使用当前未保存内容。
 
 ### 后台媒体与详情地址
@@ -201,9 +201,9 @@ PostgreSQL 建连、连接生命周期与空闲回收、SQL 执行和等锁超�
 - 产品写入字段 imageMediaId 必填、reportMediaId 选填，两者只能引用可用图片。省略或空串表示清除选填媒体。保存和预览校验媒体存在、可用及类型。
 - 两个字段复用 media_reference，owner_type 为 product，field 分别为 image/report；详情富文本使用 detail。引用与产品在同一事务中保存，替换或清除媒体释放旧引用，删除产品释放全部引用；被引用素材不能删除。
 - 产品管理详情返回两个媒体 ID 及服务端解析的 image/report URL；公开详情与预览仅返回 URL，列表返回 image URL。后台与官网共用图片详情组件。已有无图产品仍可读取，编辑保存及再次发布前需要补齐图片。
-- COS 上传协议、目录操作、状态与部署配置见 [媒体库说明](MEDIA_LIBRARY.md)，对应 migration 000015_media_cos。
+- COS 上传协议、目录操作、状态与部署配置见 [媒体库说明](MEDIA_LIBRARY.md)，结构定义见初始 migration 000001_schema。
 - 产品、新闻的官网地址由服务端在新建且未传 slug 时按名称加随机后缀生成；同名内容使用不同地址。更新时保留数据库中的既有 slug，不随改名或表单省略而变化。后台不提供官网路径输入。
-- 新闻保存不使用自定义 SEO 字段；官网可按标题和摘要生成页面元信息。旧记录中的字段保留兼容，后续保存置空。
+- 商品与新闻的官网页面元信息由名称／标题和摘要生成，不存储自定义 SEO 字段。商品 detail_html 和新闻 body_html 保存净化后的富文本；共享 RichTextRenderer 用于官网展示和后台预览，不另存固定格式标记。
 
 
 ## 问答配置
@@ -221,7 +221,7 @@ PostgreSQL 建连、连接生命周期与空闲回收、SQL 执行和等锁超�
 
 管理接口返回 id（十进制字符串）、question、answer、sort、enabled、version。校验失败返回 INVALID_ARGUMENT；版本冲突返回 VERSION_CONFLICT；已删除或不存在返回 NOT_FOUND。问题与答案长度上限由 biz/faq 常量控制，当前分别为 500、10000 字节。新增、修改和删除与审计记录在同一事务中提交，审计动作是 faq.create、faq.update、faq.delete。
 
-数据表 `faq`（迁移 `000014_faq`）包含：id bigint identity 主键，question/answer text 非空，sort integer，enabled boolean 默认 false，version bigint 默认 1，以及 created_at/updated_at/deleted_at timestamptz、created_by/updated_by bigint。时间与操作人记录创建、修改、删除的来源，deleted_at 为空代表有效数据。活动记录和公开记录分别建立 (sort,id) 部分索引，不涉及其他业务表关系。回滚 SQL 为对应的 down 文件，删除 faq 表及问答内容，需在停用功能并备份后执行。
+数据表 `faq`（初始结构 `000001_schema`）包含：id bigint identity 主键，question/answer text 非空，sort integer，enabled boolean 默认 false，version bigint 默认 1，以及 created_at/updated_at/deleted_at timestamptz、created_by/updated_by bigint。时间与操作人记录创建、修改、删除的来源，deleted_at 为空代表有效数据。活动记录和公开记录分别建立 (sort,id) 部分索引，不涉及其他业务表关系。完整初始结构的 down 文件删除全部业务表，不提供单模块降级结构。
 
 权限种子注册菜单及四个权限。新建默认内容管理员获得全部问答权限，只读角色获得 faq.read；重复 seed 仅为超级管理员补齐权限，已有普通角色需显式授权。
 
@@ -231,6 +231,18 @@ PostgreSQL 建连、连接生命周期与空闲回收、SQL 执行和等锁超�
 
 GET /admin/api/v1/products 和 GET /api/v1/products 新增 homeFeatured 筛选，接受 true/false，空值不筛选，非法值返回 INVALID_ARGUMENT。筛选 true 时按 home_sort、id 升序，否则维持原列表排序；筛选与分页、分类、名称及管理状态条件共同生效。公共列表继续要求已发布、未删除且具有启用并有效定价的 SKU，下架或删除后自动不再展示。
 
-product 表迁移 000016_product_home 增加 home_featured boolean 和 home_sort integer；默认关闭推荐，排序默认 0。部分索引 product_home_featured 按 home_sort、id 排序，范围为已发布、未删除且开启推荐的商品。up/down 成对；先应用迁移再部署应用，回滚先回退应用再执行 down。
+product 表包含 home_featured boolean 和 home_sort integer；默认关闭推荐，排序默认 0。部分索引 product_home_featured 按 home_sort、id 排序，范围为已发布、未删除且开启推荐的商品。字段及索引包含在完整初始结构中。
 
 首页按以下顺序展示：home_hero Banner、全部公开分类、最多 6 个推荐商品、首页配置的品牌介绍、最多 3 篇已发布新闻、联系咨询。新闻沿用置顶、排序和发布时间规则；分类跳转带 categoryId 的产品列表，商品跳转详情，品牌介绍链接 About，资讯链接 News，联系区复用 WhatsApp 客服分流并链接独立 FAQ。无分类、推荐商品或文章时隐藏对应区块，品牌标题及正文均为空时隐藏介绍。首页不展示检测区块或问答列表。
+
+## 数据库结构与写入约束
+
+完整字段、类型、默认值、约束、索引和中文含义以 [初始建表 SQL](../backend/internal/data/migration/000001_schema.up.sql) 为准，配对 [down SQL](../backend/internal/data/migration/000001_schema.down.sql) 删除业务结构。34 张业务表加 schema_migration 执行记录表构成站点数据库。初始化文件只面向空库；迁移执行记录与运行时结构检查保持一致，不使用 AutoMigrate 或 GORM Gen。
+
+普通实体使用 bigint identity 主键；站点单例、会话摘要、上传批次和关联表按各自标识使用固定值、文本或组合主键。业务实体采用软删除及有效记录部分唯一索引；会话和可重建关联记录按实际生命周期清理。全部表和字段带中文注释，表之间不建立物理外键。
+
+商品必须关联有效分类。规格、规格值、SKU 和价格仍按商品聚合保存；价格未改变时保留价格行标识、时间和操作人，金额改变时原行更新，清空价格、切换币种或移除 SKU 时软删相应有效价格。单独改价与聚合保存采用相同价格写入规则，并在商品版本检查和行锁保护下执行。currency 是币种和精度的唯一来源，金额以最小货币单位 bigint 保存。
+
+新闻公开排序索引为 (pinned DESC, sort, first_published_at DESC NULLS LAST, id DESC)，限定已发布且未删除记录，与查询顺序一致。banner 与 site_config 的版本必须为正数；media 的文件大小、已填写尺寸必须为正数，ready 记录必须具有访问地址，COS 记录必须具有上传批次标识。pending 上传允许暂缺访问地址及尺寸。
+
+media.storage_root_id 标识存储位置：本地图片使用 storage_root.id，COS 图片使用地域与存储桶组成的标识。media_upload_batch 保存存储位置快照，正式图片删除仍需读取，因此上传完成不代表批次可删除。cleanup_pending 与 temporary_cleaned 分别记录正式文件和临时文件的清理进度。

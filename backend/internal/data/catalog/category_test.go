@@ -2,7 +2,6 @@ package catalog
 
 import (
 	"context"
-	"os"
 	auth "peptide-site/internal/biz/admin"
 	biz "peptide-site/internal/biz/catalog"
 	"peptide-site/internal/pkg/richtext"
@@ -38,7 +37,7 @@ func TestCategoriesAndProductFilters(t *testing.T) {
 	}
 	price := "12.00"
 	makeProduct := func(name, slug, category string) biz.Product {
-		p, err := r.Save(ctx, 0, biz.Product{ImageMediaID: imageID, Name: name, Slug: slug, CategoryID: category, Aliases: "hidden-alias", Status: "draft", Detail: richtext.Document{MediaIDs: []string{}}, SKUs: []biz.SKU{{Key: "default", Enabled: true, Currency: "USD", SalePrice: &price, SpecValueKeys: []string{}}}})
+		p, err := r.Save(ctx, 0, biz.Product{ImageMediaID: imageID, Name: name, Slug: slug, CategoryID: category, Status: "draft", Detail: richtext.Document{MediaIDs: []string{}}, SKUs: []biz.SKU{{Key: "default", Enabled: true, Currency: "USD", SalePrice: &price, SpecValueKeys: []string{}}}})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -51,10 +50,7 @@ func TestCategoriesAndProductFilters(t *testing.T) {
 	}
 	p1 := makeProduct("Alpha 100%", "alpha", first.ID)
 	makeProduct("Alpha supply", "alpha-supply", second.ID)
-	legacy := makeProduct("Legacy product", "legacy", second.ID)
-	if err = d.DB.Exec("UPDATE product SET category_id=NULL,category='' WHERE id=?", legacy.ID).Error; err != nil {
-		t.Fatal(err)
-	}
+	makeProduct("Other product", "other", second.ID)
 	id, _ := strconv.ParseInt(first.ID, 10, 64)
 	for _, tt := range []struct {
 		q    string
@@ -92,6 +88,12 @@ func TestCategoriesAndProductFilters(t *testing.T) {
 	current, err := r.Get(ctx, pid)
 	if err != nil || current.Category != "Renamed" {
 		t.Fatal(current, err)
+	}
+	for _, public := range []bool{false, true} {
+		rows, total, err := r.List(ctx, public, 1, 20, "", id, "", nil)
+		if err != nil || total != 1 || len(rows) != 1 || rows[0]["category"] != "Renamed" {
+			t.Fatal("list category must use current related name", rows, total, err)
+		}
 	}
 	if _, err = r.SaveCategory(ctx, id, first); err == nil {
 		t.Fatal("stale category accepted")
@@ -155,43 +157,6 @@ func TestCategoryDeleteRacesProductCreation(t *testing.T) {
 		t.Fatal("orphan", orphan, err)
 	}
 }
-func TestLegacyCategoryMigration(t *testing.T) {
-	d, _ := testutil.Postgres(t)
-	down, err := os.ReadFile("../migration/000013_product_category.down.sql")
-	if err != nil {
-		t.Fatal(err)
-	}
-	up, err := os.ReadFile("../migration/000013_product_category.up.sql")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err = d.DB.Exec(string(down)).Error; err != nil {
-		t.Fatal(err)
-	}
-	if err = d.DB.Exec("INSERT INTO product(name,slug,category,status) VALUES ('A','a',' Peptides ','draft'),('B','b','peptides','draft'),('C','c','','draft')").Error; err != nil {
-		t.Fatal(err)
-	}
-	if err = d.DB.Exec(string(up)).Error; err != nil {
-		t.Fatal(err)
-	}
-	var count int64
-	if err = d.DB.Table("product_category").Count(&count).Error; err != nil || count != 1 {
-		t.Fatal(count, err)
-	}
-	if err = d.DB.Table("product").Where("category_id IS NOT NULL").Count(&count).Error; err != nil || count != 2 {
-		t.Fatal(count, err)
-	}
-	if err = d.DB.Exec("UPDATE product_category SET name='Renamed'").Error; err != nil {
-		t.Fatal(err)
-	}
-	if err = d.DB.Exec(string(down)).Error; err != nil {
-		t.Fatal(err)
-	}
-	if err = d.DB.Table("product").Where("category='Renamed'").Count(&count).Error; err != nil || count != 2 {
-		t.Fatal(count, err)
-	}
-}
-
 func TestCurrencyDictionaryDrivesOptionsAndDefaultSKU(t *testing.T) {
 	d, c := testutil.Postgres(t)
 	r := NewRepo(d, c)

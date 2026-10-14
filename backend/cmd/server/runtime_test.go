@@ -166,7 +166,7 @@ func TestRuntimePostgres(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := fixture.DB.Exec("INSERT INTO media(name,url,mime,size,media_type,storage_root_id,storage_key) VALUES('sample','','text/plain',10,'document',?,'sample.txt')", roots[0].ID).Error; err != nil {
+	if err := fixture.DB.Exec("INSERT INTO media(name,url,mime,size,media_type,storage_root_id,storage_key) VALUES('sample','/uploads/sample.txt','text/plain',10,'document',?,'sample.txt')", roots[0].ID).Error; err != nil {
 		t.Fatal(err)
 	}
 	closeFixture()

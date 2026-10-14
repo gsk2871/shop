@@ -56,13 +56,13 @@ func (r *Repo) Sanitize(ctx context.Context, d richtext.Document) (richtext.Docu
 }
 
 type productRow struct {
-	HomeFeatured                                                                                                                                               bool
-	HomeSort                                                                                                                                                   int
-	CategoryID                                                                                                                                                 *int64
-	ID                                                                                                                                                         int64
-	Name, Slug, Category, Aliases, CAS, Formula, MolecularWeight, Sequence, Purity, Storage, Solubility, Summary, DetailHTML, Status, SEOTitle, SEODescription string
-	Version                                                                                                                                                    int64
-	UpdatedAt                                                                                                                                                  time.Time
+	HomeFeatured                            bool
+	HomeSort                                int
+	CategoryID                              int64
+	ID                                      int64
+	Name, Slug, Summary, DetailHTML, Status string
+	Version                                 int64
+	UpdatedAt                               time.Time
 }
 type specRow struct {
 	ID        int64
@@ -89,15 +89,13 @@ func (r *Repo) get(tx *gorm.DB, id int64) (biz.Product, error) {
 	if err := tx.Table("product").Where("id=? AND deleted_at IS NULL", id).Take(&row).Error; err != nil {
 		return biz.Product{}, err
 	}
-	p := biz.Product{HomeFeatured: row.HomeFeatured, HomeSort: row.HomeSort, ID: strconv.FormatInt(row.ID, 10), Name: row.Name, Slug: row.Slug, Category: row.Category, Aliases: row.Aliases, CAS: row.CAS, Formula: row.Formula, MolecularWeight: row.MolecularWeight, Sequence: row.Sequence, Purity: row.Purity, Storage: row.Storage, Solubility: row.Solubility, Summary: row.Summary, Status: row.Status, SEOTitle: row.SEOTitle, SEODescription: row.SEODescription, Version: row.Version, UpdatedAt: row.UpdatedAt.UTC().Format(time.RFC3339), Specs: []biz.Spec{}, SKUs: []biz.SKU{}, Detail: richtext.Document{HTML: row.DetailHTML, MediaIDs: []string{}}}
-	if row.CategoryID != nil {
-		c, err := category(tx, *row.CategoryID, false)
-		if err != nil {
-			return p, err
-		}
-		p.CategoryID = strconv.FormatInt(c.ID, 10)
-		p.Category = c.Name
+	p := biz.Product{HomeFeatured: row.HomeFeatured, HomeSort: row.HomeSort, ID: strconv.FormatInt(row.ID, 10), Name: row.Name, Slug: row.Slug, Summary: row.Summary, Status: row.Status, Version: row.Version, UpdatedAt: row.UpdatedAt.UTC().Format(time.RFC3339), Specs: []biz.Spec{}, SKUs: []biz.SKU{}, Detail: richtext.Document{HTML: row.DetailHTML, MediaIDs: []string{}}}
+	c, err := category(tx, row.CategoryID, false)
+	if err != nil {
+		return p, err
 	}
+	p.CategoryID = strconv.FormatInt(c.ID, 10)
+	p.Category = c.Name
 	var assets []struct {
 		Field   string
 		MediaID int64
@@ -448,7 +446,7 @@ func (r *Repo) Save(ctx context.Context, id int64, p biz.Product) (biz.Product, 
 		if pricesDiffer(old, p) && !can(ctx, "product.price.update") {
 			return errdef.Denied()
 		}
-		columns := map[string]any{"home_featured": p.HomeFeatured, "home_sort": p.HomeSort, "name": p.Name, "slug": p.Slug, "category": p.Category, "category_id": categoryID, "aliases": p.Aliases, "cas": p.CAS, "formula": p.Formula, "molecular_weight": p.MolecularWeight, "sequence": p.Sequence, "purity": p.Purity, "storage": p.Storage, "solubility": p.Solubility, "summary": p.Summary, "detail_html": p.Detail.HTML, "status": p.Status, "seo_title": p.SEOTitle, "seo_description": p.SEODescription, "updated_at": time.Now().UTC(), "updated_by": actor(ctx)}
+		columns := map[string]any{"home_featured": p.HomeFeatured, "home_sort": p.HomeSort, "name": p.Name, "slug": p.Slug, "category_id": categoryID, "summary": p.Summary, "detail_html": p.Detail.HTML, "status": p.Status, "updated_at": time.Now().UTC(), "updated_by": actor(ctx)}
 		if id == 0 {
 			columns["created_by"] = actor(ctx)
 			columns["version"] = 1
@@ -478,9 +476,6 @@ func (r *Repo) Save(ctx context.Context, id int64, p biz.Product) (biz.Product, 
 			if err := tx.Exec("UPDATE "+table+" SET deleted_at=now(),updated_at=now() WHERE product_id=? AND deleted_at IS NULL", id).Error; err != nil {
 				return err
 			}
-		}
-		if err := tx.Exec("UPDATE product_sku_price SET deleted_at=now(),updated_at=now() WHERE sku_id IN (SELECT id FROM product_sku WHERE product_id=?) AND deleted_at IS NULL", id).Error; err != nil {
-			return err
 		}
 		if err := tx.Exec("DELETE FROM product_sku_value WHERE sku_id IN (SELECT id FROM product_sku WHERE product_id=?)", id).Error; err != nil {
 			return err
@@ -527,6 +522,11 @@ func (r *Repo) Save(ctx context.Context, id int64, p biz.Product) (biz.Product, 
 					return err
 				}
 			}
+			// A removed price or changed currency retires only the affected row.
+			// Unchanged prices keep their ID, timestamps and actor metadata.
+			if err := tx.Exec("UPDATE product_sku_price SET deleted_at=now(),updated_at=now(),updated_by=? WHERE sku_id=? AND deleted_at IS NULL AND (currency<>? OR ?)", actor(ctx), skuID, sku.Currency, sku.SalePrice == nil).Error; err != nil {
+				return err
+			}
 			if sku.SalePrice != nil {
 				c, err := currency(tx, sku.Currency)
 				if err != nil {
@@ -536,10 +536,13 @@ func (r *Repo) Save(ctx context.Context, id int64, p biz.Product) (biz.Product, 
 				if err != nil {
 					return err
 				}
-				if err := tx.Exec("INSERT INTO product_sku_price(sku_id,currency,amount,created_by,updated_by) VALUES(?,?,?,?,?)", skuID, sku.Currency, amount, actor(ctx), actor(ctx)).Error; err != nil {
+				if err := writePrice(tx, ctx, skuID, sku.Currency, amount); err != nil {
 					return err
 				}
 			}
+		}
+		if err := tx.Exec("UPDATE product_sku_price SET deleted_at=now(),updated_at=now(),updated_by=? WHERE deleted_at IS NULL AND sku_id IN (SELECT id FROM product_sku WHERE product_id=? AND deleted_at IS NOT NULL)", actor(ctx), id).Error; err != nil {
+			return err
 		}
 		references := map[string][]int64{"detail": richtext.IDs(p.Detail)}
 		for field, raw := range map[string]string{"image": p.ImageMediaID, "report": p.ReportMediaID} {
@@ -641,7 +644,7 @@ func (r *Repo) Price(ctx context.Context, id, skuID, version int64, value, code 
 		if err != nil {
 			return errdef.Invalid()
 		}
-		if err := tx.Exec("INSERT INTO product_sku_price(sku_id,currency,amount,created_by,updated_by) VALUES(?,?,?,?,?) ON CONFLICT(sku_id,currency) WHERE deleted_at IS NULL DO UPDATE SET amount=EXCLUDED.amount,updated_at=now(),updated_by=EXCLUDED.updated_by", skuID, code, amount, actor(ctx), actor(ctx)).Error; err != nil {
+		if err := writePrice(tx, ctx, skuID, code, amount); err != nil {
 			return err
 		}
 		if err := tx.Exec("UPDATE product SET version=version+1,updated_at=now(),updated_by=? WHERE id=?", actor(ctx), id).Error; err != nil {
@@ -653,4 +656,14 @@ func (r *Repo) Price(ctx context.Context, id, skuID, version int64, value, code 
 		return biz.Product{}, err
 	}
 	return r.Get(ctx, id)
+}
+
+// writePrice preserves unchanged price rows. Aggregate saves and dedicated price
+// changes share this write path; updates to existing products hold the product
+// lock and check its version before calling it.
+func writePrice(tx *gorm.DB, ctx context.Context, skuID int64, code string, amount int64) error {
+	return tx.Exec(`INSERT INTO product_sku_price(sku_id,currency,amount,created_by,updated_by)
+ VALUES(?,?,?,?,?) ON CONFLICT(sku_id,currency) WHERE deleted_at IS NULL
+ DO UPDATE SET amount=EXCLUDED.amount,updated_at=now(),updated_by=EXCLUDED.updated_by
+ WHERE product_sku_price.amount IS DISTINCT FROM EXCLUDED.amount`, skuID, code, amount, actor(ctx), actor(ctx)).Error
 }

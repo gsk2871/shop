@@ -51,19 +51,9 @@ type Product struct {
 	Slug            string            `json:"slug"`
 	CategoryID      string            `json:"categoryId"`
 	Category        string            `json:"category"`
-	Aliases         string            `json:"aliases"`
-	CAS             string            `json:"cas"`
-	Formula         string            `json:"formula"`
-	MolecularWeight string            `json:"molecularWeight"`
-	Sequence        string            `json:"sequence"`
-	Purity          string            `json:"purity"`
-	Storage         string            `json:"storage"`
-	Solubility      string            `json:"solubility"`
 	Summary         string            `json:"summary"`
 	Detail          richtext.Document `json:"detail"`
 	Status          string            `json:"status"`
-	SEOTitle        string            `json:"seoTitle"`
-	SEODescription  string            `json:"seoDescription"`
 	Version         int64             `json:"version"`
 	ExpectedVersion int64             `json:"expectedVersion,omitempty"`
 	Specs           []Spec            `json:"specs"`
@@ -106,15 +96,8 @@ func Validate(p *Product, defaultCurrency string) error {
 	if p.Status != "draft" && p.Status != "published" && p.Status != "offline" {
 		return errdef.Invalid()
 	}
-	for _, field := range []string{p.Category, p.CAS, p.Formula, p.MolecularWeight, p.Purity, p.SEOTitle} {
-		if len(field) > 200 {
-			return errdef.Invalid()
-		}
-	}
-	for _, field := range []string{p.Aliases, p.Sequence, p.Storage, p.Solubility, p.Summary, p.SEODescription} {
-		if len(field) > 5000 {
-			return errdef.Invalid()
-		}
+	if len(p.Summary) > 5000 {
+		return errdef.Invalid()
 	}
 	dimensions := map[string]bool{}
 	values := map[string]string{}
@@ -222,5 +205,5 @@ func Public(p Product) map[string]any {
 		}
 		specs = append(specs, PublicSpec{spec.ID, spec.Key, spec.Name, values})
 	}
-	return map[string]any{"image": p.Image, "report": p.Report, "id": p.ID, "name": p.Name, "slug": p.Slug, "category": p.Category, "categoryId": p.CategoryID, "aliases": p.Aliases, "cas": p.CAS, "formula": p.Formula, "molecularWeight": p.MolecularWeight, "sequence": p.Sequence, "purity": p.Purity, "storage": p.Storage, "solubility": p.Solubility, "summary": p.Summary, "detail": p.Detail, "specs": specs, "skus": skus, "fromPrice": p.FromPrice, "seoTitle": p.SEOTitle, "seoDescription": p.SEODescription}
+	return map[string]any{"image": p.Image, "report": p.Report, "id": p.ID, "name": p.Name, "slug": p.Slug, "category": p.Category, "categoryId": p.CategoryID, "summary": p.Summary, "detail": p.Detail, "specs": specs, "skus": skus, "fromPrice": p.FromPrice}
 }

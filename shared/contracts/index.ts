@@ -90,18 +90,8 @@ export interface PublicProduct {
   slug: string;
   categoryId: EntityID | "";
   category: string;
-  aliases: string;
-  cas: string;
-  formula: string;
-  molecularWeight: string;
-  sequence: string;
-  purity: string;
-  storage: string;
-  solubility: string;
   summary: string;
   detail: RichText;
-  seoTitle: string;
-  seoDescription: string;
   specs: PublicProductSpec[];
   skus: PublicSKU[];
   fromPrice?: Price | null;
@@ -142,8 +132,6 @@ export interface PublicArticle {
   summary: string;
   body: RichText;
   cover: string;
-  seoTitle: string;
-  seoDescription: string;
   firstPublishedAt: string | null;
 }
 export interface Article extends PublicArticle {

@@ -31,14 +31,14 @@ func NewRepo(d *data.Data, c conf.Config) *Repo {
 }
 
 type row struct {
-	ID                                                               int64
-	Title, Slug, Summary, BodyHTML, Status, SEOTitle, SEODescription string
-	CoverMediaID                                                     *int64
-	Pinned                                                           bool
-	Sort                                                             int
-	Version                                                          int64
-	FirstPublishedAt                                                 *time.Time
-	UpdatedAt                                                        time.Time
+	ID                                     int64
+	Title, Slug, Summary, BodyHTML, Status string
+	CoverMediaID                           *int64
+	Pinned                                 bool
+	Sort                                   int
+	Version                                int64
+	FirstPublishedAt                       *time.Time
+	UpdatedAt                              time.Time
 }
 
 func actor(ctx context.Context) int64 {
@@ -59,7 +59,6 @@ func (r *Repo) prepare(ctx context.Context, a *biz.Article) error {
 		}
 		a.Slug = value
 	}
-	a.SEOTitle, a.SEODescription = "", ""
 	if err := biz.Validate(*a); err != nil {
 		return err
 	}
@@ -90,7 +89,7 @@ func (r *Repo) get(tx *gorm.DB, id int64) (biz.Article, error) {
 	if err := tx.Table("article").Where("id=? AND deleted_at IS NULL", id).Take(&record).Error; err != nil {
 		return biz.Article{}, err
 	}
-	a := biz.Article{ID: strconv.FormatInt(record.ID, 10), Title: record.Title, Slug: record.Slug, Summary: record.Summary, Body: richtext.Document{HTML: record.BodyHTML, MediaIDs: []string{}}, Status: record.Status, SEOTitle: record.SEOTitle, SEODescription: record.SEODescription, Pinned: record.Pinned, Sort: record.Sort, Version: record.Version, UpdatedAt: record.UpdatedAt.UTC().Format(time.RFC3339)}
+	a := biz.Article{ID: strconv.FormatInt(record.ID, 10), Title: record.Title, Slug: record.Slug, Summary: record.Summary, Body: richtext.Document{HTML: record.BodyHTML, MediaIDs: []string{}}, Status: record.Status, Pinned: record.Pinned, Sort: record.Sort, Version: record.Version, UpdatedAt: record.UpdatedAt.UTC().Format(time.RFC3339)}
 	if record.FirstPublishedAt != nil {
 		formatted := record.FirstPublishedAt.UTC().Format(time.RFC3339)
 		a.FirstPublishedAt = &formatted
@@ -210,7 +209,7 @@ func (r *Repo) Save(ctx context.Context, id int64, a biz.Article) (biz.Article, 
 			now := time.Now().UTC()
 			published = &now
 		}
-		columns := map[string]any{"title": a.Title, "slug": a.Slug, "summary": a.Summary, "body_html": a.Body.HTML, "cover_media_id": cover, "status": a.Status, "seo_title": a.SEOTitle, "seo_description": a.SEODescription, "pinned": a.Pinned, "sort": a.Sort, "first_published_at": published, "version": version, "updated_by": actor(ctx), "updated_at": time.Now().UTC()}
+		columns := map[string]any{"title": a.Title, "slug": a.Slug, "summary": a.Summary, "body_html": a.Body.HTML, "cover_media_id": cover, "status": a.Status, "pinned": a.Pinned, "sort": a.Sort, "first_published_at": published, "version": version, "updated_by": actor(ctx), "updated_at": time.Now().UTC()}
 		if id == 0 {
 			columns["created_by"] = actor(ctx)
 			if err := tx.Table("article").Clauses(clause.Returning{Columns: []clause.Column{{Name: "id"}}}).Create(&columns).Error; err != nil {

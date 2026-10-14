@@ -6,6 +6,7 @@ import (
 	biz "peptide-site/internal/biz/news"
 	"peptide-site/internal/pkg/richtext"
 	"peptide-site/internal/testutil"
+	"reflect"
 	"strconv"
 	"testing"
 )
@@ -44,8 +45,18 @@ func TestPublicationVersionAndPreview(t *testing.T) {
 	}
 	a.ExpectedVersion = a.Version
 	a.Title = "Preview"
-	if _, e = r.Preview(ctx, a); e != nil {
-		t.Fatal(e)
+	preview, e := r.Preview(ctx, a)
+	if e != nil || !reflect.DeepEqual(preview["body"], a.Body) || !reflect.DeepEqual(public["body"], a.Body) {
+		t.Fatal("rich text preview/public mismatch", e)
+	}
+	var stored string
+	if e = d.DB.Table("article").Select("body_html").Where("id=?", id).Scan(&stored).Error; e != nil || stored != a.Body.HTML {
+		t.Fatal("rich text storage mismatch", e)
+	}
+	for _, key := range []string{"seoTitle", "seoDescription", "bodyFormat"} {
+		if _, exists := public[key]; exists {
+			t.Fatal("removed field exposed", key)
+		}
 	}
 	saved, e := r.Get(ctx, id)
 	if e != nil || saved.Title == a.Title || saved.Version != a.Version {
@@ -123,13 +134,13 @@ func TestManagementFiltersAndPublicIsolation(t *testing.T) {
 	}
 }
 
-func TestAutomaticPathAndRemovedSEOFields(t *testing.T) {
+func TestAutomaticPath(t *testing.T) {
 	d, c := testutil.Postgres(t)
 	r := NewRepo(d, c)
 	ctx := context.Background()
-	input := biz.Article{Title: "Same title", Status: "draft", SEOTitle: "Custom", SEODescription: "Custom description"}
+	input := biz.Article{Title: "Same title", Status: "draft"}
 	first, err := r.Save(ctx, 0, input)
-	if err != nil || first.Slug == "" || first.SEOTitle != "" || first.SEODescription != "" {
+	if err != nil || first.Slug == "" {
 		t.Fatal(first, err)
 	}
 	second, err := r.Save(ctx, 0, input)

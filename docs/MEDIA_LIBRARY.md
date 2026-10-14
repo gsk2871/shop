@@ -41,7 +41,7 @@ sequenceDiagram
 
 ## 数据与权限
 
-migration `000015_media_cos` 新建 media_group、media_upload_batch，给 media 增加 group_id、storage_provider、status、batch_id、temporary_cleaned。目录和上传状态使用数据库管理，不创建 COS 空文件夹。本地测试图片标记为 local，正式上传图片标记为 cos。表之间使用逻辑引用，不增加外键。
+初始结构 `000001_schema` 包含 media_group、media_upload_batch，以及 media 的 group_id、storage_provider、status、batch_id、temporary_cleaned 字段。目录和上传状态使用数据库管理，不创建 COS 空文件夹。本地测试图片标记为 local，正式上传图片标记为 cos。表之间使用逻辑引用，不增加外键。
 
 接口前缀为 `/admin/api/v1/media`，ID 使用十进制字符串。写请求沿用登录会话、来源校验、`X-Requested-With: peptide-admin` 和权限中间件。
 

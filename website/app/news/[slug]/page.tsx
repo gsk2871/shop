@@ -12,8 +12,8 @@ export async function generateMetadata({
     `articles/${encodeURIComponent(slug)}`,
   );
   return {
-    title: result.data?.seoTitle || result.data?.title || "Article",
-    description: result.data?.seoDescription || result.data?.summary,
+    title: result.data?.title || "Article",
+    description: result.data?.summary,
     robots: result.error ? { index: false, follow: false } : undefined,
   };
 }

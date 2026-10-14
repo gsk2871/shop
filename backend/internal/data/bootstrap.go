@@ -24,6 +24,11 @@ func Migrate(d *Data) error {
 		if err := tx.Exec("CREATE TABLE IF NOT EXISTS schema_migration (name text PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now())").Error; err != nil {
 			return err
 		}
+		if err := tx.Exec(`COMMENT ON TABLE schema_migration IS '数据库结构执行记录';
+COMMENT ON COLUMN schema_migration.name IS '结构文件名称';
+COMMENT ON COLUMN schema_migration.applied_at IS '执行时间'`).Error; err != nil {
+			return err
+		}
 		for _, name := range names {
 			var count int64
 			if err := tx.Table("schema_migration").Where("name = ?", name).Count(&count).Error; err != nil {
