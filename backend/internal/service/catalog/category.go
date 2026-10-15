@@ -25,7 +25,7 @@ func (h *Handler) categories(w http.ResponseWriter, r *http.Request, path string
 		if all {
 			items := []map[string]any{}
 			for _, row := range rows {
-				items = append(items, map[string]any{"id": row.ID, "name": row.Name})
+				items = append(items, map[string]any{"id": row.ID, "name": row.Name, "cover": row.Cover})
 			}
 			admin.Reply(w, 200, map[string]any{"items": items})
 		} else {

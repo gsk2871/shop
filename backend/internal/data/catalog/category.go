@@ -6,6 +6,7 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 	biz "peptide-site/internal/biz/catalog"
+	media "peptide-site/internal/data/media"
 	"peptide-site/internal/pkg/errdef"
 	"strconv"
 )
@@ -30,8 +31,20 @@ func category(tx *gorm.DB, id int64, lock bool) (categoryRow, error) {
 	return row, err
 }
 func (r *Repo) Category(ctx context.Context, id int64) (biz.Category, error) {
-	row, err := category(r.Data.DB.WithContext(ctx), id, false)
-	return categoryDTO(row), err
+	var result biz.Category
+	err := r.Data.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		row, err := category(tx, id, false)
+		if err != nil {
+			return err
+		}
+		items := []biz.Category{categoryDTO(row)}
+		if err := categoryCovers(tx, items); err != nil {
+			return err
+		}
+		result = items[0]
+		return nil
+	}, &sql.TxOptions{Isolation: sql.LevelRepeatableRead, ReadOnly: true})
+	return result, err
 }
 func (r *Repo) Categories(ctx context.Context, page, size int, search string, all bool) ([]biz.Category, int64, error) {
 	items := []biz.Category{}
@@ -55,7 +68,7 @@ func (r *Repo) Categories(ctx context.Context, page, size int, search string, al
 		for _, row := range rows {
 			items = append(items, categoryDTO(row))
 		}
-		return nil
+		return categoryCovers(tx, items)
 	}, &sql.TxOptions{Isolation: sql.LevelRepeatableRead, ReadOnly: true})
 	return items, total, err
 }
@@ -88,6 +101,14 @@ func (r *Repo) SaveCategory(ctx context.Context, id int64, c biz.Category) (biz.
 				return err
 			}
 		}
+		refs := map[string][]int64{}
+		if c.CoverMediaID != "" {
+			mid, _ := biz.ParseID(c.CoverMediaID)
+			refs["cover"] = []int64{mid}
+		}
+		if err := media.SyncReferences(tx, "product_category", strconv.FormatInt(id, 10), refs); err != nil {
+			return err
+		}
 		action := "category.update"
 		if old.ID == 0 {
 			action = "category.create"
@@ -118,6 +139,39 @@ func (r *Repo) DeleteCategory(ctx context.Context, id, version int64) error {
 		if err := tx.Exec("UPDATE product_category SET deleted_at=now(),updated_at=now(),updated_by=?,version=version+1 WHERE id=?", actor(ctx), id).Error; err != nil {
 			return err
 		}
+		if err := media.SyncReferences(tx, "product_category", strconv.FormatInt(id, 10), nil); err != nil {
+			return err
+		}
 		return tx.Exec("INSERT INTO audit_log(user_id,action,target_type,target_id) VALUES(?,'category.delete','product_category',?)", actor(ctx), strconv.FormatInt(id, 10)).Error
 	})
+}
+
+// Load covers in one query for a list; unavailable media never becomes a public URL.
+func categoryCovers(tx *gorm.DB, items []biz.Category) error {
+	if len(items) == 0 {
+		return nil
+	}
+	ids := make([]string, 0, len(items))
+	for _, item := range items {
+		ids = append(ids, item.ID)
+	}
+	var rows []struct {
+		OwnerID string
+		MediaID int64
+		URL     string
+	}
+	if err := tx.Table("media_reference ref").Select("ref.owner_id,ref.media_id,m.url").Joins("JOIN media m ON m.id=ref.media_id AND m.available AND m.status='ready' AND m.media_type='image' AND m.deleted_at IS NULL").Where("ref.owner_type=? AND ref.field=? AND ref.owner_id IN ?", "product_category", "cover", ids).Scan(&rows).Error; err != nil {
+		return err
+	}
+	byID := map[string]int{}
+	for i, item := range items {
+		byID[item.ID] = i
+	}
+	for _, row := range rows {
+		if i, ok := byID[row.OwnerID]; ok {
+			items[i].CoverMediaID = strconv.FormatInt(row.MediaID, 10)
+			items[i].Cover = row.URL
+		}
+	}
+	return nil
 }

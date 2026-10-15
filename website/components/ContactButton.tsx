@@ -3,17 +3,27 @@ import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import type { WhatsAppContact } from "../lib/contracts";
 // Image addresses are resolved by the trusted backend from a media ID.
 function validImageURL(raw: string) {
-  if (/^\/uploads\/[a-f0-9]+\/[a-f0-9]+\.(png|jpg|webp|gif)$/.test(raw)) return true;
-  try { const u = new URL(raw); return u.protocol === 'https:' && !u.username && !u.password && !u.search && !u.hash; } catch { return false; }
+  if (/^\/uploads\/[a-f0-9]+\/[a-f0-9]+\.(png|jpg|webp|gif)$/.test(raw))
+    return true;
+  try {
+    const u = new URL(raw);
+    return (
+      u.protocol === "https:" &&
+      !u.username &&
+      !u.password &&
+      !u.search &&
+      !u.hash
+    );
+  } catch {
+    return false;
+  }
 }
 export default function ContactButton({
   children = "Contact on WhatsApp ↗",
   className = "button",
-  productName,
 }: {
   children?: ReactNode;
   className?: string;
-  productName?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -72,16 +82,12 @@ export default function ContactButton({
         url.username ||
         url.password ||
         url.pathname !== `/${value.phoneNumber}` ||
-        url.search ||
+        [...url.searchParams.keys()].some((key) => key !== "text") ||
+        url.searchParams.getAll("text").length > 1 ||
         url.hash ||
         !validImageURL(value.qrCodeUrl)
       )
         throw new Error("Invalid contact");
-      if (productName)
-        url.searchParams.set(
-          "text",
-          `Hello, I would like to enquire about ${productName}.`,
-        );
       if (pending.current === controller)
         setContact({ ...value, url: url.toString() });
     } catch {

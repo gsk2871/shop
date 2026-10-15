@@ -26,7 +26,7 @@ func TestPublicCategoryContractAndInvalidFilter(t *testing.T) {
 	if err = json.Unmarshal(w.Body.Bytes(), &body); err != nil || w.Code != 200 || len(body.Items) != 1 {
 		t.Fatal(w.Code, w.Body.String(), err)
 	}
-	if len(body.Items[0]) != 2 || body.Items[0]["id"] != cat.ID || body.Items[0]["name"] != "Public" {
+	if len(body.Items[0]) != 3 || body.Items[0]["id"] != cat.ID || body.Items[0]["name"] != "Public" {
 		t.Fatal("management data leaked", body)
 	}
 	for _, path := range []string{"/api/v1/products?categoryId=abc", "/api/v1/products?categoryId=-1"} {

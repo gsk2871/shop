@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/url"
 	auth "peptide-site/internal/biz/admin"
 	ids "peptide-site/internal/biz/catalog"
 	mediaBiz "peptide-site/internal/biz/media"
@@ -30,7 +31,7 @@ func stamp(g biz.Group) string { return g.UpdatedAt.Format(time.RFC3339Nano) }
 func input(g biz.Group) biz.Input {
 	in := biz.Input{Name: g.Name, CountryCodes: g.CountryCodes, Enabled: g.Enabled, ExpectedUpdatedAt: stamp(g), Accounts: []biz.AccountInput{}}
 	for _, a := range g.Accounts {
-		in.Accounts = append(in.Accounts, biz.AccountInput{ID: a.ID, Name: a.Name, PhoneNumber: a.PhoneNumber, QRCodeMediaID: a.QRCodeMediaID, Enabled: a.Enabled})
+		in.Accounts = append(in.Accounts, biz.AccountInput{ID: a.ID, Name: a.Name, Greeting: a.Greeting, PhoneNumber: a.PhoneNumber, QRCodeMediaID: a.QRCodeMediaID, Enabled: a.Enabled})
 	}
 	return in
 }
@@ -69,11 +70,18 @@ func TestRoutingConcurrencyAndConfiguration(t *testing.T) {
 	}
 	in := input(g)
 	for n := 1; n <= 4; n++ {
-		in.Accounts = append(in.Accounts, makeAccount(n))
+		a := makeAccount(n)
+		if n == 1 {
+			a.Greeting = "  Hello & 你好 + test?\nHow can I help?  "
+		}
+		in.Accounts = append(in.Accounts, a)
 	}
 	g, e = r.Save(ctx, mustID(g.ID), in)
 	if e != nil {
 		t.Fatal(e)
+	}
+	if g.Accounts[0].Greeting != "Hello & 你好 + test?\nHow can I help?" {
+		t.Fatal("greeting round trip", g.Accounts[0])
 	}
 	_, offset := g.UpdatedAt.Zone()
 	if offset != 0 {
@@ -87,6 +95,29 @@ func TestRoutingConcurrencyAndConfiguration(t *testing.T) {
 		v, e := r.Contact(ctx, "US")
 		if e != nil || v.PhoneNumber != makeAccount(n).PhoneNumber {
 			t.Fatal("initial round", n, v, e)
+		}
+		u, err := url.Parse(v.URL)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if n == 1 && u.Query().Get("text") != g.Accounts[0].Greeting {
+			t.Fatal("greeting encoding", v.URL)
+		}
+		if n != 1 && u.RawQuery != "" {
+			t.Fatal("empty greeting added query", v.URL)
+		}
+	}
+	// Editing and clearing an existing greeting must round-trip and remove text.
+	in = input(g)
+	in.Accounts[0].Greeting = "   "
+	g, e = r.Save(ctx, id, in)
+	if e != nil || g.Accounts[0].Greeting != "" {
+		t.Fatal("clear greeting", g, e)
+	}
+	for n := 0; n < 4; n++ {
+		v, e := r.Contact(ctx, "US")
+		if e != nil || v.URL != "https://wa.me/"+g.Accounts[n].PhoneNumber {
+			t.Fatal("cleared greeting link", v, e)
 		}
 	}
 	before := stamp(g)

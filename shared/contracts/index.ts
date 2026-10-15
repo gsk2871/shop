@@ -83,6 +83,8 @@ export interface PublicSKU {
   price: Price;
 }
 export interface PublicProduct {
+  images?: string[];
+  reports?: string[];
   image: string;
   report: string;
   id?: EntityID;
@@ -99,6 +101,8 @@ export interface PublicProduct {
 export interface Product extends Omit<PublicProduct, "specs" | "skus"> {
   homeFeatured: boolean;
   homeSort: number;
+  imageMediaIds?: EntityID[];
+  reportMediaIds?: EntityID[];
   imageMediaId: EntityID | "";
   reportMediaId: EntityID | "";
   specs: ProductSpec[];
@@ -212,6 +216,7 @@ export const defaultTheme: Theme = {
 };
 
 export interface WhatsAppAccount {
+  greeting: string;
   id: EntityID;
   name: string;
   phoneNumber: string;
@@ -222,6 +227,7 @@ export interface WhatsAppAccount {
   updatedAt: string;
 }
 export interface WhatsAppAccountInput {
+  greeting?: string;
   id?: EntityID;
   name: string;
   phoneNumber: string;
@@ -261,10 +267,12 @@ export interface WhatsAppContact {
 }
 
 export interface PublicCategory {
+  cover?: string;
   id: EntityID;
   name: string;
 }
 export interface Category extends PublicCategory {
+  coverMediaId?: EntityID | "";
   sort: number;
   version: number;
   expectedVersion?: number;

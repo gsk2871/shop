@@ -96,21 +96,30 @@ func (r *Repo) get(tx *gorm.DB, id int64) (biz.Product, error) {
 	}
 	p.CategoryID = strconv.FormatInt(c.ID, 10)
 	p.Category = c.Name
+	p.ImageMediaIDs, p.ReportMediaIDs, p.Images, p.Reports = []string{}, []string{}, []string{}, []string{}
 	var assets []struct {
 		Field   string
 		MediaID int64
 		URL     string
 	}
-	if err := tx.Table("media_reference ref").Select("ref.field,ref.media_id,m.url").Joins("JOIN media m ON m.id=ref.media_id AND m.available AND m.deleted_at IS NULL").Where("ref.owner_type='product' AND ref.owner_id=? AND ref.field IN ?", p.ID, []string{"image", "report"}).Scan(&assets).Error; err != nil {
+	if err := tx.Table("media_reference ref").Select("ref.field,ref.media_id,m.url").Joins("JOIN media m ON m.id=ref.media_id AND m.available AND m.deleted_at IS NULL").Where("ref.owner_type='product' AND ref.owner_id=? AND ref.field IN ?", p.ID, []string{"image", "report"}).Order("ref.sort,ref.id").Scan(&assets).Error; err != nil {
 		return p, err
 	}
 	for _, asset := range assets {
 		switch asset.Field {
 		case "image":
-			p.ImageMediaID, p.Image = strconv.FormatInt(asset.MediaID, 10), asset.URL
+			p.ImageMediaIDs = append(p.ImageMediaIDs, strconv.FormatInt(asset.MediaID, 10))
+			p.Images = append(p.Images, asset.URL)
 		case "report":
-			p.ReportMediaID, p.Report = strconv.FormatInt(asset.MediaID, 10), asset.URL
+			p.ReportMediaIDs = append(p.ReportMediaIDs, strconv.FormatInt(asset.MediaID, 10))
+			p.Reports = append(p.Reports, asset.URL)
 		}
+	}
+	if len(p.Images) > 0 {
+		p.ImageMediaID, p.Image = p.ImageMediaIDs[0], p.Images[0]
+	}
+	if len(p.Reports) > 0 {
+		p.ReportMediaID, p.Report = p.ReportMediaIDs[0], p.Reports[0]
 	}
 	var refs []int64
 	if err := tx.Table("media_reference").Where("owner_type='product' AND owner_id=? AND field='detail'", p.ID).Order("media_id").Pluck("media_id", &refs).Error; err != nil {
@@ -274,27 +283,33 @@ func (r *Repo) Prepare(ctx context.Context, p *biz.Product) error {
 	}
 	p.Category = c.Name
 	p.Image, p.Report = "", ""
+	p.Images, p.Reports = []string{}, []string{}
 	for _, field := range []struct {
-		id, kind string
-		url      *string
+		ids  []string
+		urls *[]string
 	}{
-		{p.ImageMediaID, "image", &p.Image}, {p.ReportMediaID, "image", &p.Report},
+		{p.ImageMediaIDs, &p.Images}, {p.ReportMediaIDs, &p.Reports},
 	} {
-		if field.id == "" {
-			continue
+		for _, raw := range field.ids {
+			id, _ := biz.ParseID(raw)
+			asset, err := r.Media.Get(ctx, id)
+			if err == gorm.ErrRecordNotFound {
+				return errdef.Invalid()
+			}
+			if err != nil {
+				return err
+			}
+			if asset.MediaType != "image" {
+				return errdef.Invalid()
+			}
+			*field.urls = append(*field.urls, asset.URL)
 		}
-		id, _ := biz.ParseID(field.id)
-		asset, err := r.Media.Get(ctx, id)
-		if err == gorm.ErrRecordNotFound {
-			return errdef.Invalid()
-		}
-		if err != nil {
-			return err
-		}
-		if asset.MediaType != field.kind {
-			return errdef.Invalid()
-		}
-		*field.url = asset.URL
+	}
+	if len(p.Images) > 0 {
+		p.Image = p.Images[0]
+	}
+	if len(p.Reports) > 0 {
+		p.Report = p.Reports[0]
 	}
 	clean, err := r.Sanitize(ctx, p.Detail)
 	if err != nil {
@@ -545,10 +560,10 @@ func (r *Repo) Save(ctx context.Context, id int64, p biz.Product) (biz.Product, 
 			return err
 		}
 		references := map[string][]int64{"detail": richtext.IDs(p.Detail)}
-		for field, raw := range map[string]string{"image": p.ImageMediaID, "report": p.ReportMediaID} {
-			if raw != "" {
+		for field, list := range map[string][]string{"image": p.ImageMediaIDs, "report": p.ReportMediaIDs} {
+			for _, raw := range list {
 				mediaID, _ := biz.ParseID(raw)
-				references[field] = []int64{mediaID}
+				references[field] = append(references[field], mediaID)
 			}
 		}
 		if err := media.SyncReferences(tx, "product", strconv.FormatInt(id, 10), references); err != nil {

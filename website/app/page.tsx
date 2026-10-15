@@ -1,3 +1,4 @@
+import CategoryCard from "../components/CategoryCard";
 import Link from "next/link";
 import Hero from "../components/Hero";
 import ContactButton from "../components/ContactButton";
@@ -37,17 +38,11 @@ export default async function Home() {
           </div>
           <div className="home-category-grid">
             {categories.items.map((category, index) => (
-              <Link
-                className="home-category-card"
+              <CategoryCard
                 key={category.id}
-                href={`/products?categoryId=${encodeURIComponent(category.id)}`}
-              >
-                <span className="eyebrow">
-                  {String(index + 1).padStart(2, "0")}
-                </span>
-                <h3>{category.name}</h3>
-                <span className="home-text-link">Explore products ↗</span>
-              </Link>
+                category={category}
+                index={index}
+              />
             ))}
           </div>
         </section>

@@ -9,6 +9,7 @@ import (
 )
 
 type Account struct {
+	Greeting        string    `json:"greeting"`
 	ID              string    `json:"id,omitempty"`
 	Name            string    `json:"name"`
 	PhoneNumber     string    `json:"phoneNumber"`
@@ -19,6 +20,7 @@ type Account struct {
 	UpdatedAt       time.Time `json:"updatedAt"`
 }
 type AccountInput struct {
+	Greeting      string `json:"greeting"`
 	ID            string `json:"id,omitempty"`
 	Name          string `json:"name"`
 	PhoneNumber   string `json:"phoneNumber"`
@@ -73,6 +75,7 @@ type Contact struct {
 var Phone = regexp.MustCompile(`^[1-9][0-9]{6,14}$`)
 var Country = regexp.MustCompile(`^[A-Z]{2}$`)
 
+const MaxGreetingLength = 2000
 const MaxAccounts = 100
 const MaxCountries = 250
 
@@ -93,6 +96,10 @@ func (v *Input) Validate() error {
 	for j := range v.Accounts {
 		a := &v.Accounts[j]
 		a.Name = strings.TrimSpace(a.Name)
+		a.Greeting = strings.TrimSpace(a.Greeting)
+		if len([]rune(a.Greeting)) > MaxGreetingLength {
+			return errdef.Invalid()
+		}
 		if a.Name == "" || len(a.Name) > 100 || !Phone.MatchString(a.PhoneNumber) || a.QRCodeMediaID == "" {
 			return errdef.Invalid()
 		}

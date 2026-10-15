@@ -193,8 +193,8 @@ func SyncReferences(tx *gorm.DB, owner string, ownerID string, fields map[string
 		return err
 	}
 	for field, list := range fields {
-		for _, id := range list {
-			if err := tx.Exec("INSERT INTO media_reference(media_id,owner_type,owner_id,field) VALUES(?,?,?,?) ON CONFLICT DO NOTHING", id, owner, ownerID, field).Error; err != nil {
+		for position, id := range list {
+			if err := tx.Exec("INSERT INTO media_reference(media_id,owner_type,owner_id,field,sort) VALUES(?,?,?,?,?) ON CONFLICT DO NOTHING", id, owner, ownerID, field, position).Error; err != nil {
 				return err
 			}
 		}

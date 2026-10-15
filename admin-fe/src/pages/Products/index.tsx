@@ -37,7 +37,7 @@ import type {
   ProductSummary,
   PublicProduct,
 } from "../../services/contracts";
-import MediaSelect from "../../components/MediaSelect";
+import MediaMultiSelect from "../../components/MediaMultiSelect";
 import RichTextEditor from "../../components/RichTextEditor";
 function newKey() {
   return crypto.randomUUID();
@@ -189,23 +189,35 @@ export default function Products() {
       setEditing(product);
       form.resetFields();
       form.setFieldsValue(
-        product || {
-          status: "draft",
-          homeFeatured: false,
-          homeSort: 0,
-          detail: { html: "", mediaIds: [] },
-          specs: [],
-          skus: [
-            {
-              key: "default",
-              enabled: true,
-              sort: 0,
-              specValueKeys: [],
-              currency: currencies.defaultCurrency,
-              salePrice: null,
+        product
+          ? {
+              ...product,
+              imageMediaIds:
+                product.imageMediaIds ??
+                (product.imageMediaId ? [product.imageMediaId] : []),
+              reportMediaIds:
+                product.reportMediaIds ??
+                (product.reportMediaId ? [product.reportMediaId] : []),
+            }
+          : {
+              imageMediaIds: [],
+              reportMediaIds: [],
+              status: "draft",
+              homeFeatured: false,
+              homeSort: 0,
+              detail: { html: "", mediaIds: [] },
+              specs: [],
+              skus: [
+                {
+                  key: "default",
+                  enabled: true,
+                  sort: 0,
+                  specValueKeys: [],
+                  currency: currencies.defaultCurrency,
+                  salePrice: null,
+                },
+              ],
             },
-          ],
-        },
       );
       cleanSnapshot.current = JSON.stringify(form.getFieldsValue(true));
     } catch (e) {
@@ -289,16 +301,15 @@ export default function Products() {
     try {
       await form.validateFields();
       const payload = input();
-      const result = await api<Product>(
+      await api<Product>(
         editing ? `products/${editing.id}` : "products",
         editing ? "PUT" : "POST",
         payload,
       );
       msg.success("保存成功");
-      setEditing(result);
+      setEditing(undefined);
       form.resetFields();
-      form.setFieldsValue(result);
-      cleanSnapshot.current = JSON.stringify(form.getFieldsValue(true));
+      cleanSnapshot.current = "";
       refresh();
     } catch (e) {
       msg.error((e as Error).message || "请检查必填项");
@@ -487,13 +498,17 @@ export default function Products() {
                     description={row.name}
                     onConfirm={async () => {
                       try {
-                        const product = await api<Product>(`products/${row.id}`);
+                        const product = await api<Product>(
+                          `products/${row.id}`,
+                        );
                         await api(`products/${row.id}`, "PUT", {
                           ...product,
                           homeFeatured: !row.homeFeatured,
                           expectedVersion: row.version,
                         });
-                        msg.success(row.homeFeatured ? "已取消推荐" : "已设置推荐");
+                        msg.success(
+                          row.homeFeatured ? "已取消推荐" : "已设置推荐",
+                        );
                         refresh();
                       } catch (e) {
                         msg.error((e as Error).message);
@@ -644,14 +659,21 @@ export default function Products() {
           <ContentHeading title="产品媒体" />
           <div className="content-form-grid">
             <Form.Item
-              name="imageMediaId"
+              name="imageMediaIds"
               label="产品图片"
-              rules={[{ required: true, message: "请选择产品图片" }]}
+              rules={[
+                {
+                  required: true,
+                  type: "array",
+                  min: 1,
+                  message: "请选择产品图片",
+                },
+              ]}
             >
-              <MediaSelect />
+              <MediaMultiSelect />
             </Form.Item>
-            <Form.Item name="reportMediaId" label="检测报告图片（选填）">
-              <MediaSelect />
+            <Form.Item name="reportMediaIds" label="检测报告图片（选填）">
+              <MediaMultiSelect />
             </Form.Item>
           </div>
           <ContentHeading
@@ -896,7 +918,7 @@ export default function Products() {
           onFinish={async (values) => {
             if (!priceEdit) return;
             try {
-              const result = await api<Product>(
+              await api<Product>(
                 `products/${priceEdit.product.id}/skus/${priceEdit.sku.id}/price`,
                 "PATCH",
                 {
@@ -906,10 +928,10 @@ export default function Products() {
                 },
               );
               setPriceEdit(undefined);
-              setEditing(result);
+              setEditing(undefined);
               form.resetFields();
-              form.setFieldsValue(result);
-              cleanSnapshot.current = JSON.stringify(form.getFieldsValue(true));
+              cleanSnapshot.current = "";
+              msg.success("价格已保存");
               refresh();
             } catch (e) {
               msg.error((e as Error).message);

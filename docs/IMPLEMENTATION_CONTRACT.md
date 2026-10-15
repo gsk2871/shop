@@ -198,10 +198,10 @@ PostgreSQL 建连、连接生命周期与空闲回收、SQL 执行和等锁超�
 
 - 工作台不作为独立页面；登录与根路径进入当前账号有权限的首个菜单，历史 /overview 地址跳转到根路径。客户配置沿用 /whatsapp 和 whatsapp.* 权限，国家选择支持中文名称、英文名称和国家代码的大小写不敏感子串匹配。
 - 媒体库只列出和上传图片，支持 JPEG、PNG、WebP、GIF。新图片直传 COS；未配置 COS 时禁用上传。历史非图片记录及旧文件保留，不出现在媒体库，不提供视频管理或转码。
-- 产品写入字段 imageMediaId 必填、reportMediaId 选填，两者只能引用可用图片。省略或空串表示清除选填媒体。保存和预览校验媒体存在、可用及类型。
+- 产品写入字段 imageMediaIds 为必填有序图片 ID 数组，reportMediaIds 为可选有序数组；报告空数组表示清空。各数组当前最多 20 张，只能引用可用图片，不允许重复。保存和预览校验媒体存在、可用及类型。公共详情 images、reports 为有序图片 URL 数组，首张产品图用作封面。兼容单图字段仅在数组缺失时使用。
 - 两个字段复用 media_reference，owner_type 为 product，field 分别为 image/report；详情富文本使用 detail。引用与产品在同一事务中保存，替换或清除媒体释放旧引用，删除产品释放全部引用；被引用素材不能删除。
-- 产品管理详情返回两个媒体 ID 及服务端解析的 image/report URL；公开详情与预览仅返回 URL，列表返回 image URL。后台与官网共用图片详情组件。已有无图产品仍可读取，编辑保存及再次发布前需要补齐图片。
-- COS 上传协议、目录操作、状态与部署配置见 [媒体库说明](MEDIA_LIBRARY.md)，结构定义见初始 migration 000001_schema。
+- 产品管理详情返回有序媒体 ID 数组及服务端解析的 images/reports URL 数组；公开详情与预览仅返回 URL，列表返回 image URL。后台与官网共用图片详情组件。已有无图产品仍可读取，编辑保存及再次发布前需要补齐图片。
+- COS 上传协议、目录操作、状态与部署配置见 [媒体库说明](MEDIA_LIBRARY.md)，结构定义见初始 migration 000001_schema，图片展示顺序由 000002_media_order 添加到 media_reference.sort。
 - 产品、新闻的官网地址由服务端在新建且未传 slug 时按名称加随机后缀生成；同名内容使用不同地址。更新时保留数据库中的既有 slug，不随改名或表单省略而变化。后台不提供官网路径输入。
 - 商品与新闻的官网页面元信息由名称／标题和摘要生成，不存储自定义 SEO 字段。商品 detail_html 和新闻 body_html 保存净化后的富文本；共享 RichTextRenderer 用于官网展示和后台预览，不另存固定格式标记。
 
@@ -237,7 +237,7 @@ product 表包含 home_featured boolean 和 home_sort integer；默认关闭推�
 
 ## 数据库结构与写入约束
 
-完整字段、类型、默认值、约束、索引和中文含义以 [初始建表 SQL](../backend/internal/data/migration/000001_schema.up.sql) 为准，配对 [down SQL](../backend/internal/data/migration/000001_schema.down.sql) 删除业务结构。34 张业务表加 schema_migration 执行记录表构成站点数据库。初始化文件只面向空库；迁移执行记录与运行时结构检查保持一致，不使用 AutoMigrate 或 GORM Gen。
+完整字段、类型、默认值、约束、索引和中文含义以 [初始建表 SQL](../backend/internal/data/migration/000001_schema.up.sql) 及 000002_media_order、000003_whatsapp_greeting、000004_category_cover 增量为准，配对 [down SQL](../backend/internal/data/migration/000001_schema.down.sql) 删除业务结构。34 张业务表加 schema_migration 执行记录表构成站点数据库。初始化文件只面向空库；迁移执行记录与运行时结构检查保持一致，不使用 AutoMigrate 或 GORM Gen。
 
 普通实体使用 bigint identity 主键；站点单例、会话摘要、上传批次和关联表按各自标识使用固定值、文本或组合主键。业务实体采用软删除及有效记录部分唯一索引；会话和可重建关联记录按实际生命周期清理。全部表和字段带中文注释，表之间不建立物理外键。
 
@@ -246,3 +246,5 @@ product 表包含 home_featured boolean 和 home_sort integer；默认关闭推�
 新闻公开排序索引为 (pinned DESC, sort, first_published_at DESC NULLS LAST, id DESC)，限定已发布且未删除记录，与查询顺序一致。banner 与 site_config 的版本必须为正数；media 的文件大小、已填写尺寸必须为正数，ready 记录必须具有访问地址，COS 记录必须具有上传批次标识。pending 上传允许暂缺访问地址及尺寸。
 
 media.storage_root_id 标识存储位置：本地图片使用 storage_root.id，COS 图片使用地域与存储桶组成的标识。media_upload_batch 保存存储位置快照，正式图片删除仍需读取，因此上传完成不代表批次可删除。cleanup_pending 与 temporary_cleaned 分别记录正式文件和临时文件的清理进度。
+
+分类支持可选 coverMediaId，公开分类返回 cover URL；封面通过 product_category/cover 媒体引用维护，官网文字与 Explore products 位于封面下方。商品新增、编辑与单独改价成功后关闭窗口返回列表。Cookie 提示与偏好保存规则见 [CMS 接口与部署说明](CMS接口与部署说明.md)。

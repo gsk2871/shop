@@ -30,13 +30,15 @@ ID 为十进制字符串，时间为 UTC RFC 3339，保留数据库微秒精度�
 | GET /api/v1/whatsapp-status | 公开读取可用状态，不消耗轮询 |
 | GET /api/v1/contact | 可信官网代理读取选中账号及二维码 |
 
-官网浏览器调用 `GET /api/contact` 同源代理，无 body、业务 query、点击标识或产品提交。前后端使用 no-store，禁预取和自动重试，用户主动重试作为新分配；HEAD 明确拒绝，不能消耗位置。响应为 accountName、phoneNumber、qrCodeUrl、url。产品文案在浏览器基于已展示名称编码到 wa.me 链接。官网没有联系页、邮件入口或联系表单，旧 `/contact` 重定向到首页。
+官网浏览器调用 `GET /api/contact` 同源代理，无 body、业务 query、点击标识或产品提交。前后端使用 no-store，禁预取和自动重试，用户主动重试作为新分配；HEAD 明确拒绝，不能消耗位置。响应为 accountName、phoneNumber、qrCodeUrl、url。账号可配置可选 `greeting` 问候语，去除首尾空白后保存，上限由代码常量控制（当前 2000 字符）。非空时后端将其 URL 编码为 wa.me 链接的 `text` 参数，空值不加参数。所有官网入口使用同一返回链接，不自动附加产品文案；消息在 WhatsApp 中预填，由访客确认发送。官网没有联系页、邮件入口或联系表单，旧 `/contact` 重定向到首页。
 
-编辑输入为 name、countryCodes、enabled、accounts；账号为已有 id（新账号省略）、name、phoneNumber、qrCodeMediaId、enabled。已有账号缺席表示软删除，保留账号 ID 和计数。更新、启停、删除传 `expectedUpdatedAt`，指所属配置更新时间，账号操作也同步推进配置时间。默认切换传 groupId、expectedUpdatedAt（全局设置时间）、expectedGroupUpdatedAt（目标配置时间）。数据库时间不一致返回 409 UPDATE_CONFLICT，整次不更新，前端刷新后人工核对。时间原样回传，不通过 JavaScript Date 截断。
+编辑输入为 name、countryCodes、enabled、accounts；账号为已有 id（新账号省略）、name、phoneNumber、qrCodeMediaId、greeting、enabled。已有账号缺席表示软删除，保留账号 ID 和计数。更新、启停、删除传 `expectedUpdatedAt`，指所属配置更新时间，账号操作也同步推进配置时间。默认切换传 groupId、expectedUpdatedAt（全局设置时间）、expectedGroupUpdatedAt（目标配置时间）。数据库时间不一致返回 409 UPDATE_CONFLICT，整次不更新，前端刷新后人工核对。时间原样回传，不通过 JavaScript Date 截断。
 
 其余业务错误包括 COUNTRY_ALREADY_ASSIGNED、DUPLICATE_WHATSAPP_ACCOUNT、DEFAULT_GROUP_PROTECTED、DEFAULT_GROUP_UNAVAILABLE、WHATSAPP_UNAVAILABLE；使用现有 `{code,message,requestId}` 格式。
 
 ## 数据与部署
+
+`whatsapp_account.greeting` 存储账号问候语，通过 000003_whatsapp_greeting 增量添加，默认空字符串。
 
 五张表定义于 `backend/internal/data/migration/000001_schema.up.sql`；配对 down 删除全站业务结构。五表：whatsapp_group、whatsapp_group_country、whatsapp_account、whatsapp_routing_setting、whatsapp_cursor；业务软删除，无物理外键。二维码逻辑指向 media，media_reference 的 owner_type 为 whatsapp_account，field 为 qr_code。没有访客资料或短期分配结果表，不持久化访客 IP。媒体图片不因列表省略缩略图而移除。
 

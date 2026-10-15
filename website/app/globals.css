@@ -1288,3 +1288,117 @@ main h2 {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* Category imagery stays separate from the label for readable cards. */
+.home-category-card {
+  padding: 0;
+  overflow: hidden;
+}
+.home-category-cover {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+}
+.home-category-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  flex: 1;
+  width: 100%;
+  padding: 28px;
+}
+.home-category-copy h3 {
+  flex: 1;
+}
+.cookie.cookie-notice {
+  max-width: 1080px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: 32px;
+  align-items: center;
+  padding: 32px;
+  border-radius: 20px;
+  z-index: 80;
+  max-height: calc(100dvh - 40px);
+  overflow-y: auto;
+}
+.cookie-notice h2 {
+  font-size: 26px;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+  margin: 0 0 16px;
+}
+.cookie-notice p {
+  font-size: 16px;
+  line-height: 1.6;
+  max-width: none;
+  margin: 8px 0;
+}
+.cookie-notice strong {
+  font-size: inherit;
+}
+.cookie-notice a,
+.cookie-manage {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.cookie-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 12px;
+}
+.cookie-actions .button,
+.cookie-actions .outline {
+  width: 100%;
+  padding: 16px;
+  font-size: 16px;
+  white-space: normal;
+  justify-content: center;
+}
+.cookie-manage {
+  border: 0;
+  background: none;
+  color: var(--text);
+  padding: 8px;
+  cursor: pointer;
+  font: inherit;
+}
+.cookie-notice .cookie-close {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font-size: 28px;
+  cursor: pointer;
+}
+@media (max-width: 760px) {
+  .cookie.cookie-notice {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+    padding: 28px 20px calc(20px + env(safe-area-inset-bottom));
+    bottom: 12px;
+    left: 12px;
+    right: 12px;
+    max-height: calc(100dvh - 24px);
+  }
+  .cookie-notice h2 {
+    font-size: 23px;
+  }
+  .cookie-notice p {
+    font-size: 14px;
+  }
+  .cookie-actions {
+    padding-top: 0;
+    gap: 8px;
+  }
+}
+.home-category-card:not(:has(.home-category-cover)) .home-category-copy {
+  flex: 0;
+  margin-top: auto;
+}

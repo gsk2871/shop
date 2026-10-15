@@ -32,7 +32,7 @@
 
 公共前缀 /api/v1：GET site、products、products/{slug}、articles、articles/{slug}。基础设施 GET /healthz、/readyz 保留。当前 GET/HEAD /uploads/{name} 由 ServeFile 提供文件；官网 Next rewrite 转发 /uploads，后台 assetURL 通过 /backend/uploads 访问，后台 API 使用 /backend/admin/api/v1。新版存储路径继续经过同一代理，验证 Range 请求及 206。
 
-当前数据库以完整初始结构 000001_schema 为准，up/down 成对，执行记录由 schema_migration 保存，事务 advisory lock 串行化初始化。不执行 AutoMigrate，无 proto/OpenAPI/GORM Gen 前置要求。
+当前数据库以完整初始结构 000001_schema 加有序增量 000002_media_order、000003_whatsapp_greeting、000004_category_cover 为准，up/down 成对，执行记录由 schema_migration 保存，事务 advisory lock 串行化初始化。不执行 AutoMigrate，无 proto/OpenAPI/GORM Gen 前置要求。
 
 ## 三端任务矩阵
 

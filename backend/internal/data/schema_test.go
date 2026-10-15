@@ -17,7 +17,7 @@ func TestSchemaBaselineRoundTrip(t *testing.T) {
 		t.Fatal("repeat migrate", err)
 	}
 	var count int64
-	if err := d.DB.Table("schema_migration").Count(&count).Error; err != nil || count != 1 {
+	if err := d.DB.Table("schema_migration").Count(&count).Error; err != nil || count != 4 {
 		t.Fatal("baseline count", count, err)
 	}
 	var missing int64
@@ -33,6 +33,15 @@ func TestSchemaBaselineRoundTrip(t *testing.T) {
 	var index string
 	if err := d.DB.Raw("SELECT indexdef FROM pg_indexes WHERE schemaname='public' AND indexname='article_public_sort'").Scan(&index).Error; err != nil || !strings.Contains(index, "first_published_at DESC NULLS LAST") {
 		t.Fatal("article sort index", index, err)
+	}
+	for _, name := range []string{"000004_category_cover", "000003_whatsapp_greeting", "000002_media_order"} {
+		down, err := os.ReadFile("migration/" + name + ".down.sql")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := d.DB.Exec(string(down)).Error; err != nil {
+			t.Fatal(err)
+		}
 	}
 	down, err := os.ReadFile("migration/000001_schema.down.sql")
 	if err != nil {

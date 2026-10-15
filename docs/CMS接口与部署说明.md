@@ -18,11 +18,15 @@
 
 产品由基本信息、specs、values、skus、价格及 detail 组成。规格维度不超过 6 个，每维不超过 20 值，SKU 不超过 500 个；同产品组合不能重复，每个 SKU 必须从每维选择一个值，无规格产品使用一个默认 SKU。更新保留已有实体 ID，并校验规格／值／SKU 属于当前产品。产品状态单独 PATCH `/products/{id}/status`，SKU 价格 PATCH `/products/{id}/skus/{skuId}/price`。价格输入为 salePrice 十进制字符串，后端按 currency.minor_unit 转为整数，并返回格式化 price 和 fromPrice；首次种子补齐 USD，不换汇，不使用浮点。币种选项直接读取 currency 表中全部启用记录，默认取编码排序后的第一项；增加币种无需修改运行配置，已有 SKU 币种不自动改变。
 
+商品分类的可选 `coverMediaId` 引用媒体库图片，公共字段 `cover` 返回可用封面的 URL。封面通过 `media_reference`（owner_type=product_category、field=cover）维护引用；清空、替换和删除分类释放引用，使用中的封面不能删除。首页分类卡片上方显示图片，下方显示名称及 Explore products；未配置封面时显示文字卡片。
+
 商品分类管理使用 GET/POST `/categories`、GET/PUT/DELETE `/categories/{id}`，分别受 category.read/create/update/delete 权限控制。分类名称去首尾空白、不区分大小写唯一，sort 越小越靠前，同序按 ID 排列；删除为软删除，被任意未删除商品使用时返回 409 CATEGORY_IN_USE。GET `/categories/options` 由 product.read 授权，返回全部可选分类的 `{items:[{id,name}]}`；创建及编辑保存商品必传 categoryId，分类名称由服务端解析，重命名即时反映在商品展示中。
 
 公共 GET `/api/v1/categories` 返回全部未删除分类的 `{items:[{id,name}]}`，不包含管理版本信息。GET `/api/v1/products` 的 categoryId 可选，不传或空值不增加分类筛选；q 仅对产品名称做不区分大小写的字面子串查询，两个条件可组合，total 与分页使用同一筛选。官网首次进入选中 All products，搜索／切换分类重置页码，翻页保留条件；分类与结果数量来自后台接口。
 
-新站点先在空库执行完整初始结构 000001_schema，再运行 seed 初始化菜单、权限、币种及默认配置，最后启动服务。商品必须关联有效分类，分类名称通过关联查询实时展示。种子不生成演示分类；超管获得全部权限，普通角色按角色管理中的授权生效。
+新站点先在空库执行 `-migrate` 应用完整结构及增量，再运行 seed 初始化菜单、权限、币种及默认配置，最后启动服务。商品必须关联有效分类，分类名称通过关联查询实时展示。种子不生成演示分类；超管获得全部权限，普通角色按角色管理中的授权生效。
+
+产品 `imageMediaIds` 与 `reportMediaIds` 为有序图片 ID 数组，分别由代码常量限制数量（当前各 20 张）。产品图片至少一张，报告可为空；不接受重复、不可用或非图片素材。第一张产品图为列表封面。公共详情返回有序 `images`、`reports` URL 数组；兼容字段 `image`、`report` 返回首张，旧单图写入字段仅在相应数组缺失时使用，显式空数组表示清空。引用顺序保存在 `media_reference.sort`。官网及后台预览使用左侧主图与缩略图、右侧简介／规格／价格／底部联系按钮；下方依次为报告和描述。
 
 产品 detail 和文章 body 为 `{html,mediaIds}`。HTML 只保留段落、h2–h4、强调、列表、引用、安全链接和受控图片。媒体节点含 `data-media-id`，必须对应可用素材及后端生成的 URL；正文 ID 集合必须一致。脚本、iframe、SVG、事件属性和外部媒体会被删除或拒绝。`POST /products/preview`、`POST /articles/preview` 对当前表单进行同一套净化，返回公共 DTO，不保存、发布或创建持久引用。后台预览和官网共用 `@shop/content`。
 
@@ -98,3 +102,9 @@ server -conf /path/config.yaml -recover-totp-user admin -recover-reason '经过�
 ## 运行配置
 
 完整中文字段说明见 backend/configs/config.local.example.yaml，字段校验与消费者见 CONFIG_RELOAD_MATRIX.md。旧私有配置删除 seed 和 product 段后再启动本版本；加载器会拒绝未知字段。数据库连接串、连接池、连接空闲回收、建连／SQL 执行／等锁超时、慢查询阈值和 SQL 日志开关均由 data.database 配置；连接超时和 SQL 超时优先于 DSN 中对应设置。日志统一输出到标准输出，采用文本格式，等级支持 debug/info/warn/error 热加载。
+
+## 官网 Cookie 提示
+
+首次访问显示 Cookie 提示，后台 cookieTitle/cookieContent 为空时使用默认英文文案。提供接受全部、仅必要及管理入口；关闭按钮按仅必要处理。当前未接入可选分析或广告 Cookie，管理界面说明必要偏好存储。选择保存在当前浏览器 localStorage 的 shop-cookie-choice-v1，180 天后重新提示；存储不可用时仍可关闭当前提示。页脚 Cookie settings 可重新打开并更改选择。接入可选追踪前必须实现与偏好联动的加载门禁。
+
+商品新增、编辑及单独改价保存成功后关闭编辑窗口并刷新原列表；校验或请求失败时保留表单。

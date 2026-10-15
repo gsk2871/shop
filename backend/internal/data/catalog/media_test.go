@@ -96,6 +96,7 @@ func TestProductMediaAndAutomaticPath(t *testing.T) {
 	p.Slug = ""
 	p.Name = "Renamed"
 	p.ReportMediaID = ""
+	p.ReportMediaIDs = []string{}
 	id, _ := strconv.ParseInt(p.ID, 10, 64)
 	saved, err := r.Save(ctx, id, p)
 	if err != nil || saved.Slug != originalSlug || saved.ReportMediaID != "" {
@@ -114,6 +115,7 @@ func TestProductMediaAndAutomaticPath(t *testing.T) {
 	}
 	price := "1.00"
 	saved.ImageMediaID = image
+	saved.ImageMediaIDs = []string{image}
 	saved.ExpectedVersion = saved.Version
 	saved.SKUs[0].SalePrice = &price
 	saved, err = r.Save(ctx, id, saved)
@@ -125,5 +127,43 @@ func TestProductMediaAndAutomaticPath(t *testing.T) {
 	}
 	if _, err = r.Status(ctx, id, saved.Version, "published"); err == nil {
 		t.Fatal("published without image")
+	}
+}
+
+func TestProductGalleryOrderAndClearingReports(t *testing.T) {
+	d, c := testutil.Postgres(t)
+	r := NewRepo(d, c)
+	ctx := context.Background()
+	category, err := r.SaveCategory(ctx, 0, biz.Category{Name: "Gallery"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	a, b := fixtureMedia(t, r, "image"), fixtureMedia(t, r, "image")
+	p, err := r.Save(ctx, 0, biz.Product{Name: "Gallery", CategoryID: category.ID, Status: "draft", ImageMediaIDs: []string{b, a}, ReportMediaIDs: []string{a, b}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(p.ImageMediaIDs) != 2 || p.ImageMediaIDs[0] != b || p.ImageMediaIDs[1] != a || len(p.ReportMediaIDs) != 2 || p.ReportMediaIDs[0] != a {
+		t.Fatal("media order", p)
+	}
+	id, _ := strconv.ParseInt(p.ID, 10, 64)
+	p.ExpectedVersion = p.Version
+	p.ImageMediaIDs = []string{a, b}
+	p.ReportMediaIDs = []string{}
+	p, err = r.Save(ctx, id, p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p.ImageMediaID != a || len(p.ReportMediaIDs) != 0 || p.Report != "" {
+		t.Fatal("reorder/clear", p)
+	}
+	var count int64
+	if err := d.DB.Table("media_reference").Where("owner_type='product' AND owner_id=? AND field='report'", p.ID).Count(&count).Error; err != nil || count != 0 {
+		t.Fatal("report refs retained", count, err)
+	}
+	p.ExpectedVersion = p.Version
+	p.ImageMediaIDs = []string{a, a}
+	if _, err = r.Save(ctx, id, p); err == nil {
+		t.Fatal("duplicate images accepted")
 	}
 }

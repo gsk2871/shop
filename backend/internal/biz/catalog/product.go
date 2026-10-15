@@ -12,6 +12,7 @@ import (
 	"strings"
 )
 
+const MaxProductImages = 20
 const MaxSpecs = 6
 const MaxValues = 20
 const MaxSKUs = 500
@@ -40,6 +41,10 @@ type SKU struct {
 	Price         *money.Price `json:"price,omitempty"`
 }
 type Product struct {
+	ImageMediaIDs   []string          `json:"imageMediaIds"`
+	ReportMediaIDs  []string          `json:"reportMediaIds"`
+	Images          []string          `json:"images"`
+	Reports         []string          `json:"reports"`
 	HomeFeatured    bool              `json:"homeFeatured"`
 	HomeSort        int               `json:"homeSort"`
 	ImageMediaID    string            `json:"imageMediaId"`
@@ -79,13 +84,32 @@ func Validate(p *Product, defaultCurrency string) error {
 	if p.HomeSort < 0 || p.HomeSort > 2147483647 {
 		return errdef.Invalid()
 	}
-	if id, err := ParseID(p.ImageMediaID); err != nil || id == 0 {
+	// Nil collections accept older single-image clients; explicit empty arrays clear them.
+	if p.ImageMediaIDs == nil && p.ImageMediaID != "" {
+		p.ImageMediaIDs = []string{p.ImageMediaID}
+	}
+	if p.ReportMediaIDs == nil && p.ReportMediaID != "" {
+		p.ReportMediaIDs = []string{p.ReportMediaID}
+	}
+	if len(p.ImageMediaIDs) == 0 {
 		return errdef.Invalid()
 	}
-	for _, raw := range []string{p.ReportMediaID} {
-		if _, err := ParseID(raw); err != nil {
-			return err
+	for _, list := range [][]string{p.ImageMediaIDs, p.ReportMediaIDs} {
+		if len(list) > MaxProductImages {
+			return errdef.Invalid()
 		}
+		seen := map[string]bool{}
+		for _, raw := range list {
+			if id, err := ParseID(raw); err != nil || id == 0 || seen[raw] {
+				return errdef.Invalid()
+			}
+			seen[raw] = true
+		}
+	}
+	p.ImageMediaID = p.ImageMediaIDs[0]
+	p.ReportMediaID = ""
+	if len(p.ReportMediaIDs) > 0 {
+		p.ReportMediaID = p.ReportMediaIDs[0]
 	}
 	if id, err := ParseID(p.CategoryID); err != nil || id == 0 {
 		return errdef.Invalid()
@@ -205,5 +229,5 @@ func Public(p Product) map[string]any {
 		}
 		specs = append(specs, PublicSpec{spec.ID, spec.Key, spec.Name, values})
 	}
-	return map[string]any{"image": p.Image, "report": p.Report, "id": p.ID, "name": p.Name, "slug": p.Slug, "category": p.Category, "categoryId": p.CategoryID, "summary": p.Summary, "detail": p.Detail, "specs": specs, "skus": skus, "fromPrice": p.FromPrice}
+	return map[string]any{"images": p.Images, "reports": p.Reports, "image": p.Image, "report": p.Report, "id": p.ID, "name": p.Name, "slug": p.Slug, "category": p.Category, "categoryId": p.CategoryID, "summary": p.Summary, "detail": p.Detail, "specs": specs, "skus": skus, "fromPrice": p.FromPrice}
 }

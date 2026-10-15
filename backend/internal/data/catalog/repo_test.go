@@ -44,7 +44,7 @@ func TestProductAggregateAndConcurrentVersion(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, key := range []string{"status", "version", "expectedVersion", "images", "updatedBy"} {
+	for _, key := range []string{"status", "version", "expectedVersion", "imageMediaIds", "reportMediaIds", "updatedBy"} {
 		if _, ok := public[key]; ok {
 			t.Fatal("management field leaked", key)
 		}

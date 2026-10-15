@@ -37,11 +37,11 @@ export default async function ProductDetail({
     );
   return (
     <section className="section">
-      <ProductView key={result.data.slug} product={result.data} />
-      <ContactButton productName={result.data.name}>
-        Enquire about this product ↗
-      </ContactButton>
-
+      <ProductView
+        key={result.data.slug}
+        product={result.data}
+        contact={<ContactButton>Enquire about this product ↗</ContactButton>}
+      />
     </section>
   );
 }

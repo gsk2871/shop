@@ -6,7 +6,7 @@ import { settings } from "../lib/content";
 import ContactButton from "../components/ContactButton";
 import SectionRuler from "../components/SectionRuler";
 import Navigation from "../components/Navigation";
-import CookieNotice from "../components/CookieNotice";
+import CookieNotice, { CookieSettingsButton } from "../components/CookieNotice";
 import "./globals.css";
 export const dynamic = "force-dynamic";
 export async function generateMetadata(): Promise<Metadata> {
@@ -73,6 +73,7 @@ export default async function Layout({ children }: { children: ReactNode }) {
               Contact on WhatsApp ↗
             </ContactButton>
             <Link href="/privacy">Privacy & cookies</Link>
+            <CookieSettingsButton />
           </div>
         </footer>
         <ContactButton className="whatsapp">WhatsApp ↗</ContactButton>

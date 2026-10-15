@@ -111,6 +111,7 @@ export default function WhatsAppPage() {
                 id: a.id,
                 name: a.name,
                 phoneNumber: a.phoneNumber,
+                greeting: a.greeting,
                 qrCodeMediaId: a.qrCodeMediaId,
                 enabled: a.enabled,
               })),
@@ -459,6 +460,14 @@ export default function WhatsAppPage() {
                       ]}
                     >
                       <Input placeholder="不包含加号、空格或横线" />
+                    </Form.Item>
+                    <Form.Item
+                      name={[field.name, "greeting"]}
+                      label="问候语（选填）"
+                      extra="留空则不预填消息；填写后访客打开 WhatsApp 时带入此内容。"
+                      rules={[{ max: 2000 }]}
+                    >
+                      <Input.TextArea rows={3} maxLength={2000} showCount />
                     </Form.Item>
                     <Form.Item
                       name={[field.name, "qrCodeMediaId"]}

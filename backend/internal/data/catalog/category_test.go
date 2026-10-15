@@ -187,3 +187,53 @@ func TestCurrencyDictionaryDrivesOptionsAndDefaultSKU(t *testing.T) {
 		t.Fatal("disabled currency accepted")
 	}
 }
+
+func TestCategoryCoverReferences(t *testing.T) {
+	d, c := testutil.Postgres(t)
+	r := NewRepo(d, c)
+	ctx := context.Background()
+	image := fixtureMedia(t, r, "image")
+	category, err := r.SaveCategory(ctx, 0, biz.Category{Name: "Cover", CoverMediaID: image})
+	if err != nil || category.CoverMediaID != image || category.Cover == "" {
+		t.Fatal("cover round trip", category, err)
+	}
+	rows, _, err := r.Categories(ctx, 1, 20, "", true)
+	if err != nil || len(rows) != 1 || rows[0].Cover != category.Cover {
+		t.Fatal("cover list", rows, err)
+	}
+	mid, _ := strconv.ParseInt(image, 10, 64)
+	if err := r.Media.Delete(ctx, mid); err == nil {
+		t.Fatal("referenced cover deleted")
+	}
+	id, _ := strconv.ParseInt(category.ID, 10, 64)
+	category.ExpectedVersion = category.Version
+	category.CoverMediaID = ""
+	category, err = r.SaveCategory(ctx, id, category)
+	if err != nil || category.Cover != "" {
+		t.Fatal("cover clear", category, err)
+	}
+	refs, err := r.Media.References(ctx, mid)
+	if err != nil || len(refs) != 0 {
+		t.Fatal("cover ref retained", refs, err)
+	}
+	category.ExpectedVersion = category.Version
+	category.CoverMediaID = fixtureMedia(t, r, "video")
+	if _, err = r.SaveCategory(ctx, id, category); err == nil {
+		t.Fatal("video cover accepted")
+	}
+	category.CoverMediaID = image
+	category, err = r.SaveCategory(ctx, id, category)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = r.DeleteCategory(ctx, id, category.Version); err != nil {
+		t.Fatal(err)
+	}
+	refs, err = r.Media.References(ctx, mid)
+	if err != nil || len(refs) != 0 {
+		t.Fatal("deleted category kept ref", refs, err)
+	}
+	if _, err = r.SaveCategory(ctx, 0, biz.Category{Name: "Invalid cover", CoverMediaID: "99999999"}); err == nil {
+		t.Fatal("missing cover accepted")
+	}
+}

@@ -12,6 +12,7 @@ import {
   Table,
   message,
 } from "antd";
+import MediaSelect from "../../components/MediaSelect";
 import { api } from "../../services/cms";
 import { allows } from "../../services/auth";
 import type { Category, Page } from "../../services/contracts";
@@ -56,7 +57,7 @@ export default function Categories() {
         : undefined;
       setEditing(current);
       form.resetFields();
-      form.setFieldsValue(current || { name: "", sort: 0 });
+      form.setFieldsValue(current || { name: "", sort: 0, coverMediaId: "" });
       setOpen(true);
     } catch (e) {
       msg.error((e as Error).message);
@@ -164,6 +165,13 @@ export default function Categories() {
             rules={[{ required: true, whitespace: true, max: 200 }]}
           >
             <Input maxLength={200} />
+          </Form.Item>
+          <Form.Item
+            name="coverMediaId"
+            label="分类封面（选填）"
+            extra="官网分类卡片上方展示封面，下方展示分类名称与入口。"
+          >
+            <MediaSelect />
           </Form.Item>
           <Form.Item
             name="sort"

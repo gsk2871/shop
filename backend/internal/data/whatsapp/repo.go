@@ -8,6 +8,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
+	"net/url"
 	auth "peptide-site/internal/biz/admin"
 	ids "peptide-site/internal/biz/catalog"
 	biz "peptide-site/internal/biz/whatsapp"
@@ -35,6 +36,7 @@ type groupRow struct {
 	UpdatedAt time.Time
 }
 type accountRow struct {
+	Greeting                     string
 	ID, GroupID, QRCodeMediaID   int64
 	Name, PhoneNumber, QRCodeURL string
 	Enabled                      bool
@@ -96,7 +98,7 @@ func detail(tx *gorm.DB, g groupRow, s setting, withAccounts bool) (biz.Group, e
 			b.AvailableAccountCount++
 		}
 		if withAccounts {
-			b.Accounts = append(b.Accounts, biz.Account{ID: str(a.ID), Name: a.Name, PhoneNumber: a.PhoneNumber, QRCodeMediaID: str(a.QRCodeMediaID), QRCodeURL: a.QRCodeURL, Enabled: a.Enabled, AllocationCount: a.AllocationCount, UpdatedAt: a.UpdatedAt.UTC()})
+			b.Accounts = append(b.Accounts, biz.Account{ID: str(a.ID), Name: a.Name, Greeting: a.Greeting, PhoneNumber: a.PhoneNumber, QRCodeMediaID: str(a.QRCodeMediaID), QRCodeURL: a.QRCodeURL, Enabled: a.Enabled, AllocationCount: a.AllocationCount, UpdatedAt: a.UpdatedAt.UTC()})
 		}
 	}
 	return b, nil
@@ -333,12 +335,12 @@ func (r *Repo) Save(ctx context.Context, id int64, in biz.Input) (biz.Group, err
 			mid, _ := ids.ParseID(a.QRCodeMediaID)
 			var aid int64
 			if a.ID == "" {
-				if e = tx.Raw("INSERT INTO whatsapp_account(group_id,name,phone_number,qr_code_media_id,enabled,created_by,updated_by) VALUES(?,?,?,?,?,?,?) RETURNING id", id, a.Name, a.PhoneNumber, mid, a.Enabled, actor(ctx), actor(ctx)).Scan(&aid).Error; e != nil {
+				if e = tx.Raw("INSERT INTO whatsapp_account(group_id,name,phone_number,qr_code_media_id,enabled,created_by,updated_by,greeting) VALUES(?,?,?,?,?,?,?,?) RETURNING id", id, a.Name, a.PhoneNumber, mid, a.Enabled, actor(ctx), actor(ctx), a.Greeting).Scan(&aid).Error; e != nil {
 					return e
 				}
 			} else {
 				aid, _ = ids.ParseID(a.ID)
-				if e = tx.Exec("UPDATE whatsapp_account SET name=?,phone_number=?,qr_code_media_id=?,enabled=?,updated_by=?,updated_at=GREATEST(clock_timestamp(),updated_at+interval '1 microsecond') WHERE id=?", a.Name, a.PhoneNumber, mid, a.Enabled, actor(ctx), aid).Error; e != nil {
+				if e = tx.Exec("UPDATE whatsapp_account SET name=?,phone_number=?,qr_code_media_id=?,enabled=?,updated_by=?,greeting=?,updated_at=GREATEST(clock_timestamp(),updated_at+interval '1 microsecond') WHERE id=?", a.Name, a.PhoneNumber, mid, a.Enabled, actor(ctx), a.Greeting, aid).Error; e != nil {
 					return e
 				}
 			}
@@ -574,6 +576,9 @@ func (r *Repo) Contact(ctx context.Context, country string) (biz.Contact, error)
 			return e
 		}
 		out = biz.Contact{AccountName: selected.Name, PhoneNumber: selected.PhoneNumber, QRCodeURL: selected.QRCodeURL, URL: "https://wa.me/" + selected.PhoneNumber}
+		if selected.Greeting != "" {
+			out.URL += "?" + url.Values{"text": {selected.Greeting}}.Encode()
+		}
 		return nil
 	})
 	return out, err
