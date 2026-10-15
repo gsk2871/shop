@@ -151,7 +151,7 @@ func TestUploadSnapshotAndLifecycle(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if row.GroupID != nil || row.Status != "ready" || !row.Available || *row.Width != 2 || *row.Height != 3 || !strings.HasPrefix(row.URL, "https://media.example.com/site-a/images/") {
+	if row.GroupID != nil || row.Status != "ready" || !row.Available || row.Width != nil || row.Height != nil || !strings.HasPrefix(row.URL, "https://media.example.com/site-a/images/") {
 		t.Fatal(row)
 	}
 	if s.authorized.Bucket != "test-12345" {

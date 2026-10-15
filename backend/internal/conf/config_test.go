@@ -228,3 +228,29 @@ func TestCOSConfiguration(t *testing.T) {
 		}
 	}
 }
+
+func TestConfiguredImageTypes(t *testing.T) {
+	clearEnv(t)
+	// PSD is deliberately outside the defaults: recognized formats can be enabled by configuration alone.
+	for _, tc := range []struct {
+		types string
+		valid bool
+	}{
+		{"image/vnd.adobe.photoshop", true},
+		{"image/bmp, image/tiff, image/avif, image/heic, image/heif, image/x-icon, image/svg+xml", true},
+		{"image/png, image/png", false},
+		{"image/*", false},
+		{"image/unknown", false},
+		{"application/pdf", false},
+	} {
+		t.Run(tc.types, func(t *testing.T) {
+			cfg, err := NewLoader().Decode([]byte("data:\n  database:\n    dsn: test-dsn\n  storage:\n    allowed_types: [" + tc.types + "]\n"))
+			if (err == nil) != tc.valid {
+				t.Fatalf("valid=%v, error=%v", tc.valid, err)
+			}
+			if err == nil && len(cfg.Data.Storage.AllowedTypes) != len(strings.Split(tc.types, ",")) {
+				t.Fatal("configured whitelist was not preserved")
+			}
+		})
+	}
+}

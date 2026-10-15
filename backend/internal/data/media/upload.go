@@ -187,7 +187,7 @@ func (r *Repo) CompleteUpload(ctx context.Context, id int64) (biz.Media, error) 
 		if err != nil && !errors.Is(err, cosstore.ErrInvalidObject) {
 			return err
 		}
-		width, height, inspectErr := biz.InspectImage(body, row.MIME, b.MaxBytes)
+		inspectErr := biz.InspectImage(body, row.MIME, b.MaxBytes)
 		if err != nil || inspectErr != nil || int64(len(body)) != row.Size {
 			invalid = errdef.New(400, "MEDIA_FILE_INVALID")
 			if err := tx.Table("media").Where("id=?", id).Updates(map[string]any{"status": "failed", "updated_at": time.Now()}).Error; err != nil {
@@ -199,11 +199,9 @@ func (r *Repo) CompleteUpload(ctx context.Context, id int64) (biz.Media, error) 
 			return err
 		}
 		row.URL = b.PublicDomain + "/" + row.StorageKey
-		row.Width = &width
-		row.Height = &height
 		row.Available = true
 		row.Status = "ready"
-		if err := tx.Table("media").Where("id=?", id).Updates(map[string]any{"url": row.URL, "width": width, "height": height, "available": true, "status": "ready", "updated_at": time.Now()}).Error; err != nil {
+		if err := tx.Table("media").Where("id=?", id).Updates(map[string]any{"url": row.URL, "available": true, "status": "ready", "updated_at": time.Now()}).Error; err != nil {
 			return err
 		}
 		return audit(tx, ctx, "media.upload", id)

@@ -6,9 +6,11 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"mime"
 	"net"
 	"net/url"
 	"os"
+	"peptide-site/internal/pkg/imageformat"
 	"reflect"
 	"regexp"
 	"strconv"
@@ -131,7 +133,7 @@ func defaults() Config {
 		Log:    Log{Level: "info"},
 		App:    App{Name: "peptide-site"},
 		Server: Server{HTTP: HTTP{Addr: "127.0.0.1:8080", Timeout: 30 * time.Second, ReadHeaderTimeout: 10 * time.Second, ReadTimeout: 60 * time.Second, WriteTimeout: 90 * time.Second, IdleTimeout: 120 * time.Second}},
-		Data:   Data{Database: Database{MaxOpenConns: 10, MaxIdleConns: 5, ConnMaxLifetime: 30 * time.Minute, ConnMaxIdleTime: 15 * time.Minute, ConnectTimeout: 10 * time.Second, StatementTimeout: 5 * time.Second, LockTimeout: 3 * time.Second, SlowSQLMS: 200}, Storage: Storage{UploadDir: "./storage/uploads", MaxImageBytes: 20 << 20, MaxVideoBytes: 200 << 20, MaxDocumentBytes: 20 << 20, AllowedTypes: []string{"image/jpeg", "image/png", "image/webp", "image/gif"}, CleanupInterval: time.Minute}},
+		Data:   Data{Database: Database{MaxOpenConns: 10, MaxIdleConns: 5, ConnMaxLifetime: 30 * time.Minute, ConnMaxIdleTime: 15 * time.Minute, ConnectTimeout: 10 * time.Second, StatementTimeout: 5 * time.Second, LockTimeout: 3 * time.Second, SlowSQLMS: 200}, Storage: Storage{UploadDir: "./storage/uploads", MaxImageBytes: 50 << 20, MaxVideoBytes: 200 << 20, MaxDocumentBytes: 20 << 20, AllowedTypes: []string{"image/jpeg", "image/png", "image/webp", "image/gif", "image/bmp", "image/tiff", "image/avif", "image/heic", "image/heif", "image/x-icon", "image/svg+xml"}, CleanupInterval: time.Minute}},
 		Auth:   Auth{CookieSecure: true, SessionTTL: 8 * time.Hour, OnboardingTTL: 15 * time.Minute, MFATicketTTL: 5 * time.Minute, MFAMaxAttempts: 5, LoginLimit: 5, TOTP: TOTP{Enabled: true, Issuer: "Research Supply Admin"}},
 	}
 }
@@ -264,13 +266,13 @@ func Validate(c Config) error {
 	if storage.MaxImageBytes <= 0 || storage.MaxVideoBytes <= 0 || storage.MaxDocumentBytes <= 0 || storage.MaxImageBytes > 64<<20 || storage.MaxVideoBytes > 1<<40 || storage.MaxDocumentBytes > 1<<40 || storage.CleanupInterval < 100*time.Millisecond || storage.CleanupInterval > time.Hour || len(storage.AllowedTypes) == 0 {
 		return errors.New("invalid storage upload policy")
 	}
-	allowed := map[string]bool{"image/jpeg": true, "image/png": true, "image/webp": true, "image/gif": true, "video/mp4": true, "video/webm": true, "application/pdf": true}
 	seen := map[string]bool{}
-	for _, mime := range storage.AllowedTypes {
-		if !allowed[mime] || seen[mime] {
+	for _, value := range storage.AllowedTypes {
+		parsed, params, err := mime.ParseMediaType(value)
+		if err != nil || parsed != value || len(params) != 0 || imageformat.Lookup(value) == nil || seen[value] {
 			return errors.New("invalid or duplicate storage type")
 		}
-		seen[mime] = true
+		seen[value] = true
 	}
 
 	if c.Auth.SessionTTL <= 0 || c.Auth.SessionTTL > 24*time.Hour || c.Auth.OnboardingTTL <= 0 || c.Auth.OnboardingTTL > time.Hour || c.Auth.MFATicketTTL <= 0 || c.Auth.MFATicketTTL > 15*time.Minute || c.Auth.MFAMaxAttempts < 1 || c.Auth.MFAMaxAttempts > 20 || c.Auth.LoginLimit < 1 || c.Auth.TOTP.Issuer == "" {

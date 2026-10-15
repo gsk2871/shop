@@ -13,6 +13,7 @@ import (
 	"peptide-site/internal/pkg/configreload"
 	"peptide-site/internal/pkg/cosstore"
 	"peptide-site/internal/pkg/errdef"
+	"peptide-site/internal/pkg/imageformat"
 	admin "peptide-site/internal/service/admin"
 	"strconv"
 	"strings"
@@ -38,12 +39,13 @@ func decode(w http.ResponseWriter, r *http.Request, v any) error {
 	}
 	return nil
 }
-func allowedTypes(configured []string) []string {
-	out := []string{}
-	for _, mime := range configured {
-		switch mime {
-		case "image/jpeg", "image/png", "image/webp", "image/gif":
-			out = append(out, mime)
+func allowedExtensions(configured []string) map[string]string {
+	out := map[string]string{}
+	for _, value := range configured {
+		for _, ext := range imageformat.Extensions(value) {
+			if _, exists := out[ext]; !exists {
+				out[ext] = value
+			}
 		}
 	}
 	return out
@@ -61,7 +63,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if s, ok := configreload.FromContext(ctx); ok {
 			version = s.Status.Version
 		}
-		result = map[string]any{"version": version, "enabled": h.Config.Data.Storage.COS.Enabled, "allowedTypes": allowedTypes(h.Config.Data.Storage.AllowedTypes), "maxImageBytes": h.Config.Data.Storage.MaxImageBytes, "maxBatchFiles": 20}
+		result = map[string]any{"version": version, "enabled": h.Config.Data.Storage.COS.Enabled, "allowedTypes": h.Config.Data.Storage.AllowedTypes, "allowedExtensions": allowedExtensions(h.Config.Data.Storage.AllowedTypes), "maxImageBytes": h.Config.Data.Storage.MaxImageBytes, "maxBatchFiles": 20}
 	case path == "/upload/init" && r.Method == "POST":
 		var in repo.UploadInput
 		if err = decode(w, r, &in); err == nil {

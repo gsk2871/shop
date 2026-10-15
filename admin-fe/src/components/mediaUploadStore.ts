@@ -3,6 +3,7 @@ import { useSyncExternalStore } from "react";
 import { api, APIException, type Media } from "../services/cms";
 import {
   getPolicy,
+  uploadMIME,
   finishUpload,
   type Credential,
   type UploadBatch,
@@ -73,8 +74,9 @@ async function run(task: UploadTask) {
     if (!task.batch) {
       const policy = await getPolicy();
       if (!policy.enabled) throw new Error("COS 尚未配置");
+      const mime = uploadMIME(task.file, policy);
       if (
-        !policy.allowedTypes.includes(task.file.type) ||
+        !mime ||
         task.file.size > policy.maxImageBytes ||
         task.file.size <= 0
       )
@@ -83,7 +85,7 @@ async function run(task: UploadTask) {
       const batch = await api<UploadBatch>("media/upload/init", "POST", {
         groupId: task.groupId,
         files: [
-          { name: task.file.name, mime: task.file.type, size: task.file.size },
+          { name: task.file.name, mime, size: task.file.size },
         ],
       });
       task.batch = batch;

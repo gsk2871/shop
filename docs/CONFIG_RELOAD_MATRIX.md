@@ -33,10 +33,10 @@
 | data.storage.cos.public_domain | HTTPS 域名 | 新批次快照与正式图片地址 | TestUploadSnapshotAndLifecycle |
 | data.storage.cos.key_prefix | 独立站点路径前缀 | 临时／正式路径，移动目录不改路径 | TestUploadSnapshotAndLifecycle |
 | data.storage.upload_dir | ./storage/uploads；可写目录 | 历史本地图片兼容和持久 root 注册 | TestRuntimePostgres：切换、旧文件和 Range；配套恢复演练 |
-| data.storage.max_image_bytes | 20 MiB；>0，≤64 MiB | 新批次大小快照／策略接口 | TestUploadSnapshotAndLifecycle；TestImageOnlyPolicy |
+| data.storage.max_image_bytes | 50 MiB；>0，≤64 MiB | 新批次大小快照／策略接口 | TestUploadSnapshotAndLifecycle；TestImageOnlyPolicy |
 | data.storage.max_video_bytes | 历史兼容字段 | 不影响有效上传策略，视频始终拒绝 | TestImageOnlyPolicy |
 | data.storage.max_document_bytes | 历史兼容字段 | 不影响有效上传策略，PDF 始终拒绝 | TestImageOnlyPolicy |
-| data.storage.allowed_types | JPEG/PNG/WebP/GIF；无重复；历史 application/pdf 可解析但不生效 | 上传策略接口及内容嗅探仅允许配置中的图片类型，始终排除 PDF | TestImageOnlyPolicy |
+| data.storage.allowed_types | 默认 JPEG/PNG/WebP/GIF/BMP/TIFF/AVIF/HEIC/HEIF/ICO/SVG；无重复；必须是识别库支持的具体图片 MIME | 配置为唯一上传白名单；策略接口原样返回并附扩展名映射；实际内容通过文件头识别 | TestImageOnlyPolicy |
 | data.storage.cleanup_interval | 1m；100ms–1h | 新版本后台任务、旧任务取消 | TestReloadResourceConsumers；删除和崩溃临时文件测试 |
 | auth.cookie_secure | true；环境 COOKIE_SECURE 可覆盖 | 新签发／注销 Cookie | TestReloadResourceConsumers；HttpOnly/SameSite 测试 |
 | auth.session_ttl | 8h；>0，≤24h | 新完整会话 DB expiry 和 MaxAge | TestReloadResourceConsumers：3600s |

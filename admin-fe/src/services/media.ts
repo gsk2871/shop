@@ -8,8 +8,17 @@ export interface UploadPolicy {
   version: number;
   enabled: boolean;
   allowedTypes: string[];
+  allowedExtensions?: Record<string, string>;
   maxImageBytes: number;
   maxBatchFiles: number;
+}
+export function uploadMIME(file: File, policy: UploadPolicy): string | undefined {
+  if (policy.allowedTypes.includes(file.type)) return file.type;
+  const ext = file.name.match(/\.[^.]+$/)?.[0].toLowerCase();
+  const candidate = ext ? policy.allowedExtensions?.[ext] : undefined;
+  return candidate && policy.allowedTypes.includes(candidate)
+    ? candidate
+    : undefined;
 }
 export interface Credential {
   secretId: string;

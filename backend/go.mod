@@ -3,6 +3,7 @@ module peptide-site
 go 1.25.0
 
 require (
+	github.com/gabriel-vasile/mimetype v1.4.8
 	github.com/go-kratos/kratos/v2 v2.9.2
 	github.com/google/wire v0.7.0
 	github.com/jackc/pgx/v5 v5.6.0

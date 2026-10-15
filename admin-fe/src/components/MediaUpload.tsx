@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Button, Upload, message } from "antd";
-import { getPolicy, type UploadPolicy } from "../services/media";
+import { getPolicy, uploadMIME, type UploadPolicy } from "../services/media";
 import type { Media } from "../services/cms";
 import { mediaUploads, useMediaUploads } from "./mediaUploadStore";
 export function useUploadPolicy() {
@@ -46,14 +46,17 @@ export default function MediaUpload({
     <>
       {context}
       <Upload
-        accept={policy?.allowedTypes.join(",")}
+        accept={
+          policy &&
+          [...policy.allowedTypes, ...Object.keys(policy.allowedExtensions ?? {})].join(",")
+        }
         multiple
         showUploadList={false}
         disabled={!policy?.enabled}
         beforeUpload={(file) => {
           if (!policy?.enabled) return Upload.LIST_IGNORE;
           if (
-            !policy.allowedTypes.includes(file.type) ||
+            !uploadMIME(file, policy) ||
             file.size > policy.maxImageBytes ||
             file.size === 0
           ) {
