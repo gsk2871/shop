@@ -79,7 +79,7 @@ func (h *Handler) admin(w http.ResponseWriter, r *http.Request) {
 			h.whatsapp.ServeHTTP(w, r)
 			return
 		}
-	case r.URL.Path == "/admin/api/v1/settings" || r.URL.Path == "/admin/api/v1/banner-slots" || r.URL.Path == "/admin/api/v1/banners" || strings.HasPrefix(r.URL.Path, "/admin/api/v1/banners/"):
+	case r.URL.Path == "/admin/api/v1/social-accounts" || strings.HasPrefix(r.URL.Path, "/admin/api/v1/social-accounts/") || r.URL.Path == "/admin/api/v1/settings" || r.URL.Path == "/admin/api/v1/banner-slots" || r.URL.Path == "/admin/api/v1/banners" || strings.HasPrefix(r.URL.Path, "/admin/api/v1/banners/"):
 		if h.branding != nil {
 			h.branding.ServeHTTP(w, r)
 			return

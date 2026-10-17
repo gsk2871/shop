@@ -97,9 +97,9 @@ server -conf /path/config.yaml -recover-totp-user admin -recover-reason '经过�
 - 「品牌、主题与官网内容」维护 brand（站点名称及 SEO 标题）、brandMark（无 Logo 时的文字标记）、logoMediaId、description（SEO 简介及页脚）、theme。
 - 同一设置页面维护 homeTitle/homeContent、aboutTitle/aboutContent、productsTitle、newsTitle、privacyTitle/privacyContent、cookieTitle/cookieContent。正文为纯文本，保留换行，HTML 按文本显示；正文和品牌标记留空时不展示，不补写示例宣传内容。Cookie 标题和正文均留空时不弹出提示。
 - 设置仍由 GET/PUT /admin/api/v1/settings 管理，公共 GET /api/v1/site 返回上述展示字段。沿用 site_config.payload JSON 存储及版本冲突校验，无需数据库结构迁移。旧配置缺失新增字段时使用空值；升级后请在后台填写所需正文。
-- 「品牌与主题」中的社交账号列表支持新增、编辑、删除和即时启停，同一平台可配置多个账号。每个账号包含 name、platform、link、iconMediaId、icon、enabled；平台支持 facebook、tiktok、youtube、x、instagram、linkedin、other。名称必填且不超过 100 字符，链接必须是无用户凭据的 HTTPS 地址且不超过 2000 字节，图标从媒体库选择；最多 50 个账号，按列表顺序展示。
-- 社交账号保存在 site_config.payload.socialAccounts，使用现有 site.update 权限、审计与 expectedVersion 冲突保护。icon 由后端根据 iconMediaId 解析，开启和关闭的账号均保留媒体引用，删除账号后释放对应引用。公共 site 接口仅返回开启账号的 name、platform、link、icon，不返回关闭账号和媒体标识。
-- 官网首页的 GET IN TOUCH 区域在 Cookie settings 下方展示社交账号图标，点击以新标签页打开链接；其他页面不展示。全部关闭或尚未配置时不显示该区域。保存后刷新首页生效；部署先更新后端再更新后台与官网，无需数据库迁移。
+- 「品牌与主题」中的社交账号列表支持新增、编辑、删除和即时启停，同一平台可配置多个账号。每个账号包含 id、name、platform、link、iconMediaId、icon、enabled、sort、version；平台支持 facebook、tiktok、youtube、x、instagram、linkedin、other。名称必填且不超过 100 字符，链接必须是无用户凭据的 HTTPS 地址且不超过 2000 字节，图标从媒体库选择；最多 50 个未删除账号，按 sort、id 升序展示。
+- 社交账号独立存储在 social_account 表，GET /admin/api/v1/social-accounts 使用 site.read 权限；POST /admin/api/v1/social-accounts、PUT/DELETE /admin/api/v1/social-accounts/{id}、PATCH /admin/api/v1/social-accounts/{id}/enabled 使用 site.update 权限。列表返回 {items}；编辑、删除和启停要求该账号的 expectedVersion，冲突返回 409 VERSION_CONFLICT。品牌配置的 GET/PUT settings 不读写社交账号。icon 根据 icon_media_id 关联媒体记录返回，开启和关闭的账号均保留 media_reference 引用（owner_type=social_account、field=icon），软删除账号时释放引用。公共 site 接口仅返回开启且图标可用账号的 name、platform、link、icon，不返回关闭账号和媒体标识。
+- 官网首页的 GET IN TOUCH 区域在 Cookie settings 下方展示社交账号图标，点击以新标签页打开链接；其他页面不展示。全部关闭或尚未配置时不显示该区域。保存后刷新首页生效；部署须先备份并停止应用写入，执行 000005_social_account.up.sql 迁移，再同步权限种子并启动配套后端和后台。现有发布脚本 update 按此顺序执行。
 - 官网不再展示 disclaimer、固定科研声明及 DB-IP 链接；disclaimer 保留为兼容字段。导航、搜索、分页、联系按钮和错误提示属于界面操作文字。
 
 ## 运行配置
@@ -111,3 +111,24 @@ server -conf /path/config.yaml -recover-totp-user admin -recover-reason '经过�
 首次访问显示 Cookie 提示，后台 cookieTitle/cookieContent 为空时使用默认英文文案。提供接受全部、仅必要及管理入口；关闭按钮按仅必要处理。当前未接入可选分析或广告 Cookie，管理界面说明必要偏好存储。选择保存在当前浏览器 localStorage 的 shop-cookie-choice-v1，180 天后重新提示；存储不可用时仍可关闭当前提示。页脚 Cookie settings 可重新打开并更改选择。接入可选追踪前必须实现与偏好联动的加载门禁。
 
 商品新增、编辑及单独改价保存成功后关闭编辑窗口并刷新原列表；校验或请求失败时保留表单。
+
+## 社交账号数据表与迁移
+
+social_account 使用单条账号记录维护生命周期，允许同平台多个账号。字段含义如下：
+
+| 字段 | 类型 | 含义 |
+| --- | --- | --- |
+| id | bigint identity | 账号标识 |
+| name / platform / link | text | 名称、平台、账号链接 |
+| icon_media_id | bigint | 图标媒体标识，逻辑关联 media.id |
+| enabled | boolean | 开启状态 |
+| sort | integer | 展示顺序 |
+| version | bigint | 账号内容版本 |
+| created_by / updated_by | bigint | 创建人、更新人 |
+| created_at / updated_at / deleted_at | timestamptz | 创建、更新、软删除时间 |
+
+公开列表使用未删除且开启记录的 sort、id 部分索引。创建、编辑、启停、软删除均写审计日志；保存账号及同步媒体引用在同一事务完成。账号数量上限在创建事务内通过锁保护。
+
+增量迁移为 backend/internal/data/migration/000005_social_account.up.sql：创建表，将 site_config.payload.socialAccounts 中的账号按原顺序写入新表，同时转移媒体引用，移除旧 JSON 数据并增加品牌配置版本。重复发布由 schema_migration 执行记录防止重复迁移。
+
+回滚脚本为同目录的 000005_social_account.down.sql：将未删除账号和图标引用恢复至品牌配置后删除独立表；账号 ID、独立版本、审计字段及软删除历史无法在旧格式中保留。回滚须在停止应用写入并完成备份后，与兼容旧格式的应用版本配套执行，不应直接在运行中的服务上执行 down。

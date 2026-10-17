@@ -20,8 +20,6 @@ type Theme struct {
 	OnPrimary  string `json:"onPrimary"`
 }
 type Settings struct {
-	SocialAccounts []SocialAccount `json:"socialAccounts"`
-
 	BrandMark      string `json:"brandMark"`
 	HomeTitle      string `json:"homeTitle"`
 	HomeContent    string `json:"homeContent"`
@@ -55,9 +53,6 @@ var color = regexp.MustCompile(`^#[0-9a-fA-F]{6}$`)
 var phone = regexp.MustCompile(`^$|^[0-9]{7,15}$`)
 
 func (s Settings) Validate() error {
-	if err := ValidateSocialAccounts(s.SocialAccounts); err != nil {
-		return err
-	}
 	if strings.TrimSpace(s.Brand) == "" || len(s.Brand) > 100 || len(s.Description) > 5000 || len(s.Disclaimer) > 500 || !phone.MatchString(s.WhatsApp) {
 		return errdef.Invalid()
 	}

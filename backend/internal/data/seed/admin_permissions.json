@@ -121,6 +121,10 @@
         {
           "method": "GET",
           "path": "/admin/api/v1/settings"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/api/v1/social-accounts"
         }
       ]
     },
@@ -477,6 +481,22 @@
         {
           "method": "PUT",
           "path": "/admin/api/v1/settings"
+        },
+        {
+          "method": "POST",
+          "path": "/admin/api/v1/social-accounts"
+        },
+        {
+          "method": "PUT",
+          "path": "/admin/api/v1/social-accounts/{id}"
+        },
+        {
+          "method": "PATCH",
+          "path": "/admin/api/v1/social-accounts/{id}/enabled"
+        },
+        {
+          "method": "DELETE",
+          "path": "/admin/api/v1/social-accounts/{id}"
         }
       ]
     },

@@ -143,32 +143,7 @@ export default function SettingsPage() {
         )}
       </Form>
       <Card title="社交账号" style={{ marginTop: 24 }}>
-        <SocialAccounts
-          accounts={savedSettings?.socialAccounts || []}
-          editable={editable && !!savedSettings}
-          busy={busy}
-          onSave={async (socialAccounts) => {
-            if (busy || !savedSettings || !editable) return false;
-            setBusy(true);
-            try {
-              const saved = await api<Settings>("settings", "PUT", {
-                ...savedSettings,
-                socialAccounts,
-                expectedVersion: version,
-              });
-              setVersion(saved.version);
-              setSavedSettings(saved);
-              form.setFieldValue("socialAccounts", saved.socialAccounts);
-              msg.success("社交账号已保存，刷新官网首页生效");
-              return true;
-            } catch (e) {
-              msg.error((e as Error).message);
-              return false;
-            } finally {
-              setBusy(false);
-            }
-          }}
-        />
+        <SocialAccounts editable={editable} />
       </Card>
     </Card>
   );

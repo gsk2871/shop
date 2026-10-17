@@ -5,7 +5,7 @@ export type {
   Settings,
   PublicBanner as Banner,
 } from "./contracts";
-type SiteSettings = Omit<Settings, "socialAccounts"> & { socialAccounts?: PublicSocialAccount[] };
+type SiteSettings = Settings & { socialAccounts?: PublicSocialAccount[] };
 export const defaults: SiteSettings = {
   socialAccounts: [],
   brand: "",

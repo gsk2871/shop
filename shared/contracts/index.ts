@@ -166,11 +166,14 @@ export interface PublicSocialAccount {
   icon: string;
 }
 export interface SocialAccount extends PublicSocialAccount {
+  id: EntityID;
+  version: number;
+  expectedVersion?: number;
+  sort: number;
   iconMediaId: string;
   enabled: boolean;
 }
 export interface Settings {
-  socialAccounts?: SocialAccount[];
   brandMark: string;
   homeTitle: string;
   homeContent: string;

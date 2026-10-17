@@ -1,7 +1,7 @@
-import { useState } from "react";
-import { Button, Form, Image, Input, Modal, Popconfirm, Select, Space, Switch, Table } from "antd";
+import { useEffect, useRef, useState } from "react";
+import { Button, Form, Image, Input, InputNumber, Modal, Popconfirm, Select, Space, Switch, Table, message } from "antd";
 import type { SocialAccount } from "../../services/contracts";
-import { assetURL } from "../../services/cms";
+import { api, assetURL } from "../../services/cms";
 import MediaSelect from "../../components/MediaSelect";
 
 const platforms = [
@@ -14,29 +14,59 @@ const platforms = [
   { value: "other", label: "其他" },
 ];
 
-export default function SocialAccounts({ accounts, editable, busy, onSave }: {
-  accounts: SocialAccount[];
-  editable: boolean;
-  busy: boolean;
-  onSave: (accounts: SocialAccount[]) => Promise<boolean>;
-}) {
-  const [editing, setEditing] = useState<number | null>(null);
+export default function SocialAccounts({ editable }: { editable: boolean }) {
+  const [accounts, setAccounts] = useState<SocialAccount[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+  const [editing, setEditing] = useState<SocialAccount | null | undefined>();
+  const [msg, context] = message.useMessage();
+  const pending = useRef(false);
+  const refresh = async () => {
+    if (pending.current) return;
+    pending.current = true;
+    setBusy(true);
+    setLoaded(false);
+    try {
+      const result = await api<{ items: SocialAccount[] }>("social-accounts");
+      setAccounts(result.items);
+      setLoaded(true);
+    } catch (e) { msg.error((e as Error).message); }
+    finally { pending.current = false; setBusy(false); }
+  };
+  useEffect(() => { void refresh(); }, []);
+  const save = async (path: string, method: string, body: unknown, removeID?: string) => {
+    if (pending.current || !editable || !loaded) return false;
+    pending.current = true;
+    setBusy(true);
+    try {
+      const saved = await api<SocialAccount>(path, method, body);
+      setAccounts((previous) => removeID
+        ? previous.filter((account) => account.id !== removeID)
+        : [...previous.filter((account) => account.id !== saved.id), saved].sort((a, b) => a.sort - b.sort || (BigInt(a.id) < BigInt(b.id) ? -1 : 1)));
+      msg.success("社交账号已保存，刷新官网首页生效");
+      return true;
+    } catch (e) { msg.error((e as Error).message); return false; }
+    finally { pending.current = false; setBusy(false); }
+  };
   const [form] = Form.useForm<SocialAccount>();
-  const open = (index: number) => {
+  const open = (account: SocialAccount | null) => {
     form.resetFields();
-    form.setFieldsValue(index < 0
-      ? { name: "", platform: "facebook", link: "", iconMediaId: "", icon: "", enabled: true }
-      : accounts[index]);
-    setEditing(index);
+    form.setFieldsValue(account || { name: "", platform: "facebook", link: "", iconMediaId: "", icon: "", enabled: true, sort: 0 });
+    setEditing(account);
   };
   return (
     <>
-      <p>已开启的账号显示在官网首页页脚，按列表顺序排列。支持同一平台的多个账号，开关切换后立即保存。</p>
-      {editable && <Button onClick={() => open(-1)} disabled={busy || accounts.length >= 50}>新增社交账号</Button>}
+      {context}
+      <p>已开启的账号显示在官网首页页脚，按排序值从小到大排列，同序按创建顺序排列。支持同一平台的多个账号，开关切换后立即保存。</p>
+      <Space>
+        {editable && <Button onClick={() => open(null)} disabled={busy || !loaded || accounts.length >= 50}>新增社交账号</Button>}
+        <Button onClick={() => void refresh()} disabled={busy}>刷新列表</Button>
+      </Space>
       <Table
         style={{ marginTop: 16 }}
-        dataSource={accounts.map((account, index) => ({ ...account, index }))}
-        rowKey="index"
+        dataSource={accounts}
+        loading={busy}
+        rowKey="id"
         pagination={false}
         scroll={{ x: 800 }}
         columns={[
@@ -45,25 +75,25 @@ export default function SocialAccounts({ accounts, editable, busy, onSave }: {
           { title: "链接", dataIndex: "link", ellipsis: true },
           { title: "图标", dataIndex: "icon", render: (value, row) => value && <Image width={32} height={32} style={{ objectFit: "contain" }} src={assetURL(value)} alt={row.name} /> },
           { title: "是否开启", dataIndex: "enabled", render: (value, row) => (
-            <Switch checked={value} disabled={!editable || busy} onChange={(enabled) => void onSave(accounts.map((account, index) => index === row.index ? { ...account, enabled } : account))} />
+            <Switch checked={value} disabled={!editable || busy || !loaded} onChange={(enabled) => void save(`social-accounts/${row.id}/enabled`, "PATCH", { enabled, expectedVersion: row.version })} />
           ) },
+          { title: "排序", dataIndex: "sort" },
           { title: "操作", render: (_, row) => editable && (
             <Space>
-              <Button disabled={busy} onClick={() => open(row.index)}>编辑</Button>
-              <Popconfirm title="删除此社交账号？" disabled={busy} onConfirm={() => onSave(accounts.filter((_, index) => index !== row.index)).then(() => undefined)}>
-                <Button danger disabled={busy}>删除</Button>
+              <Button disabled={busy || !loaded} onClick={() => open(row)}>编辑</Button>
+              <Popconfirm title="删除此社交账号？" disabled={busy || !loaded} onConfirm={() => save(`social-accounts/${row.id}`, "DELETE", { expectedVersion: row.version }, row.id).then(() => undefined)}>
+                <Button danger disabled={busy || !loaded}>删除</Button>
               </Popconfirm>
             </Space>
           ) },
         ]}
       />
-      <Modal title={editing === -1 ? "新增社交账号" : "编辑社交账号"} open={editing !== null}
-        onCancel={() => { if (!busy) setEditing(null); }}
+      <Modal title={editing === null ? "新增社交账号" : "编辑社交账号"} open={editing !== undefined}
+        onCancel={() => { if (!busy) setEditing(undefined); }}
         onOk={() => form.submit()} confirmLoading={busy} cancelButtonProps={{ disabled: busy }}>
-        <Form form={form} layout="vertical" disabled={!editable || busy} onFinish={async (values) => {
-          if (editing === null) return;
-          const next = editing < 0 ? [...accounts, values] : accounts.map((account, index) => index === editing ? values : account);
-          if (await onSave(next)) setEditing(null);
+        <Form form={form} layout="vertical" disabled={!editable || busy || !loaded} onFinish={async (values) => {
+          if (editing === undefined) return;
+          if (await save(editing ? `social-accounts/${editing.id}` : "social-accounts", editing ? "PUT" : "POST", { ...values, expectedVersion: editing?.version || 0 })) setEditing(undefined);
         }}>
           <Form.Item name="name" label="名称" rules={[{ required: true, whitespace: true, max: 100 }]}><Input maxLength={100} /></Form.Item>
           <Form.Item name="platform" label="平台" rules={[{ required: true }]}><Select options={platforms} /></Form.Item>
@@ -75,6 +105,7 @@ export default function SocialAccounts({ accounts, editable, busy, onSave }: {
             return Promise.reject(new Error("请输入完整的 HTTPS 账号链接"));
           } }]}><Input maxLength={2000} placeholder="https://…" /></Form.Item>
           <Form.Item name="iconMediaId" label="图标" rules={[{ required: true, message: "请选择图标" }]}><MediaSelect /></Form.Item>
+          <Form.Item name="sort" label="排序" rules={[{ required: true }]}><InputNumber precision={0} min={-2147483648} max={2147483647} /></Form.Item>
           <Form.Item name="enabled" label="是否开启" valuePropName="checked"><Switch /></Form.Item>
         </Form>
       </Modal>

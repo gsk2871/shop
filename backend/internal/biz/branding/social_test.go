@@ -25,6 +25,7 @@ func TestSocialAccountValidation(t *testing.T) {
 		func(a *SocialAccount) { a.Name = strings.Repeat("a", 101) },
 		func(a *SocialAccount) { a.Platform = "unknown" },
 		func(a *SocialAccount) { a.IconMediaID = "" },
+		func(a *SocialAccount) { a.Sort = 2147483648 },
 	} {
 		account := valid
 		change(&account)

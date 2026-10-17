@@ -102,7 +102,10 @@ func TestLoginScopesPermissionsAndRevocation(t *testing.T) {
 	if request("GET", "products", readerToken, nil).Code != 200 {
 		t.Fatal("reader list denied")
 	}
-	for _, entry := range []struct{ method, path string }{{"POST", "faqs"}, {"PUT", "faqs/1"}, {"DELETE", "faqs/1"}, {"POST", "products"}, {"POST", "products/preview"}, {"PUT", "settings"}, {"POST", "media"}, {"PATCH", "banners/1/enabled"}} {
+	if request("GET", "social-accounts", readerToken, nil).Code != 200 {
+		t.Fatal("reader social account list denied")
+	}
+	for _, entry := range []struct{ method, path string }{{"POST", "faqs"}, {"PUT", "faqs/1"}, {"DELETE", "faqs/1"}, {"POST", "products"}, {"POST", "products/preview"}, {"PUT", "settings"}, {"POST", "social-accounts"}, {"PUT", "social-accounts/1"}, {"PATCH", "social-accounts/1/enabled"}, {"DELETE", "social-accounts/1"}, {"POST", "media"}, {"PATCH", "banners/1/enabled"}} {
 		if request(entry.method, entry.path, readerToken, nil).Code != 403 {
 			t.Fatal("reader mutation allowed", entry)
 		}

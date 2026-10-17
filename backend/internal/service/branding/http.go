@@ -49,6 +49,10 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if public {
 		path = strings.TrimPrefix(r.URL.Path, "/api/v1/")
 	}
+	if path == "social-accounts" || strings.HasPrefix(path, "social-accounts/") {
+		h.social(w, r, path)
+		return
+	}
 	if path == "site" || path == "settings" {
 		if r.Method == "GET" {
 			s, e := h.Repo.Settings(r.Context())
@@ -57,7 +61,12 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			if public {
-				admin.Reply(w, 200, map[string]any{"socialAccounts": biz.PublicSocialAccounts(s.SocialAccounts), "brand": s.Brand, "logo": s.Logo, "theme": s.Theme, "description": s.Description, "email": s.Email, "whatsapp": s.WhatsApp, "disclaimer": s.Disclaimer, "brandMark": s.BrandMark, "homeTitle": s.HomeTitle, "homeContent": s.HomeContent, "aboutTitle": s.AboutTitle, "aboutContent": s.AboutContent, "privacyTitle": s.PrivacyTitle, "privacyContent": s.PrivacyContent, "productsTitle": s.ProductsTitle, "researchTitle": s.ResearchTitle, "newsTitle": s.NewsTitle, "cookieTitle": s.CookieTitle, "cookieContent": s.CookieContent})
+				accounts, err := h.Repo.SocialAccounts(r.Context(), true)
+				if err != nil {
+					admin.Failure(w, r, err)
+					return
+				}
+				admin.Reply(w, 200, map[string]any{"socialAccounts": biz.PublicSocialAccounts(accounts), "brand": s.Brand, "logo": s.Logo, "theme": s.Theme, "description": s.Description, "email": s.Email, "whatsapp": s.WhatsApp, "disclaimer": s.Disclaimer, "brandMark": s.BrandMark, "homeTitle": s.HomeTitle, "homeContent": s.HomeContent, "aboutTitle": s.AboutTitle, "aboutContent": s.AboutContent, "privacyTitle": s.PrivacyTitle, "privacyContent": s.PrivacyContent, "productsTitle": s.ProductsTitle, "researchTitle": s.ResearchTitle, "newsTitle": s.NewsTitle, "cookieTitle": s.CookieTitle, "cookieContent": s.CookieContent})
 			} else {
 				admin.Reply(w, 200, s)
 			}
