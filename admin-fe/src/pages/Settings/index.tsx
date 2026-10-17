@@ -5,6 +5,7 @@ import { api, type Settings } from "../../services/cms";
 import { defaultTheme } from "../../services/contracts";
 import { allows } from "../../services/auth";
 import MediaSelect from "../../components/MediaSelect";
+import SocialAccounts from "./SocialAccounts";
 export default function SettingsPage() {
   const { initialState } = useModel("@@initialState");
   const editable = allows(initialState?.identity, "site.update");
@@ -30,8 +31,9 @@ export default function SettingsPage() {
       <Form
         form={form}
         layout="vertical"
-        disabled={!editable}
+        disabled={!editable || busy || !savedSettings}
         onFinish={async (values) => {
+          if (busy || !savedSettings) return;
           setBusy(true);
           try {
             const saved = await api<Settings>("settings", "PUT", {
@@ -140,6 +142,34 @@ export default function SettingsPage() {
           </Button>
         )}
       </Form>
+      <Card title="社交账号" style={{ marginTop: 24 }}>
+        <SocialAccounts
+          accounts={savedSettings?.socialAccounts || []}
+          editable={editable && !!savedSettings}
+          busy={busy}
+          onSave={async (socialAccounts) => {
+            if (busy || !savedSettings || !editable) return false;
+            setBusy(true);
+            try {
+              const saved = await api<Settings>("settings", "PUT", {
+                ...savedSettings,
+                socialAccounts,
+                expectedVersion: version,
+              });
+              setVersion(saved.version);
+              setSavedSettings(saved);
+              form.setFieldValue("socialAccounts", saved.socialAccounts);
+              msg.success("社交账号已保存，刷新官网首页生效");
+              return true;
+            } catch (e) {
+              msg.error((e as Error).message);
+              return false;
+            } finally {
+              setBusy(false);
+            }
+          }}
+        />
+      </Card>
     </Card>
   );
 }

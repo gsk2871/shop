@@ -97,6 +97,9 @@ server -conf /path/config.yaml -recover-totp-user admin -recover-reason '经过�
 - 「品牌、主题与官网内容」维护 brand（站点名称及 SEO 标题）、brandMark（无 Logo 时的文字标记）、logoMediaId、description（SEO 简介及页脚）、theme。
 - 同一设置页面维护 homeTitle/homeContent、aboutTitle/aboutContent、productsTitle、newsTitle、privacyTitle/privacyContent、cookieTitle/cookieContent。正文为纯文本，保留换行，HTML 按文本显示；正文和品牌标记留空时不展示，不补写示例宣传内容。Cookie 标题和正文均留空时不弹出提示。
 - 设置仍由 GET/PUT /admin/api/v1/settings 管理，公共 GET /api/v1/site 返回上述展示字段。沿用 site_config.payload JSON 存储及版本冲突校验，无需数据库结构迁移。旧配置缺失新增字段时使用空值；升级后请在后台填写所需正文。
+- 「品牌与主题」中的社交账号列表支持新增、编辑、删除和即时启停，同一平台可配置多个账号。每个账号包含 name、platform、link、iconMediaId、icon、enabled；平台支持 facebook、tiktok、youtube、x、instagram、linkedin、other。名称必填且不超过 100 字符，链接必须是无用户凭据的 HTTPS 地址且不超过 2000 字节，图标从媒体库选择；最多 50 个账号，按列表顺序展示。
+- 社交账号保存在 site_config.payload.socialAccounts，使用现有 site.update 权限、审计与 expectedVersion 冲突保护。icon 由后端根据 iconMediaId 解析，开启和关闭的账号均保留媒体引用，删除账号后释放对应引用。公共 site 接口仅返回开启账号的 name、platform、link、icon，不返回关闭账号和媒体标识。
+- 官网首页的 GET IN TOUCH 区域在 Cookie settings 下方展示社交账号图标，点击以新标签页打开链接；其他页面不展示。全部关闭或尚未配置时不显示该区域。保存后刷新首页生效；部署先更新后端再更新后台与官网，无需数据库迁移。
 - 官网不再展示 disclaimer、固定科研声明及 DB-IP 链接；disclaimer 保留为兼容字段。导航、搜索、分页、联系按钮和错误提示属于界面操作文字。
 
 ## 运行配置

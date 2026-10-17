@@ -159,7 +159,18 @@ export interface Theme {
   accent: string;
   onPrimary: string;
 }
+export interface PublicSocialAccount {
+  name: string;
+  platform: "facebook" | "tiktok" | "youtube" | "x" | "instagram" | "linkedin" | "other";
+  link: string;
+  icon: string;
+}
+export interface SocialAccount extends PublicSocialAccount {
+  iconMediaId: string;
+  enabled: boolean;
+}
 export interface Settings {
+  socialAccounts?: SocialAccount[];
   brandMark: string;
   homeTitle: string;
   homeContent: string;

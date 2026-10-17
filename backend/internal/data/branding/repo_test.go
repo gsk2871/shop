@@ -76,11 +76,15 @@ func TestUnlimitedSchedulingThemeAndReferences(t *testing.T) {
 	s.ResearchTitle = "Research articles"
 	s.CookieContent = "Configured storage notice"
 	s.LogoMediaID = mediaID
+	s.SocialAccounts = []biz.SocialAccount{{Name: "Research", Platform: "youtube", Link: "https://www.youtube.com/@research", IconMediaID: mediaID, Icon: "https://untrusted.example/icon.png", Enabled: true}}
 	s.Theme.Primary = "#112233"
 	s.ExpectedVersion = s.Version
 	s, e = r.SaveSettings(ctx, s)
 	if e != nil || s.Logo == "" {
 		t.Fatal(e)
+	}
+	if len(s.SocialAccounts) != 1 || s.SocialAccounts[0].Icon != asset.URL {
+		t.Fatal("social icon must be resolved from media, not the request", s.SocialAccounts)
 	}
 	if _, e = r.SaveSettings(ctx, s); e == nil {
 		t.Fatal("stale theme accepted")
@@ -94,5 +98,30 @@ func TestUnlimitedSchedulingThemeAndReferences(t *testing.T) {
 	}
 	if e = d.DB.Transaction(func(tx *gorm.DB) error { return tx.Exec("DELETE FROM media_reference WHERE owner_type='banner'").Error }); e != nil {
 		t.Fatal(e)
+	}
+	s.LogoMediaID = ""
+	if len(s.SocialAccounts) != 1 {
+		t.Fatal("social accounts did not round-trip", s.SocialAccounts)
+	}
+	s.SocialAccounts[0].Enabled = false
+	s.ExpectedVersion = s.Version
+	s, e = r.SaveSettings(ctx, s)
+	if e != nil {
+		t.Fatal(e)
+	}
+	s, e = r.Settings(ctx)
+	if e != nil || len(s.SocialAccounts) != 1 || s.SocialAccounts[0].Enabled || s.SocialAccounts[0].Icon != asset.URL {
+		t.Fatal("disabled account did not round-trip", s.SocialAccounts, e)
+	}
+	if e = r.Media.Delete(ctx, asset.ID); e == nil {
+		t.Fatal("disabled social icon reference ignored")
+	}
+	s.SocialAccounts = nil
+	s.ExpectedVersion = s.Version
+	if _, e = r.SaveSettings(ctx, s); e != nil {
+		t.Fatal(e)
+	}
+	if e = r.Media.Delete(ctx, asset.ID); e != nil {
+		t.Fatal("removed social account retained its media reference", e)
 	}
 }

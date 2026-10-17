@@ -129,6 +129,15 @@ export default async function Products({
                   className="article-card"
                   href={`/products/${product.slug}`}
                 >
+                  {product.image && (
+                    <img
+                      className="product-cover"
+                      src={product.image}
+                      alt={product.name}
+                      loading="lazy"
+                      decoding="async"
+                    />
+                  )}
                   <span className="eyebrow">{product.category}</span>
                   <h2>{product.name}</h2>
                   <p>{product.summary}</p>

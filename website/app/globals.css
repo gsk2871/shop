@@ -949,6 +949,12 @@ button:disabled {
   border-radius: 20px;
   padding: 24px;
 }
+.product-results .product-cover {
+  display: block;
+  object-fit: contain;
+  background: var(--surface);
+  border-radius: 12px;
+}
 .sr-only {
   position: absolute;
   width: 1px;
@@ -1267,6 +1273,30 @@ main h2 {
 }
 .site-footer:not(:has(.footer-identity)) {
   grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.footer-social-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+.site-footer .footer-social-links a {
+  justify-content: center;
+  width: 44px;
+  min-height: 44px;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+}
+.footer-social-links a:hover,
+.footer-social-links a:focus-visible {
+  background: var(--surface);
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+.footer-social-links img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
 }
 @media (max-width: 850px) {
   .site-footer {

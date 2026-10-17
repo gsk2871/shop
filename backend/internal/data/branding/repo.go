@@ -77,6 +77,15 @@ func (r *Repo) SaveSettings(ctx context.Context, s biz.Settings) (biz.Settings, 
 		return s, e
 	}
 	s.Logo = url
+	iconIDs := make([]int64, 0, len(s.SocialAccounts))
+	for i := range s.SocialAccounts {
+		iconID, iconURL, err := r.image(ctx, s.SocialAccounts[i].IconMediaID)
+		if err != nil {
+			return s, err
+		}
+		s.SocialAccounts[i].Icon = iconURL
+		iconIDs = append(iconIDs, iconID)
+	}
 	e = r.Data.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if e := tx.Exec("SELECT pg_advisory_xact_lock(784296317)").Error; e != nil {
 			return e
@@ -102,7 +111,7 @@ func (r *Repo) SaveSettings(ctx context.Context, s biz.Settings) (biz.Settings, 
 		if e = tx.Exec("INSERT INTO site_config(id,payload,version) VALUES(1,?::jsonb,?) ON CONFLICT(id) DO UPDATE SET payload=EXCLUDED.payload,version=EXCLUDED.version", string(b), s.Version).Error; e != nil {
 			return e
 		}
-		refs := map[string][]int64{}
+		refs := map[string][]int64{"social_icon": iconIDs}
 		if id != 0 {
 			refs["logo"] = []int64{id}
 		}

@@ -6,6 +6,7 @@ import { settings } from "../lib/content";
 import ContactButton from "../components/ContactButton";
 import SectionRuler from "../components/SectionRuler";
 import Navigation from "../components/Navigation";
+import SocialLinks from "../components/SocialLinks";
 import CookieNotice, { CookieSettingsButton } from "../components/CookieNotice";
 import "./globals.css";
 export const dynamic = "force-dynamic";
@@ -14,6 +15,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: s.brand ? { default: s.brand, template: `%s | ${s.brand}` } : "Home",
     description: s.description,
+    icons: s.logo ? { icon: s.logo } : undefined,
   };
 }
 export default async function Layout({ children }: { children: ReactNode }) {
@@ -74,6 +76,7 @@ export default async function Layout({ children }: { children: ReactNode }) {
             </ContactButton>
             <Link href="/privacy">Privacy & cookies</Link>
             <CookieSettingsButton />
+            <SocialLinks accounts={s.socialAccounts || []} />
           </div>
         </footer>
         <ContactButton className="whatsapp">WhatsApp ↗</ContactButton>

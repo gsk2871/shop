@@ -1,11 +1,13 @@
 import "server-only";
-import { defaultTheme, type Settings } from "./contracts";
+import { defaultTheme, type Settings, type PublicSocialAccount } from "./contracts";
 export type {
   PublicArticle as Article,
   Settings,
   PublicBanner as Banner,
 } from "./contracts";
-export const defaults: Settings = {
+type SiteSettings = Omit<Settings, "socialAccounts"> & { socialAccounts?: PublicSocialAccount[] };
+export const defaults: SiteSettings = {
+  socialAccounts: [],
   brand: "",
   brandMark: "",
   homeTitle: "",
@@ -72,7 +74,7 @@ export async function content<T>(path: string): Promise<T | null> {
   return (await contentResult<T>(path)).data;
 }
 export async function settings() {
-  const s = await content<Settings>("site");
+  const s = await content<SiteSettings>("site");
   return { ...defaults, ...s, theme: { ...defaultTheme, ...s?.theme } };
 }
 
