@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { useGoogleAds } from "./GoogleAds";
 import type { WhatsAppContact } from "../lib/contracts";
 // Image addresses are resolved by the trusted backend from a media ID.
 function validImageURL(raw: string) {
@@ -25,6 +26,7 @@ export default function ContactButton({
   children?: ReactNode;
   className?: string;
 }) {
+  const { track } = useGoogleAds();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [contact, setContact] = useState<WhatsAppContact>();
@@ -173,6 +175,7 @@ export default function ContactButton({
               <a
                 className="button contact-chat"
                 href={contact.url}
+                onClick={track}
                 target="_blank"
                 rel="noreferrer"
               >

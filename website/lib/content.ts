@@ -8,6 +8,7 @@ export type {
 type SiteSettings = Settings & { socialAccounts?: PublicSocialAccount[] };
 export const defaults: SiteSettings = {
   socialAccounts: [],
+  googleAds: { enabled: false, id: "", conversionLabel: "" },
   brand: "",
   brandMark: "",
   homeTitle: "",

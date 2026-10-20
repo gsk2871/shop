@@ -19,19 +19,36 @@ type Theme struct {
 	Accent     string `json:"accent"`
 	OnPrimary  string `json:"onPrimary"`
 }
+type GoogleAds struct {
+	Enabled         bool   `json:"enabled"`
+	ID              string `json:"id"`
+	ConversionLabel string `json:"conversionLabel"`
+}
+
+var adsID = regexp.MustCompile(`^AW-[0-9]{1,20}$`)
+var adsLabel = regexp.MustCompile(`^[A-Za-z0-9_-]{1,100}$`)
+
+func (g GoogleAds) Validate() error {
+	if (g.ID != "" && !adsID.MatchString(g.ID)) || (g.ConversionLabel != "" && !adsLabel.MatchString(g.ConversionLabel)) || (g.Enabled && (g.ID == "" || g.ConversionLabel == "")) {
+		return errdef.Invalid()
+	}
+	return nil
+}
+
 type Settings struct {
-	BrandMark      string `json:"brandMark"`
-	HomeTitle      string `json:"homeTitle"`
-	HomeContent    string `json:"homeContent"`
-	AboutTitle     string `json:"aboutTitle"`
-	AboutContent   string `json:"aboutContent"`
-	PrivacyTitle   string `json:"privacyTitle"`
-	PrivacyContent string `json:"privacyContent"`
-	ProductsTitle  string `json:"productsTitle"`
-	ResearchTitle  string `json:"researchTitle"`
-	NewsTitle      string `json:"newsTitle"`
-	CookieTitle    string `json:"cookieTitle"`
-	CookieContent  string `json:"cookieContent"`
+	GoogleAds      GoogleAds `json:"googleAds"`
+	BrandMark      string    `json:"brandMark"`
+	HomeTitle      string    `json:"homeTitle"`
+	HomeContent    string    `json:"homeContent"`
+	AboutTitle     string    `json:"aboutTitle"`
+	AboutContent   string    `json:"aboutContent"`
+	PrivacyTitle   string    `json:"privacyTitle"`
+	PrivacyContent string    `json:"privacyContent"`
+	ProductsTitle  string    `json:"productsTitle"`
+	ResearchTitle  string    `json:"researchTitle"`
+	NewsTitle      string    `json:"newsTitle"`
+	CookieTitle    string    `json:"cookieTitle"`
+	CookieContent  string    `json:"cookieContent"`
 
 	Brand           string `json:"brand"`
 	LogoMediaID     string `json:"logoMediaId"`
@@ -53,6 +70,9 @@ var color = regexp.MustCompile(`^#[0-9a-fA-F]{6}$`)
 var phone = regexp.MustCompile(`^$|^[0-9]{7,15}$`)
 
 func (s Settings) Validate() error {
+	if err := s.GoogleAds.Validate(); err != nil {
+		return err
+	}
 	if strings.TrimSpace(s.Brand) == "" || len(s.Brand) > 100 || len(s.Description) > 5000 || len(s.Disclaimer) > 500 || !phone.MatchString(s.WhatsApp) {
 		return errdef.Invalid()
 	}

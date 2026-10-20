@@ -173,7 +173,13 @@ export interface SocialAccount extends PublicSocialAccount {
   iconMediaId: string;
   enabled: boolean;
 }
+export interface GoogleAdsSettings {
+  enabled: boolean;
+  id: string;
+  conversionLabel: string;
+}
 export interface Settings {
+  googleAds: GoogleAdsSettings;
   brandMark: string;
   homeTitle: string;
   homeContent: string;

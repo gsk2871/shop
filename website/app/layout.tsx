@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import type { CSSProperties, ReactNode } from "react";
 import Link from "next/link";
 import { settings } from "../lib/content";
+import GoogleAds from "../components/GoogleAds";
 import ContactButton from "../components/ContactButton";
 import SectionRuler from "../components/SectionRuler";
 import Navigation from "../components/Navigation";
@@ -33,6 +34,7 @@ export default async function Layout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <body style={style}>
+        <GoogleAds config={s.googleAds} noticeVersion={JSON.stringify([s.cookieTitle, s.cookieContent])}>
         <header className="header">
           <Link className="brand" href="/" aria-label={s.brand || "Home"}>
             {s.logo ? (
@@ -81,6 +83,7 @@ export default async function Layout({ children }: { children: ReactNode }) {
         </footer>
         <ContactButton className="whatsapp">WhatsApp ↗</ContactButton>
         <CookieNotice title={s.cookieTitle} content={s.cookieContent} />
+        </GoogleAds>
       </body>
     </html>
   );

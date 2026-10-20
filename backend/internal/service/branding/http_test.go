@@ -15,6 +15,7 @@ func TestPublicConfiguredContent(t *testing.T) {
 	d, _ := testutil.Postgres(t)
 	r := repo.NewRepo(d)
 	s := biz.Default()
+	s.GoogleAds = biz.GoogleAds{Enabled: true, ID: "AW-18370098818", ConversionLabel: "test_label-1"}
 	s.Brand = "Configured brand"
 	s.BrandMark = "C·"
 	s.AboutTitle = "About from CMS"
@@ -39,6 +40,10 @@ func TestPublicConfiguredContent(t *testing.T) {
 		if result[key] != want {
 			t.Errorf("%s = %v, want %q", key, result[key], want)
 		}
+	}
+	ads, ok := result["googleAds"].(map[string]any)
+	if !ok || ads["enabled"] != true || ads["id"] != s.GoogleAds.ID || ads["conversionLabel"] != s.GoogleAds.ConversionLabel {
+		t.Fatalf("public Google Ads configuration mismatch: %v", result["googleAds"])
 	}
 	for _, key := range []string{"version", "expectedVersion", "logoMediaId"} {
 		if _, exists := result[key]; exists {

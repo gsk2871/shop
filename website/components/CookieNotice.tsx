@@ -2,10 +2,10 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
-const storageKey = "shop-cookie-choice-v1";
+import { consentEvent, consentKey, readConsent, saveConsent, type Choice } from "../lib/ads-consent";
+import { useGoogleAds } from "./GoogleAds";
 const settingsEvent = "shop:cookie-settings";
-const lifetime = 180 * 24 * 60 * 60 * 1000;
-type Choice = "essential" | "accepted";
+
 
 export function CookieSettingsButton() {
   return (
@@ -26,23 +26,19 @@ export default function CookieNotice({
   title: string;
   content: string;
 }) {
+  const { scope, enabled } = useGoogleAds();
+  const [saveError, setSaveError] = useState(false);
   const [show, setShow] = useState(false);
   const [managing, setManaging] = useState(false);
   const heading = useRef<HTMLHeadingElement>(null);
   const opener = useRef<HTMLElement | null>(null);
   useEffect(() => {
-    try {
-      const saved = JSON.parse(localStorage.getItem(storageKey) || "null");
-      const valid =
-        saved &&
-        ["essential", "accepted"].includes(saved.choice) &&
-        typeof saved.savedAt === "number" &&
-        saved.savedAt <= Date.now() &&
-        Date.now() - saved.savedAt < lifetime;
-      setShow(!valid);
-    } catch {
-      setShow(true);
-    }
+    function refresh() { setShow(!readConsent(scope)); }
+    function storage(event: StorageEvent) { if (event.key === consentKey || event.key === null) refresh(); }
+    refresh();
+    window.addEventListener(consentEvent, refresh);
+    window.addEventListener("storage", storage);
+    window.addEventListener("focus", refresh);
     function openSettings() {
       opener.current =
         document.activeElement instanceof HTMLElement
@@ -52,18 +48,22 @@ export default function CookieNotice({
       setShow(true);
     }
     window.addEventListener(settingsEvent, openSettings);
-    return () => window.removeEventListener(settingsEvent, openSettings);
-  }, []);
+    return () => {
+      window.removeEventListener(settingsEvent, openSettings);
+      window.removeEventListener(consentEvent, refresh);
+      window.removeEventListener("storage", storage);
+      window.removeEventListener("focus", refresh);
+    };
+  }, [scope]);
   useEffect(() => {
     if (show && managing) heading.current?.focus();
   }, [show, managing]);
   function choose(choice: Choice) {
-    try {
-      localStorage.setItem(
-        storageKey,
-        JSON.stringify({ choice, savedAt: Date.now() }),
-      );
-    } catch {}
+    if (!saveConsent(scope, choice)) {
+      setSaveError(true);
+      return;
+    }
+    setSaveError(false);
     setShow(false);
     setManaging(false);
     opener.current?.focus();
@@ -95,8 +95,7 @@ export default function CookieNotice({
               <strong>Necessary storage — always active</strong>
             </p>
             <p>
-              We store your cookie preference on this device. This website
-              currently uses no optional analytics or advertising cookies.
+              We store your cookie preference on this device. Your choice is stored on this device for up to 180 days.
             </p>
             <p>You can reopen these settings at any time from the footer.</p>
           </>
@@ -106,7 +105,10 @@ export default function CookieNotice({
               "We use essential storage to remember your preferences. Optional cookies are only used with your permission. You can review your choices at any time."}
           </p>
         )}
+        {enabled && <p>With your permission, we use Google Ads cookies and share measurement data with Google to measure whether ads lead to WhatsApp clicks. We do not enable personalized advertising. Rejecting does not affect browsing or contacting us. You can withdraw consent at any time using Cookie settings in the footer.</p>}
+        {saveError && <p role="alert">Your preference could not be saved. Further conversion reporting is disabled in this tab. Please allow site storage and try again.</p>}
         <Link href="/privacy">More info</Link>
+        {enabled && <> · <a href="https://business.safety.google/privacy/" target="_blank" rel="noreferrer">How Google uses data</a></>}
       </div>
       <div className="cookie-actions">
         <button
@@ -114,7 +116,7 @@ export default function CookieNotice({
           className="button"
           onClick={() => choose("accepted")}
         >
-          Accept All Cookies
+          {enabled ? "Accept advertising measurement" : "Accept All Cookies"}
         </button>
         <button
           type="button"

@@ -95,7 +95,7 @@ server -conf /path/config.yaml -recover-totp-user admin -recover-reason '经过�
 
 - Home 的主视觉使用「Banner 投放」中的 home_hero；Products 页头使用 products_header。CTA 仅在投放配置了 ctaText 时展示，图片、标题、副标题和跳转地址均来自投放配置。
 - 「品牌、主题与官网内容」维护 brand（站点名称及 SEO 标题）、brandMark（无 Logo 时的文字标记）、logoMediaId、description（SEO 简介及页脚）、theme。
-- 同一设置页面维护 homeTitle/homeContent、aboutTitle/aboutContent、productsTitle、newsTitle、privacyTitle/privacyContent、cookieTitle/cookieContent。正文为纯文本，保留换行，HTML 按文本显示；正文和品牌标记留空时不展示，不补写示例宣传内容。Cookie 标题和正文均留空时不弹出提示。
+- 同一设置页面维护 homeTitle/homeContent、aboutTitle/aboutContent、productsTitle、newsTitle、privacyTitle/privacyContent、cookieTitle/cookieContent。正文为纯文本，保留换行，HTML 按文本显示；正文和品牌标记留空时不展示，不补写示例宣传内容。Cookie 标题和正文均留空时使用默认提示。
 - 设置仍由 GET/PUT /admin/api/v1/settings 管理，公共 GET /api/v1/site 返回上述展示字段。沿用 site_config.payload JSON 存储及版本冲突校验，无需数据库结构迁移。旧配置缺失新增字段时使用空值；升级后请在后台填写所需正文。
 - 「品牌与主题」中的社交账号列表支持新增、编辑、删除和即时启停，同一平台可配置多个账号。每个账号包含 id、name、platform、link、iconMediaId、icon、enabled、sort、version；平台支持 facebook、tiktok、youtube、x、instagram、linkedin、other。名称必填且不超过 100 字符，链接必须是无用户凭据的 HTTPS 地址且不超过 2000 字节，图标从媒体库选择；最多 50 个未删除账号，按 sort、id 升序展示。
 - 社交账号独立存储在 social_account 表，GET /admin/api/v1/social-accounts 使用 site.read 权限；POST /admin/api/v1/social-accounts、PUT/DELETE /admin/api/v1/social-accounts/{id}、PATCH /admin/api/v1/social-accounts/{id}/enabled 使用 site.update 权限。列表返回 {items}；编辑、删除和启停要求该账号的 expectedVersion，冲突返回 409 VERSION_CONFLICT。品牌配置的 GET/PUT settings 不读写社交账号。icon 根据 icon_media_id 关联媒体记录返回，开启和关闭的账号均保留 media_reference 引用（owner_type=social_account、field=icon），软删除账号时释放引用。公共 site 接口仅返回开启且图标可用账号的 name、platform、link、icon，不返回关闭账号和媒体标识。
@@ -108,7 +108,9 @@ server -conf /path/config.yaml -recover-totp-user admin -recover-reason '经过�
 
 ## 官网 Cookie 提示
 
-首次访问显示 Cookie 提示，后台 cookieTitle/cookieContent 为空时使用默认英文文案。提供接受全部、仅必要及管理入口；关闭按钮按仅必要处理。当前未接入可选分析或广告 Cookie，管理界面说明必要偏好存储。选择保存在当前浏览器 localStorage 的 shop-cookie-choice-v1，180 天后重新提示；存储不可用时仍可关闭当前提示。页脚 Cookie settings 可重新打开并更改选择。接入可选追踪前必须实现与偏好联动的加载门禁。
+首次访问显示 Cookie 提示，后台 cookieTitle/cookieContent 为空时使用默认英文文案。关闭按钮按仅必要处理。选择、时间和告知范围仅保存在当前浏览器 localStorage 的 shop-cookie-choice-v2，180 天后重新提示；存储失败时提示错误并停止本标签页后续转化。页脚 Cookie settings 可重新打开并更改选择。
+
+Google Ads 在品牌与主题页面配置 googleAds.enabled、googleAds.id、googleAds.conversionLabel，默认关闭；沿用 settings 接口、site.update 权限和配置版本校验。公共 site 接口返回这三个公开配置字段。基础同意模式仅在配置完整有效且访客接受广告效果统计后加载标签，只有 Open WhatsApp 实际点击发送转化，撤回后停止上报。完整发布、授权行为及验收见 [Google Ads 配置与验收](GOOGLE_ADS.md)。
 
 商品新增、编辑及单独改价保存成功后关闭编辑窗口并刷新原列表；校验或请求失败时保留表单。
 

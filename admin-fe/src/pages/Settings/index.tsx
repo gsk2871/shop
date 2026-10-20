@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useModel } from "@umijs/max";
-import { Button, Card, Form, Input, Space, message } from "antd";
+import { Button, Card, Form, Input, Space, Switch, message } from "antd";
 import { api, type Settings } from "../../services/cms";
 import { defaultTheme } from "../../services/contracts";
 import { allows } from "../../services/auth";
@@ -136,6 +136,21 @@ export default function SettingsPage() {
             {max > 200 ? <Input.TextArea rows={6} maxLength={max} /> : <Input maxLength={max} />}
           </Form.Item>
         ))}
+        <Card title="Google Ads 转化跟踪" style={{ marginBottom: 24 }}>
+          <p>基础同意模式：访客接受广告效果统计后，点击 Open WhatsApp 才发送转化。拒绝不影响联系功能。保存后官网刷新生效。</p>
+          <Form.Item name={["googleAds", "enabled"]} label="启用跟踪" valuePropName="checked">
+            <Switch />
+          </Form.Item>
+          <Form.Item name={["googleAds", "id"]} label="Google Ads ID" dependencies={[["googleAds", "enabled"]]}
+            rules={[({ getFieldValue }) => ({ required: !!getFieldValue(["googleAds", "enabled"]), message: "启用时请填写 Google Ads ID" }), { pattern: /^AW-[0-9]{1,20}$/, message: "格式为 AW- 加数字" }]}>
+            <Input placeholder="AW-18370098818" maxLength={23} />
+          </Form.Item>
+          <Form.Item name={["googleAds", "conversionLabel"]} label="WhatsApp 转化标签" dependencies={[["googleAds", "enabled"]]}
+            rules={[({ getFieldValue }) => ({ required: !!getFieldValue(["googleAds", "enabled"]), message: "启用时请填写转化标签" }), { pattern: /^[A-Za-z0-9_-]{1,100}$/, message: "仅支持字母、数字、下划线和短横线" }]}>
+            <Input placeholder="事件代码 send_to 中斜杠后的部分" maxLength={100} />
+          </Form.Item>
+          <p>不要粘贴脚本。转化标签不是转化名称。默认关闭；本功能不启用个性化广告。</p>
+        </Card>
         {editable && (
           <Button type="primary" htmlType="submit" loading={busy}>
             保存品牌与主题

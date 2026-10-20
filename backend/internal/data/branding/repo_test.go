@@ -65,6 +65,7 @@ func TestUnlimitedSchedulingThemeAndReferences(t *testing.T) {
 	if e != nil {
 		t.Fatal(e)
 	}
+	s.GoogleAds = biz.GoogleAds{Enabled: true, ID: "AW-18370098818", ConversionLabel: "test_label-1"}
 	s.Brand = "Configured brand"
 	s.BrandMark = "C·"
 	s.HomeTitle = "Home from CMS"
@@ -86,7 +87,7 @@ func TestUnlimitedSchedulingThemeAndReferences(t *testing.T) {
 		t.Fatal("stale theme accepted")
 	}
 	s, e = r.Settings(ctx)
-	if e != nil || s.Theme.Primary != "#112233" || s.BrandMark != "C·" || s.AboutContent != "Configured company details" || s.HomeContent != "First line\nSecond line" || s.PrivacyContent != "Configured privacy details" || s.NewsTitle != "Company news" || s.CookieContent != "Configured storage notice" {
+	if e != nil || s.GoogleAds != (biz.GoogleAds{Enabled: true, ID: "AW-18370098818", ConversionLabel: "test_label-1"}) || s.Theme.Primary != "#112233" || s.BrandMark != "C·" || s.AboutContent != "Configured company details" || s.HomeContent != "First line\nSecond line" || s.PrivacyContent != "Configured privacy details" || s.NewsTitle != "Company news" || s.CookieContent != "Configured storage notice" {
 		t.Fatal(e, s)
 	}
 	if e = r.Media.Delete(ctx, asset.ID); e == nil {
