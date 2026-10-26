@@ -8,7 +8,7 @@ import type { ContactLead, Page } from "../../services/contracts";
 
 const statuses = { pending: "待跟进", completed: "已完成", invalid: "无效" };
 type PickerDate = NonNullable<DatePickerProps["minDate"]>;
-type Filters = { contact?: string; start?: PickerDate; end?: PickerDate };
+type Filters = { contactType?: "" | "email" | "whatsapp"; start?: PickerDate; end?: PickerDate };
 const displayTime = (value: string) => new Date(value).toLocaleString("zh-CN", { timeZone: "Asia/Shanghai", hour12: false });
 export default function LeadsPage() {
   const { initialState } = useModel("@@initialState");
@@ -27,7 +27,7 @@ export default function LeadsPage() {
     query.current = values;
     const id = ++requestId.current;
     setLoading(true);
-    const params = new URLSearchParams({ page: String(page), pageSize: "20", contact: values.contact?.trim() || "" });
+    const params = new URLSearchParams({ page: String(page), pageSize: "20", contactType: values.contactType || "" });
     if (values.start) params.set("start", values.start.toISOString());
     if (values.end) params.set("end", values.end.toISOString());
     try {
@@ -39,8 +39,8 @@ export default function LeadsPage() {
   useEffect(() => { void load(); return () => { requestId.current++; }; }, []);
   return <Card title="留资记录" extra={<Button onClick={() => void load(data.page)}>刷新</Button>}>
     {context}
-    <Form form={filters} layout="inline" onFinish={(values) => void load(1, values)} style={{ marginBottom: 20, rowGap: 12 }}>
-      <Form.Item name="contact" label="联系方式"><Input allowClear maxLength={254} placeholder="邮箱或 WhatsApp" /></Form.Item>
+    <Form form={filters} initialValues={{ contactType: "" }} layout="inline" onFinish={(values) => void load(1, values)} style={{ marginBottom: 20, rowGap: 12 }}>
+      <Form.Item name="contactType" label="联系方式"><Select style={{ width: 180 }} options={[{ value: "", label: "全部" }, { value: "email", label: "邮箱" }, { value: "whatsapp", label: "WhatsApp" }]} /></Form.Item>
       <Form.Item name="start" label="提交开始时间"><DatePicker showTime placeholder="开始时间" /></Form.Item>
       <Form.Item name="end" label="提交结束时间"><DatePicker showTime placeholder="结束时间" /></Form.Item>
       <Space><Button type="primary" htmlType="submit">查询</Button><Button onClick={() => { filters.resetFields(); void load(1, {}); }}>重置</Button></Space>

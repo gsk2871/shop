@@ -12,6 +12,7 @@ function isBackdrop(event: MouseEvent<HTMLDialogElement>) {
 
 export default function LeadPopup({ config }: { config: PublicLeadPopup | null }) {
   const dialog = useRef<HTMLDialogElement>(null);
+  const opener = useRef<HTMLButtonElement>(null);
   const backdropPressed = useRef(false);
   const checked = useRef(false);
   const pending = useRef(false);
@@ -35,11 +36,13 @@ export default function LeadPopup({ config }: { config: PublicLeadPopup | null }
     const previous = document.activeElement;
     const overflow = document.body.style.overflow;
     node.showModal();
+    node.querySelector<HTMLElement>("#lead-popup-title")?.focus();
     document.body.style.overflow = "hidden";
     return () => {
       node.close();
       document.body.style.overflow = overflow;
-      if (previous instanceof HTMLElement) previous.focus();
+      if (previous instanceof HTMLElement && previous.isConnected) previous.focus();
+      else opener.current?.focus();
     };
   }, [open]);
   async function submit(e: FormEvent) {
@@ -69,7 +72,9 @@ export default function LeadPopup({ config }: { config: PublicLeadPopup | null }
   }
   if (!config?.enabled) return null;
   return (
-    <dialog ref={dialog} className="lead-popup" aria-labelledby="lead-popup-title" aria-describedby="lead-popup-description"
+    <>
+    {!open && <button type="button" ref={opener} className="lead-popup-reopen" aria-haspopup="dialog" aria-controls="lead-popup" onClick={() => setOpen(true)}>Special offer</button>}
+    <dialog id="lead-popup" ref={dialog} className="lead-popup" aria-labelledby="lead-popup-title" aria-describedby="lead-popup-description"
       onCancel={(e) => { e.preventDefault(); setOpen(false); }}
       onPointerDown={(e) => { backdropPressed.current = e.isPrimary && e.button === 0 && isBackdrop(e); }}
       onPointerCancel={() => { backdropPressed.current = false; }}
@@ -81,11 +86,11 @@ export default function LeadPopup({ config }: { config: PublicLeadPopup | null }
       }}>
       <button type="button" className="lead-popup-close" aria-label="Close" onClick={() => setOpen(false)}>×</button>
       <div aria-live="polite">
-        <h2 id="lead-popup-title">{success ? config.successTitle : config.title}</h2>
+        <h2 id="lead-popup-title" tabIndex={-1}>{success ? config.successTitle : config.title}</h2>
         <p id="lead-popup-description" className="lead-popup-description">{success ? config.successDescription : config.description}</p>
       </div>
       {!success && <form onSubmit={submit}>
-        <label className="visually-hidden" htmlFor="lead-contact">Email or WhatsApp</label>
+        <label className="visually-hidden lead-contact-label" htmlFor="lead-contact">{config.placeholder}</label>
         <input id="lead-contact" type="text" maxLength={254} required value={contact} placeholder={config.placeholder} onChange={(e) => setContact(e.target.value)} aria-invalid={!!error} aria-describedby={error ? "lead-error" : undefined} autoCapitalize="none" spellCheck={false} />
         {error && <p id="lead-error" className="lead-popup-error" role="alert">{error}</p>}
         <button className="lead-popup-submit" type="submit" disabled={busy} aria-busy={busy}>{busy ? "Submitting…" : config.submitText}</button>
@@ -95,5 +100,6 @@ export default function LeadPopup({ config }: { config: PublicLeadPopup | null }
         <p className="lead-popup-notice">{config.notice}</p>
       </>}
     </dialog>
+    </>
   );
 }

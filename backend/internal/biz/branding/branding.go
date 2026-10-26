@@ -100,7 +100,7 @@ func (s Settings) Validate() error {
 	return nil
 }
 
-const ProductBannerCTA = "Request In-Vitro Quotation"
+const ProductBannerCTA = "Shop Now"
 
 type Banner struct {
 	ProductID          string     `json:"productId"`

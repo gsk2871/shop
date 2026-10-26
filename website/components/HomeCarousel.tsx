@@ -28,7 +28,7 @@ export default function HomeCarousel({ banners }: { banners: PublicBanner[] }) {
   if (!banner) return null;
   const move = (step: number) => setIndex((i) => (i + step + count) % count);
   return (
-    <section className="home-carousel" data-ruler-title="Introduction" aria-label="Featured products" aria-roledescription="carousel"
+    <section className="home-carousel" data-ruler-title="Highlights" aria-label="Featured products" aria-roledescription="carousel"
       onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
       onFocusCapture={() => setFocused(true)}
       onBlurCapture={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setFocused(false); }}
@@ -40,20 +40,23 @@ export default function HomeCarousel({ banners }: { banners: PublicBanner[] }) {
         const dx = t.clientX - origin.x, dy = t.clientY - origin.y;
         if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) move(dx < 0 ? 1 : -1);
       }}>
-      <div className="home-carousel-slide" role="group" aria-roledescription="slide" aria-label={`${active + 1} of ${count}`}>
-        <picture>
-          {banner.mobileImage && <source media="(max-width: 640px)" srcSet={banner.mobileImage} />}
-          <img src={banner.image} alt="" fetchPriority="high" />
-        </picture>
-        {banner.link && <Link className="button home-carousel-cta" href={banner.link}>Request In-Vitro Quotation ↗</Link>}
-      </div>
-      {count > 1 && <>
-        <button type="button" className="carousel-arrow previous" aria-label="Previous banner" onClick={() => move(-1)}>‹</button>
-        <button type="button" className="carousel-arrow next" aria-label="Next banner" onClick={() => move(1)}>›</button>
-        <div className="carousel-dots" aria-label="Banner navigation">
-          {banners.map((b, i) => <button type="button" key={b.id} aria-label={`Show banner ${i + 1}`} aria-pressed={active === i} onClick={() => setIndex(i)} />)}
+      <h1 id="home-highlights" className="visually-hidden">Highlights</h1>
+      <div className="home-carousel-stage">
+        <div className="home-carousel-slide" role="group" aria-roledescription="slide" aria-label={`${active + 1} of ${count}`}>
+          <picture>
+            {banner.mobileImage && <source media="(max-width: 640px)" srcSet={banner.mobileImage} />}
+            <img src={banner.image} alt="" fetchPriority="high" />
+          </picture>
+          {banner.link && <Link className="button home-carousel-cta" href={banner.link}>Shop Now</Link>}
         </div>
-      </>}
+        {count > 1 && <>
+          <button type="button" className="carousel-arrow previous" aria-label="Previous banner" onClick={() => move(-1)}>‹</button>
+          <button type="button" className="carousel-arrow next" aria-label="Next banner" onClick={() => move(1)}>›</button>
+        </>}
+      </div>
+      {count > 1 && <div className="carousel-dots" aria-label="Banner navigation">
+          {banners.map((b, i) => <button type="button" key={b.id} aria-label={`Show banner ${i + 1}`} aria-pressed={active === i} onClick={() => setIndex(i)} />)}
+        </div>}
     </section>
   );
 }

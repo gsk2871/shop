@@ -99,6 +99,9 @@ func (r *Repo) List(ctx context.Context, f biz.Filter) ([]biz.Lead, int64, error
 	var total int64
 	err := r.Data.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		q := tx.Table("contact_lead")
+		if f.ContactType != "" {
+			q = q.Where("contact_type = ?", f.ContactType)
+		}
 		if f.Contact != "" {
 			q = q.Where("contact ILIKE ?", "%"+f.Contact+"%")
 		}

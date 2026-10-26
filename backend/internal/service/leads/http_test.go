@@ -95,7 +95,13 @@ func TestLimiterExpiryAndBound(t *testing.T) {
 	}
 }
 func TestFilters(t *testing.T) {
-	for _, q := range []string{"page=0", "pageSize=101", "start=yesterday", "start=2026-10-27T00:00:00Z&end=2026-10-26T00:00:00Z"} {
+	for _, kind := range []string{"", "email", "whatsapp"} {
+		f, err := filter(httptest.NewRequest("GET", "/admin/api/v1/leads?contactType="+kind, nil))
+		if err != nil || f.ContactType != kind {
+			t.Fatal(f, err)
+		}
+	}
+	for _, q := range []string{"contactType=sms", "contactType=EMAIL", "page=0", "pageSize=101", "start=yesterday", "start=2026-10-27T00:00:00Z&end=2026-10-26T00:00:00Z"} {
 		if _, err := filter(httptest.NewRequest("GET", "/admin/api/v1/leads?"+q, nil)); err == nil {
 			t.Fatal("invalid filter", q)
 		}

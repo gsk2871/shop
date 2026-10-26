@@ -73,6 +73,22 @@ func TestLeadLifecycleAndConfigSeed(t *testing.T) {
 	if err := r.Submit(ctx, "+12025550123"); err != nil {
 		t.Fatal(err)
 	}
+	for _, kind := range []string{"email", "whatsapp", ""} {
+		f.ContactType = kind
+		rows, total, err = r.List(ctx, f)
+		want := int64(1)
+		if kind == "" {
+			want = 2
+		}
+		if err != nil || total != want || len(rows) != int(want) {
+			t.Fatal(rows, total, err)
+		}
+		for _, row := range rows {
+			if kind != "" && row.ContactType != kind {
+				t.Fatal("wrong contact type", row.ContactType)
+			}
+		}
+	}
 	f.Contact = "202555"
 	rows, total, err = r.List(ctx, f)
 	if err != nil || total != 1 || rows[0].ContactType != "whatsapp" || rows[0].SubmissionCount != 2 {

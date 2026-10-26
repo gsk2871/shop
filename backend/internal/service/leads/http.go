@@ -110,7 +110,10 @@ func (h *Handler) visitor(r *http.Request) (string, error) {
 	return ip.String(), nil
 }
 func filter(r *http.Request) (biz.Filter, error) {
-	f := biz.Filter{Contact: strings.TrimSpace(r.URL.Query().Get("contact")), Page: 1, Size: 20}
+	f := biz.Filter{ContactType: r.URL.Query().Get("contactType"), Contact: strings.TrimSpace(r.URL.Query().Get("contact")), Page: 1, Size: 20}
+	if f.ContactType != "" && f.ContactType != "email" && f.ContactType != "whatsapp" {
+		return f, errdef.Invalid()
+	}
 	var err error
 	if v := r.URL.Query().Get("page"); v != "" {
 		f.Page, err = strconv.Atoi(v)

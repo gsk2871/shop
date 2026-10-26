@@ -1433,15 +1433,17 @@ main h2 {
   margin-top: auto;
 }
 
-/* Homepage campaign images reserve a lower-left safe area for the product CTA. */
-.home-carousel { position: relative; margin: 48px 0; overflow: hidden; border-radius: 4px; touch-action: pan-y; }
-.home-carousel-slide picture, .home-carousel-slide img { display: block; width: 100%; }
-.home-carousel-slide img { aspect-ratio: 8 / 3; object-fit: contain; background: var(--surface); }
-.home-carousel-cta { position: absolute; left: 4%; bottom: 13%; max-width: 84%; text-align: center; }
+/* Keep navigation below the artwork and the product CTA inside its lower center. */
+.home-carousel { position: relative; min-height: 620px; margin: 0; padding: 55px 6%; overflow: hidden; border-radius: 4px; touch-action: pan-y; }
+.home-carousel-stage { position: relative; height: 450px; }
+.home-carousel-slide { height: 100%; }
+.home-carousel-slide picture, .home-carousel-slide img { display: block; width: 100%; height: 100%; }
+.home-carousel-slide img { object-fit: cover; background: var(--surface); }
+.home-carousel-cta { position: absolute; left: 50%; transform: translateX(-50%); bottom: 24px; width: max-content; max-width: calc(100% - 96px); text-align: center; }
 .carousel-arrow { position: absolute; top: 50%; transform: translateY(-50%); width: 40px; height: 48px; border: 0; border-radius: 4px; background: #111a; color: white; font-size: 28px; cursor: pointer; }
 .carousel-arrow.previous { left: 8px; } .carousel-arrow.next { right: 8px; }
-.carousel-dots { position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); display: flex; flex-wrap: wrap; justify-content: center; max-width: 85%; padding: 2px 8px; border-radius: 20px; background: #1118; }
-.carousel-dots button { width: 28px; height: 28px; border: 0; background: transparent; cursor: pointer; padding: 8px; }
+.carousel-dots { position: relative; margin: 12px auto 0; width: fit-content; display: flex; flex-wrap: wrap; justify-content: center; max-width: 85%; padding: 2px 8px; border-radius: 20px; background: #1118; }
+.carousel-dots button { width: 44px; height: 44px; border: 0; background: transparent; cursor: pointer; padding: 16px; }
 .carousel-dots button::after { content: ""; display: block; width: 12px; height: 12px; border-radius: 50%; background: #ffffff80; }
 .carousel-dots button[aria-pressed="true"]::after { background: white; }
 .lead-popup { position: fixed; inset: 0; margin: auto; width: min(750px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); padding: 54px 50px 36px; border: 0; border-radius: 10px; background: #fff; color: #151515; text-align: center; overflow-y: auto; overflow-wrap: anywhere; box-sizing: border-box; }
@@ -1450,6 +1452,9 @@ main h2 {
 .lead-popup-description { font-size: 22px; line-height: 1.5; color: #555; white-space: pre-wrap; margin: 0 0 26px; }
 .lead-popup input { display: block; width: 100%; box-sizing: border-box; border: 1px solid #cdd0dc; border-radius: 9px; padding: 18px 12px; font-size: 17px; background: #fff; color: #151515; }
 .lead-popup-close { position: absolute; right: 15px; top: 10px; min-width: 44px; min-height: 44px; padding: 0; border: 0; background: transparent; color: #6d6b80; font-size: 34px; cursor: pointer; }
+.lead-popup-close:focus-visible { outline: none; border-radius: 50%; background: #eeeef3; color: #151515; }
+.lead-popup h2:focus { outline: none; }
+.lead-popup-reopen { position: fixed; z-index: 40; left: 20px; bottom: max(20px, env(safe-area-inset-bottom)); border: 0; border-radius: 24px; padding: 12px 20px; min-height: 44px; background: #111; color: #fff; box-shadow: 0 4px 16px #0002; }
 .lead-popup-submit { width: 100%; margin-top: 24px; padding: 18px; border: 0; border-radius: 9px; background: #111; color: #fff; font-size: 22px; font-weight: 600; cursor: pointer; white-space: normal; }
 .lead-popup-submit:disabled { opacity: .6; cursor: wait; }
 .lead-popup-dismiss { display: block; margin: 22px auto; padding: 6px 12px; border: 0; background: transparent; color: #3455cb; font-size: 21px; cursor: pointer; }
@@ -1457,11 +1462,19 @@ main h2 {
 .lead-popup-error { color: #b42318; font-size: 15px; text-align: left; }
 .visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
 @media (max-width: 640px) {
- .home-carousel { margin: 24px 0; }
- .home-carousel-slide img { aspect-ratio: 4 / 5; }
- .home-carousel-cta { bottom: 17%; left: 8%; font-size: 12px; padding: 14px; }
- .carousel-arrow { width: 32px; }
- .lead-popup { padding: 48px 22px 26px; }
- .lead-popup-description { font-size: 18px; }
+ .home-carousel { min-height: 0; margin: 0; padding: 24px 6%; }
+ .home-carousel-stage { height: auto; aspect-ratio: 4 / 3; }
+
+ .home-carousel-cta { bottom: 16px; font-size: 14px; padding: 10px 20px; min-height: 44px; }
+ .carousel-arrow { width: 44px; }
+ .lead-popup { width: calc(100vw - 24px); max-height: calc(100dvh - 24px); padding: 48px 20px 22px; }
+ .lead-popup h2 { margin-bottom: 16px; }
+ .lead-contact-label { position: static; display: block; width: auto; height: auto; margin: 0 0 8px; overflow: visible; clip: auto; white-space: normal; text-align: left; font-size: 14px; color: #555; }
+ .lead-popup input::placeholder { color: transparent; }
+ .lead-popup input { font-size: 16px; padding: 14px 10px; }
+ .lead-popup-submit { margin-top: 16px; padding: 14px; font-size: 18px; }
+ .lead-popup-dismiss { margin: 14px auto; font-size: 17px; min-height: 44px; }
+ .lead-popup-reopen { left: 12px; padding: 10px 16px; font-size: 14px; }
+ .lead-popup-description { font-size: 17px; margin-bottom: 18px; }
  .lead-popup-notice { font-size: 14px; }
 }

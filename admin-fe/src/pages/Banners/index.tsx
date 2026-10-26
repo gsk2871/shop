@@ -260,7 +260,7 @@ export default function BannersPage() {
           <Form.Item
             name="imageMediaId"
             label="桌面图片"
-            extra={isHome ? "建议 1920×720，图片左下方预留按钮区域；所有桌面图保持相同比例。" : undefined}
+            extra={isHome ? "建议 1920×720，图片底部居中预留按钮区域；所有桌面图保持相同比例。" : undefined}
             rules={[{ required: true }]}
           >
             <MediaSelect />
@@ -280,7 +280,7 @@ export default function BannersPage() {
                   ...products.map((p) => ({ value: p.id, label: p.name })),
                 ]} />
             </Form.Item>
-            <Form.Item label="按钮文案"><Input value="Request In-Vitro Quotation ↗" disabled /></Form.Item>
+            <Form.Item label="按钮文案"><Input value="Shop Now" disabled /></Form.Item>
           </>}
           <Form.Item hidden={isHome} name="ctaText" label="英文按钮文字">
             <Input maxLength={100} />

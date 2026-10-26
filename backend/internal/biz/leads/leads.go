@@ -89,7 +89,8 @@ func (u Update) Validate() error {
 }
 
 type Filter struct {
-	Contact    string
-	Start, End *time.Time
-	Page, Size int
+	ContactType string
+	Contact     string
+	Start, End  *time.Time
+	Page, Size  int
 }
