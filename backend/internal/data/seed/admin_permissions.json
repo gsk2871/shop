@@ -148,6 +148,10 @@
         {
           "method": "GET",
           "path": "/admin/api/v1/banners/{id}"
+        },
+        {
+          "method": "GET",
+          "path": "/admin/api/v1/banner-products"
         }
       ]
     },
@@ -939,6 +943,66 @@
           "path": "/admin/api/v1/faqs/{id}"
         }
       ]
+    },
+    {
+      "code": "menu.lead_popup",
+      "parentCode": "directory.site",
+      "name": "留资弹窗配置",
+      "type": "menu",
+      "sort": 70,
+      "route": "/lead-popup",
+      "permissionCode": "lead_popup.read",
+      "apis": [
+        {
+          "method": "GET",
+          "path": "/admin/api/v1/lead-popup"
+        }
+      ]
+    },
+    {
+      "code": "action.lead_popup.update",
+      "parentCode": "menu.lead_popup",
+      "name": "编辑弹窗",
+      "type": "action",
+      "sort": 10,
+      "route": null,
+      "permissionCode": "lead_popup.update",
+      "apis": [
+        {
+          "method": "PUT",
+          "path": "/admin/api/v1/lead-popup"
+        }
+      ]
+    },
+    {
+      "code": "menu.lead",
+      "parentCode": "directory.content",
+      "name": "留资记录",
+      "type": "menu",
+      "sort": 70,
+      "route": "/leads",
+      "permissionCode": "lead.read",
+      "apis": [
+        {
+          "method": "GET",
+          "path": "/admin/api/v1/leads"
+        }
+      ]
+    },
+    {
+      "code": "action.lead.update",
+      "parentCode": "menu.lead",
+      "name": "跟进留资",
+      "type": "action",
+      "sort": 10,
+      "route": null,
+      "permissionCode": "lead.update",
+      "apis": [
+        {
+          "method": "PATCH",
+          "path": "/admin/api/v1/leads/{id}"
+        }
+      ]
     }
   ],
   "roles": [
@@ -997,7 +1061,11 @@
         "faq.read",
         "faq.create",
         "faq.update",
-        "faq.delete"
+        "faq.delete",
+        "lead_popup.read",
+        "lead_popup.update",
+        "lead.read",
+        "lead.update"
       ]
     },
     {
@@ -1041,7 +1109,11 @@
         "faq.read",
         "faq.create",
         "faq.update",
-        "faq.delete"
+        "faq.delete",
+        "lead_popup.read",
+        "lead_popup.update",
+        "lead.read",
+        "lead.update"
       ]
     },
     {
@@ -1168,6 +1240,14 @@
     {
       "method": "GET",
       "path": "/api/v1/whatsapp-status"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/lead-popup"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/leads"
     }
   ],
   "enforcementRules": [

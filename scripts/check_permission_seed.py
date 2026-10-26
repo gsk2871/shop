@@ -96,6 +96,8 @@ def validate_seed(seed):
         ("POST", "/admin/api/v1/login/totp"),
         ("GET", "/api/v1/contact"),
         ("GET", "/api/v1/whatsapp-status"),
+        ("GET", "/api/v1/lead-popup"),
+        ("POST", "/api/v1/leads"),
     }:
         raise ValueError("unexpected anonymous administrative route")
     return len(nodes), len(permissions), len(roles)
@@ -107,7 +109,7 @@ def _register_endpoint(endpoints, endpoint, public=False):
     if method not in {"GET", "POST", "PUT", "PATCH", "DELETE"}:
         raise ValueError(f"invalid HTTP method: {method}")
     valid_prefix = path.startswith("/admin/api/v1/") or (
-        public and method == "GET" and path.startswith("/api/v1/")
+        public and ((method == "GET" and path.startswith("/api/v1/")) or (method == "POST" and path == "/api/v1/leads"))
     )
     if not valid_prefix or ".." in path or "?" in path:
         raise ValueError(f"invalid administrative API: {path}")

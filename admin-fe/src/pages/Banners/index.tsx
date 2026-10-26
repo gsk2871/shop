@@ -39,6 +39,22 @@ export default function BannersPage() {
   const [busy, setBusy] = useState(false);
   const [form] = Form.useForm();
   const [msg, context] = message.useMessage();
+  const isHome = Form.useWatch("slotCode", form) === "home_hero";
+  const [productQuery, setProductQuery] = useState("");
+  const [products, setProducts] = useState<{ id: string; name: string }[]>([]);
+  const [searching, setSearching] = useState(false);
+  useEffect(() => {
+    if (!open || !isHome) return;
+    let active = true;
+    setSearching(true);
+    const timer = window.setTimeout(() => {
+      api<{ items: { id: string; name: string }[] }>(`banner-products?q=${encodeURIComponent(productQuery)}`)
+        .then((v) => { if (active) setProducts(v.items); })
+        .catch((e) => { if (active) msg.error(e.message); })
+        .finally(() => { if (active) setSearching(false); });
+    }, 250);
+    return () => { active = false; window.clearTimeout(timer); };
+  }, [open, isHome, productQuery]);
   async function load(page = data.page, code = slot) {
     try {
       setData(
@@ -60,6 +76,8 @@ export default function BannersPage() {
     try {
       const b = row ? await api<Banner>(`banners/${row.id}`) : undefined;
       setEditing(b);
+      setProductQuery("");
+      setProducts([]);
       form.resetFields();
       form.setFieldsValue(
         b
@@ -70,6 +88,7 @@ export default function BannersPage() {
             }
           : {
               slotCode: slot || slots[0]?.code,
+              productId: "",
               title: "",
               subtitle: "",
               imageMediaId: "",
@@ -120,7 +139,8 @@ export default function BannersPage() {
           onChange: (p) => void load(p),
         }}
         columns={[
-          { title: "英文标题", dataIndex: "title" },
+          { title: "名称", dataIndex: "title" },
+          { title: "关联商品", render: (_, b) => b.slotCode === "home_hero" ? (b.productName || (b.productId ? `商品 #${b.productId}（不可用）` : "未关联")) : "—" },
           { title: "位置", dataIndex: "slotCode" },
           { title: "排序", dataIndex: "sort" },
           {
@@ -130,7 +150,7 @@ export default function BannersPage() {
           {
             title: "排期（北京时间）",
             render: (_, b) =>
-              `${localDate(b.startsAt) || "立即"} 至 ${localDate(b.endsAt) || "不限"}`,
+              b.slotCode === "home_hero" ? "—" : `${localDate(b.startsAt) || "立即"} 至 ${localDate(b.endsAt) || "不限"}`,
           },
           {
             title: "操作",
@@ -198,10 +218,14 @@ export default function BannersPage() {
                 editing ? "PUT" : "POST",
                 {
                   ...v,
-                  startsAt: v.startsAt
+                  productId: v.slotCode === "home_hero" ? (v.productId || "") : "",
+                  subtitle: v.slotCode === "home_hero" ? "" : v.subtitle,
+                  ctaText: v.slotCode === "home_hero" ? "" : v.ctaText,
+                  link: v.slotCode === "home_hero" ? "" : v.link,
+                  startsAt: v.slotCode !== "home_hero" && v.startsAt
                     ? new Date(v.startsAt + ":00+08:00").toISOString()
                     : null,
-                  endsAt: v.endsAt
+                  endsAt: v.slotCode !== "home_hero" && v.endsAt
                     ? new Date(v.endsAt + ":00+08:00").toISOString()
                     : null,
                   enabled: editing?.enabled || false,
@@ -225,17 +249,18 @@ export default function BannersPage() {
           </Form.Item>
           <Form.Item
             name="title"
-            label="英文标题"
+            label={isHome ? "后台名称（不展示给访客）" : "英文标题"}
             rules={[{ required: true, max: 200 }]}
           >
             <Input />
           </Form.Item>
-          <Form.Item name="subtitle" label="英文副标题">
+          <Form.Item hidden={isHome} name="subtitle" label="英文副标题">
             <Input.TextArea maxLength={2000} />
           </Form.Item>
           <Form.Item
             name="imageMediaId"
             label="桌面图片"
+            extra={isHome ? "建议 1920×720，图片左下方预留按钮区域；所有桌面图保持相同比例。" : undefined}
             rules={[{ required: true }]}
           >
             <MediaSelect />
@@ -243,22 +268,33 @@ export default function BannersPage() {
           <Form.Item
             name="mobileImageMediaId"
             label="手机图片（留空使用桌面图片）"
+            extra={isHome ? "建议 800×1000，底部预留按钮和圆点区域。" : undefined}
           >
             <MediaSelect />
           </Form.Item>
-          <Form.Item name="ctaText" label="英文按钮文字">
+          {isHome && <>
+            <Form.Item name="productId" label="关联商品（选填）" extra="选择商品后显示按钮；未关联或商品不可访问时隐藏按钮。">
+              <Select showSearch allowClear filterOption={false} onSearch={setProductQuery} loading={searching} placeholder="输入商品名称搜索"
+                options={[
+                  ...(editing?.productId && !products.some((p) => p.id === editing.productId) ? [{ value: editing.productId, label: editing.productName || `商品 #${editing.productId}（不可用）` }] : []),
+                  ...products.map((p) => ({ value: p.id, label: p.name })),
+                ]} />
+            </Form.Item>
+            <Form.Item label="按钮文案"><Input value="Request In-Vitro Quotation ↗" disabled /></Form.Item>
+          </>}
+          <Form.Item hidden={isHome} name="ctaText" label="英文按钮文字">
             <Input maxLength={100} />
           </Form.Item>
-          <Form.Item name="link" label="链接（站内路径或 HTTPS）">
+          <Form.Item hidden={isHome} name="link" label="链接（站内路径或 HTTPS）">
             <Input maxLength={2000} />
           </Form.Item>
           <Form.Item name="sort" label="排序（较小优先）">
             <InputNumber precision={0} />
           </Form.Item>
-          <Form.Item name="startsAt" label="开始时间（Asia/Shanghai）">
+          <Form.Item hidden={isHome} name="startsAt" label="开始时间（Asia/Shanghai）">
             <Input type="datetime-local" />
           </Form.Item>
-          <Form.Item name="endsAt" label="结束时间（Asia/Shanghai）">
+          <Form.Item hidden={isHome} name="endsAt" label="结束时间（Asia/Shanghai）">
             <Input type="datetime-local" />
           </Form.Item>
         </Form>

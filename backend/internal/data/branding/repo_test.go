@@ -50,7 +50,11 @@ func TestUnlimitedSchedulingThemeAndReferences(t *testing.T) {
 			}
 		}
 		items, total, e := r.List(ctx, slot, 1, 1, true)
-		if e != nil || total != 4 || len(items) != 4 {
+		expected := 4
+		if slot == "home_hero" {
+			expected = 6
+		}
+		if e != nil || total != int64(expected) || len(items) != expected {
 			t.Fatal("public limited or scheduling broken", len(items), total, e)
 		}
 	}

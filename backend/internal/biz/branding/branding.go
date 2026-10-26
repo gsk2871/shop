@@ -100,7 +100,11 @@ func (s Settings) Validate() error {
 	return nil
 }
 
+const ProductBannerCTA = "Request In-Vitro Quotation"
+
 type Banner struct {
+	ProductID          string     `json:"productId"`
+	ProductName        string     `json:"productName"`
 	ID                 string     `json:"id,omitempty"`
 	SlotCode           string     `json:"slotCode"`
 	Title              string     `json:"title"`
@@ -126,6 +130,9 @@ func (b Banner) Validate() error {
 	return nil
 }
 func Public(b Banner) map[string]any {
+	if b.SlotCode == "home_hero" {
+		return map[string]any{"id": b.ID, "title": "", "subtitle": "", "image": b.Image, "mobileImage": b.MobileImage, "ctaText": ProductBannerCTA, "link": b.Link}
+	}
 	return map[string]any{"id": b.ID, "title": b.Title, "subtitle": b.Subtitle, "image": b.Image, "mobileImage": b.MobileImage, "ctaText": b.CTAText, "link": b.Link}
 }
 

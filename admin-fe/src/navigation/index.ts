@@ -1,6 +1,8 @@
 import type { PermissionNode } from "../services/contracts";
 
 export const menuNames: Record<string, string> = {
+  "/lead-popup": "留资弹窗配置",
+  "/leads": "留资记录",
   "/faqs": "问答配置",
   "/media": "媒体库",
   "/categories": "商品分类",
@@ -17,8 +19,8 @@ export const menuNames: Record<string, string> = {
 };
 
 const groups = [
-  { code: "navigation.operations", name: "运营管理", routes: ["/media", "/categories", "/products", "/whatsapp", "/articles", "/faqs"] },
-  { code: "navigation.settings", name: "系统配置", routes: ["/settings", "/banners"] },
+  { code: "navigation.operations", name: "运营管理", routes: ["/media", "/categories", "/products", "/whatsapp", "/articles", "/faqs", "/leads"] },
+  { code: "navigation.settings", name: "系统配置", routes: ["/settings", "/banners", "/lead-popup"] },
   { code: "navigation.users", name: "用户管理", routes: ["/system/roles", "/system/users", "/system/security"] },
   { code: "navigation.maintenance", name: "系统维护", routes: ["/system/audit", "/system/config"] },
 ];

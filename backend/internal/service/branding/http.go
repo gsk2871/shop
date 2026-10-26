@@ -84,6 +84,20 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		admin.Reply(w, 200, saved)
 		return
 	}
+	if path == "banner-products" && r.Method == "GET" {
+		q := r.URL.Query().Get("q")
+		if len(q) > 200 {
+			admin.Failure(w, r, errdef.Invalid())
+			return
+		}
+		rows, e := h.Repo.ProductOptions(r.Context(), q)
+		if e != nil {
+			admin.Failure(w, r, e)
+			return
+		}
+		admin.Reply(w, 200, map[string]any{"items": rows})
+		return
+	}
 	if path == "banner-slots" {
 		rows, e := h.Repo.Slots(r.Context())
 		if e != nil {

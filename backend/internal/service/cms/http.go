@@ -12,7 +12,7 @@ import (
 	"strings"
 )
 
-type Handler struct{ administration, catalog, faq, news, branding, whatsapp, mediaHandler, publicMedia http.Handler }
+type Handler struct{ leads, administration, catalog, faq, news, branding, whatsapp, mediaHandler, publicMedia http.Handler }
 
 func NewHandler(c conf.Config) *Handler { return &Handler{} }
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -31,6 +31,12 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		admin.Failure(w, r, errdef.New(503, "SERVICE_UNAVAILABLE"))
 		return
+	}
+	if (r.URL.Path == "/api/v1/leads" && r.Method == "POST") || (r.URL.Path == "/api/v1/lead-popup" && r.Method == "GET") {
+		if h.leads != nil {
+			h.leads.ServeHTTP(w, r)
+			return
+		}
 	}
 	if r.Method != "GET" {
 		admin.Failure(w, r, errdef.New(404, "NOT_FOUND"))
@@ -69,6 +75,11 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 func (h *Handler) admin(w http.ResponseWriter, r *http.Request) {
 	switch {
+	case r.URL.Path == "/admin/api/v1/lead-popup" || r.URL.Path == "/admin/api/v1/leads" || strings.HasPrefix(r.URL.Path, "/admin/api/v1/leads/"):
+		if h.leads != nil {
+			h.leads.ServeHTTP(w, r)
+			return
+		}
 	case r.URL.Path == "/admin/api/v1/faqs" || strings.HasPrefix(r.URL.Path, "/admin/api/v1/faqs/"):
 		if h.faq != nil {
 			h.faq.ServeHTTP(w, r)
@@ -79,7 +90,7 @@ func (h *Handler) admin(w http.ResponseWriter, r *http.Request) {
 			h.whatsapp.ServeHTTP(w, r)
 			return
 		}
-	case r.URL.Path == "/admin/api/v1/social-accounts" || strings.HasPrefix(r.URL.Path, "/admin/api/v1/social-accounts/") || r.URL.Path == "/admin/api/v1/settings" || r.URL.Path == "/admin/api/v1/banner-slots" || r.URL.Path == "/admin/api/v1/banners" || strings.HasPrefix(r.URL.Path, "/admin/api/v1/banners/"):
+	case r.URL.Path == "/admin/api/v1/banner-products" || r.URL.Path == "/admin/api/v1/social-accounts" || strings.HasPrefix(r.URL.Path, "/admin/api/v1/social-accounts/") || r.URL.Path == "/admin/api/v1/settings" || r.URL.Path == "/admin/api/v1/banner-slots" || r.URL.Path == "/admin/api/v1/banners" || strings.HasPrefix(r.URL.Path, "/admin/api/v1/banners/"):
 		if h.branding != nil {
 			h.branding.ServeHTTP(w, r)
 			return
@@ -128,3 +139,5 @@ func (h *Handler) PublicFiles() http.Handler {
 func (h *Handler) SetWhatsApp(v http.Handler) { h.whatsapp = v }
 
 func (h *Handler) SetFAQ(v http.Handler) { h.faq = v }
+
+func (h *Handler) SetLeads(v http.Handler) { h.leads = v }

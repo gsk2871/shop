@@ -2,7 +2,9 @@ import "@shop/content/styles.css";
 import type { Metadata } from "next";
 import type { CSSProperties, ReactNode } from "react";
 import Link from "next/link";
-import { settings } from "../lib/content";
+import LeadPopup from "../components/LeadPopup";
+import type { PublicLeadPopup } from "../lib/contracts";
+import { content, settings } from "../lib/content";
 import GoogleAds from "../components/GoogleAds";
 import ContactButton from "../components/ContactButton";
 import SectionRuler from "../components/SectionRuler";
@@ -20,7 +22,7 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 export default async function Layout({ children }: { children: ReactNode }) {
-  const s = await settings();
+  const [s, popup] = await Promise.all([settings(), content<PublicLeadPopup>("lead-popup")]);
   const style = {
     "--primary": s.theme.primary,
     "--surface": s.theme.surface,
@@ -82,6 +84,7 @@ export default async function Layout({ children }: { children: ReactNode }) {
           </div>
         </footer>
         <ContactButton className="whatsapp">WhatsApp ↗</ContactButton>
+        <LeadPopup config={popup} />
         <CookieNotice title={s.cookieTitle} content={s.cookieContent} />
         </GoogleAds>
       </body>

@@ -10,6 +10,7 @@ import (
 	brandingData "peptide-site/internal/data/branding"
 	catalogData "peptide-site/internal/data/catalog"
 	faqData "peptide-site/internal/data/faq"
+	leadsData "peptide-site/internal/data/leads"
 	mediaData "peptide-site/internal/data/media"
 	newsData "peptide-site/internal/data/news"
 	whatsappData "peptide-site/internal/data/whatsapp"
@@ -21,6 +22,7 @@ import (
 	catalogService "peptide-site/internal/service/catalog"
 	cms "peptide-site/internal/service/cms"
 	faqService "peptide-site/internal/service/faq"
+	leadsService "peptide-site/internal/service/leads"
 	mediaService "peptide-site/internal/service/media"
 	newsService "peptide-site/internal/service/news"
 	whatsappService "peptide-site/internal/service/whatsapp"
@@ -60,6 +62,7 @@ func NewResources(c conf.Config, d *data.Data, s *service.System, content *cms.H
 	content.SetMedia(mediaHandler, mediaHandler.PublicFiles())
 	content.SetBranding(brandingService.NewHandler(brandingData.NewRepo(d)))
 	content.SetNews(newsService.NewHandler(newsData.NewRepo(d, c)))
+	content.SetLeads(leadsService.NewHandler(leadsData.NewRepo(d), c))
 	content.SetFAQ(faqService.NewHandler(faqData.NewRepo(d)))
 	content.SetCatalog(catalogService.NewHandler(catalogData.NewRepo(d, c)))
 	geo, err := geoip.Open(c.Contact.GeoIPDatabasePath)

@@ -126,6 +126,7 @@ func (r *Repo) Slots(ctx context.Context) ([]Slot, error) {
 }
 
 type row struct {
+	ProductID                                *int64
 	ID                                       int64
 	SlotCode, Title, Subtitle, CTAText, Link string
 	ImageMediaID                             int64
@@ -143,6 +144,25 @@ func (r *Repo) get(tx *gorm.DB, id int64) (biz.Banner, error) {
 		return biz.Banner{}, e
 	}
 	b := biz.Banner{ID: strconv.FormatInt(id, 10), SlotCode: rec.SlotCode, Title: rec.Title, Subtitle: rec.Subtitle, CTAText: rec.CTAText, Link: rec.Link, ImageMediaID: strconv.FormatInt(rec.ImageMediaID, 10), Sort: rec.Sort, Enabled: rec.Enabled, StartsAt: rec.StartsAt, EndsAt: rec.EndsAt, Version: rec.Version}
+	if rec.ProductID != nil {
+		b.ProductID = strconv.FormatInt(*rec.ProductID, 10)
+		if e := tx.Table("product").Select("name").Where("id=?", *rec.ProductID).Scan(&b.ProductName).Error; e != nil {
+			return b, e
+		}
+	}
+	if b.SlotCode == "home_hero" {
+		b.Link = ""
+		b.CTAText = biz.ProductBannerCTA
+		if rec.ProductID != nil {
+			var slug string
+			if e := visibleProducts(tx).Select("p.slug").Where("p.id=?", *rec.ProductID).Scan(&slug).Error; e != nil {
+				return b, e
+			}
+			if slug != "" {
+				b.Link = "/products/" + slug
+			}
+		}
+	}
 	var url string
 	e = tx.Table("media").Select("url").Where("id=? AND available AND deleted_at IS NULL", rec.ImageMediaID).Take(&url).Error
 	if e != nil {
@@ -170,7 +190,7 @@ func (r *Repo) List(ctx context.Context, slot string, page, size int, public boo
 			q = q.Where("slot_code=?", slot)
 		}
 		if public {
-			q = q.Where("enabled AND (starts_at IS NULL OR starts_at<=now()) AND (ends_at IS NULL OR ends_at>now())")
+			q = q.Where("enabled AND (slot_code = 'home_hero' OR ((starts_at IS NULL OR starts_at<=now()) AND (ends_at IS NULL OR ends_at>now())))")
 		}
 		if e := q.Count(&total).Error; e != nil {
 			return e
@@ -199,6 +219,12 @@ func (r *Repo) List(ctx context.Context, slot string, page, size int, public boo
 	return items, total, e
 }
 func (r *Repo) Save(ctx context.Context, id int64, b biz.Banner) (biz.Banner, error) {
+	if b.SlotCode == "home_hero" {
+		b.Subtitle, b.CTAText, b.Link = "", "", ""
+		b.StartsAt, b.EndsAt = nil, nil
+	} else {
+		b.ProductID = ""
+	}
 	if e := b.Validate(); e != nil {
 		return b, e
 	}
@@ -232,11 +258,27 @@ func (r *Repo) Save(ctx context.Context, id int64, b biz.Banner) (biz.Banner, er
 		if b.Enabled != old.Enabled && !can(ctx, "banner.publish") {
 			return errdef.Denied()
 		}
+		var productValue any
+		if b.ProductID != "" {
+			productID, e := ids.ParseID(b.ProductID)
+			if e != nil || productID == 0 {
+				return errdef.Invalid()
+			}
+			var found int64
+			if e := tx.Table("product").Where("id=? AND deleted_at IS NULL", productID).Count(&found).Error; e != nil {
+				return e
+			}
+			// Preserve an existing deleted association while allowing other banner edits.
+			if found == 0 && (old.ProductID == nil || *old.ProductID != productID) {
+				return errdef.Invalid()
+			}
+			productValue = productID
+		}
 		var mobileValue any
 		if mobile != 0 {
 			mobileValue = mobile
 		}
-		fields := map[string]any{"slot_code": b.SlotCode, "title": b.Title, "subtitle": b.Subtitle, "image_media_id": image, "mobile_image_media_id": mobileValue, "cta_text": b.CTAText, "link": b.Link, "sort": b.Sort, "enabled": b.Enabled, "starts_at": b.StartsAt, "ends_at": b.EndsAt, "version": old.Version + 1, "updated_by": actor(ctx), "updated_at": time.Now().UTC()}
+		fields := map[string]any{"product_id": productValue, "slot_code": b.SlotCode, "title": b.Title, "subtitle": b.Subtitle, "image_media_id": image, "mobile_image_media_id": mobileValue, "cta_text": b.CTAText, "link": b.Link, "sort": b.Sort, "enabled": b.Enabled, "starts_at": b.StartsAt, "ends_at": b.EndsAt, "version": old.Version + 1, "updated_by": actor(ctx), "updated_at": time.Now().UTC()}
 		if id == 0 {
 			fields["created_by"] = actor(ctx)
 			if e := tx.Table("banner").Clauses(clause.Returning{Columns: []clause.Column{{Name: "id"}}}).Create(&fields).Error; e != nil {
@@ -300,4 +342,21 @@ func (r *Repo) Delete(ctx context.Context, id, version int64) error {
 		}
 		return audit(tx, ctx, "banner.delete", "banner", strconv.FormatInt(id, 10))
 	})
+}
+
+// Match the public product detail visibility rule, including valid pricing.
+func visibleProducts(tx *gorm.DB) *gorm.DB {
+	return tx.Table("product p").Where("p.status='published' AND p.deleted_at IS NULL").Where("EXISTS(SELECT 1 FROM product_sku s JOIN product_sku_price sp ON sp.sku_id=s.id AND sp.currency=s.currency AND sp.deleted_at IS NULL WHERE s.product_id=p.id AND s.enabled AND s.deleted_at IS NULL)")
+}
+func (r *Repo) ProductOptions(ctx context.Context, q string) ([]map[string]string, error) {
+	var rows []struct {
+		ID   int64
+		Name string
+	}
+	err := visibleProducts(r.Data.DB.WithContext(ctx)).Select("p.id,p.name").Where("p.name ILIKE ?", "%"+q+"%").Order("p.id DESC").Limit(20).Scan(&rows).Error
+	result := []map[string]string{}
+	for _, row := range rows {
+		result = append(result, map[string]string{"id": strconv.FormatInt(row.ID, 10), "name": row.Name})
+	}
+	return result, err
 }

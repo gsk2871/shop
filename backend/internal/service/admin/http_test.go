@@ -75,6 +75,14 @@ func TestLoginScopesPermissionsAndRevocation(t *testing.T) {
 		t.Fatal(w.Code, w.Body.String())
 	}
 	token := w.Result().Cookies()[0].Value
+	for _, path := range []string{"lead-popup", "leads", "banner-products"} {
+		if request("GET", path, token, nil).Code != 200 {
+			t.Fatal("super administrator new route denied", path)
+		}
+		if request("GET", path, "", nil).Code != 401 {
+			t.Fatal("anonymous access to admin route", path)
+		}
+	}
 	if request("GET", "products", token, nil).Code != 200 {
 		t.Fatal("full denied")
 	}
@@ -105,7 +113,7 @@ func TestLoginScopesPermissionsAndRevocation(t *testing.T) {
 	if request("GET", "social-accounts", readerToken, nil).Code != 200 {
 		t.Fatal("reader social account list denied")
 	}
-	for _, entry := range []struct{ method, path string }{{"POST", "faqs"}, {"PUT", "faqs/1"}, {"DELETE", "faqs/1"}, {"POST", "products"}, {"POST", "products/preview"}, {"PUT", "settings"}, {"POST", "social-accounts"}, {"PUT", "social-accounts/1"}, {"PATCH", "social-accounts/1/enabled"}, {"DELETE", "social-accounts/1"}, {"POST", "media"}, {"PATCH", "banners/1/enabled"}} {
+	for _, entry := range []struct{ method, path string }{{"GET", "leads"}, {"GET", "lead-popup"}, {"PUT", "lead-popup"}, {"PATCH", "leads/1"}, {"POST", "faqs"}, {"PUT", "faqs/1"}, {"DELETE", "faqs/1"}, {"POST", "products"}, {"POST", "products/preview"}, {"PUT", "settings"}, {"POST", "social-accounts"}, {"PUT", "social-accounts/1"}, {"PATCH", "social-accounts/1/enabled"}, {"DELETE", "social-accounts/1"}, {"POST", "media"}, {"PATCH", "banners/1/enabled"}} {
 		if request(entry.method, entry.path, readerToken, nil).Code != 403 {
 			t.Fatal("reader mutation allowed", entry)
 		}

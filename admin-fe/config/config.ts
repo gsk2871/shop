@@ -20,6 +20,8 @@ export default defineConfig({
   initialState: {},
   model: {},
   routes: [
+    { path: "/lead-popup", name: "留资弹窗配置", component: "./LeadPopup", wrappers: ["@/components/Auth"] },
+    { path: "/leads", name: "留资记录", component: "./Leads", wrappers: ["@/components/Auth"] },
     {
       path: "/faqs",
       name: "问答配置",

@@ -1,6 +1,6 @@
 import CategoryCard from "../components/CategoryCard";
 import Link from "next/link";
-import Hero from "../components/Hero";
+import HomeCarousel from "../components/HomeCarousel";
 import ContactButton from "../components/ContactButton";
 import { settings, banners, content } from "../lib/content";
 import type {
@@ -20,7 +20,7 @@ export default async function Home() {
   ]);
   return (
     <>
-      <Hero banners={slides} />
+      <HomeCarousel banners={slides} />
       {!!categories?.items.length && (
         <section
           className="section home-section"

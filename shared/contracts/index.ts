@@ -214,6 +214,8 @@ export interface PublicBanner {
   link: string;
 }
 export interface Banner extends PublicBanner {
+  productId: string;
+  productName: string;
   slotCode: string;
   imageMediaId: string;
   mobileImageMediaId: string;
@@ -308,4 +310,30 @@ export interface FAQ extends PublicFAQ {
   enabled: boolean;
   version: number;
   expectedVersion?: number;
+}
+
+export interface LeadPopupConfig {
+ enabled: boolean;
+ title: string;
+ description: string;
+ placeholder: string;
+ submitText: string;
+ dismissText: string;
+ notice: string;
+ successTitle: string;
+ successDescription: string;
+ version: number;
+ expectedVersion?: number;
+}
+export type PublicLeadPopup = Omit<LeadPopupConfig, "version" | "expectedVersion">;
+export interface ContactLead {
+ id: string;
+ contactType: "email" | "whatsapp";
+ contact: string;
+ firstSubmittedAt: string;
+ lastSubmittedAt: string;
+ submissionCount: number;
+ status: "pending" | "completed" | "invalid";
+ note: string;
+ version: number;
 }

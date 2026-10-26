@@ -15,7 +15,7 @@ class PermissionSeedTests(unittest.TestCase):
             / "backend/internal/data/seed/admin_permissions.json").read_text())
 
     def test_repository_seed(self):
-        self.assertEqual(validate_seed(self.seed), (55, 51, 3))
+        self.assertEqual(validate_seed(self.seed), (59, 55, 3))
 
     def test_invalid_authorization_changes(self):
         mutations = {
@@ -28,6 +28,8 @@ class PermissionSeedTests(unittest.TestCase):
                 {"method": "POST", "path": "/admin/api/v1/users"}),
             "duplicate route": lambda s: s["nodes"][5]["apis"].append(
                 copy.deepcopy(s["nodes"][4]["apis"][0])),
+            "unexpected public write": lambda s: s["anonymousApis"].append(
+                {"method": "POST", "path": "/api/v1/products"}),
             "public API in tree": lambda s: s["nodes"][4]["apis"][0].update(path="/api/v1/site"),
             "invalid scope": lambda s: s["selfService"][0]["allowedScopes"].append("anonymous"),
         }

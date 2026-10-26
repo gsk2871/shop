@@ -7,6 +7,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 	"peptide-site/internal/data"
+	leads "peptide-site/internal/data/leads"
 	"peptide-site/internal/data/seed"
 	whatsapp "peptide-site/internal/data/whatsapp"
 	"regexp"
@@ -46,6 +47,9 @@ func Seed(ctx context.Context, d *data.Data, c SeedOptions) error {
 			if err := whatsapp.Seed(tx); err != nil {
 				return err
 			}
+		}
+		if err := leads.Seed(tx); err != nil {
+			return err
 		}
 		ids := map[string]int64{}
 		pending := append([]seed.Node(nil), registry.Nodes...)
