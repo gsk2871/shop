@@ -1455,7 +1455,7 @@ main h2 {
 .lead-popup-close:focus-visible { outline: none; border-radius: 50%; background: #eeeef3; color: #151515; }
 .lead-popup h2:focus { outline: none; }
 .lead-popup-reopen { position: fixed; z-index: 40; left: 20px; bottom: max(20px, env(safe-area-inset-bottom)); border: 0; border-radius: 24px; padding: 12px 20px; min-height: 44px; background: #111; color: #fff; box-shadow: 0 4px 16px #0002; }
-.lead-popup-submit { width: 100%; margin-top: 24px; padding: 18px; border: 0; border-radius: 9px; background: #111; color: #fff; font-size: 22px; font-weight: 600; cursor: pointer; white-space: normal; }
+.lead-popup-submit { width: 100%; margin-top: 24px; padding: 18px; border: 0; border-radius: 9px; background: #2563eb; color: #fff; font-size: 22px; font-weight: 600; cursor: pointer; white-space: normal; }
 .lead-popup-submit:disabled { opacity: .6; cursor: wait; }
 .lead-popup-dismiss { display: block; margin: 22px auto; padding: 6px 12px; border: 0; background: transparent; color: #3455cb; font-size: 21px; cursor: pointer; }
 .lead-popup-notice { font-size: 16px; line-height: 1.6; color: #555; white-space: pre-wrap; margin-bottom: 0; }
@@ -1477,4 +1477,75 @@ main h2 {
  .lead-popup-reopen { left: 12px; padding: 10px 16px; font-size: 14px; }
  .lead-popup-description { font-size: 17px; margin-bottom: 18px; }
  .lead-popup-notice { font-size: 14px; }
+}
+
+/* Configurable marketing surfaces share contact behavior, not global theme overrides. */
+.marketing-primary,
+.nav-contact.marketing-primary { background: #2563eb; color: #fff; border: 1px solid transparent; }
+.marketing-products { background: #159447; color: #fff; }
+.marketing-actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.marketing-actions .button { font-size: 15px; font-weight: 600; justify-content: center; }
+.home-section-heading { flex-wrap: wrap; }
+.header nav { align-items: center; min-height: 44px; }
+.header nav a[aria-current="page"] { font-size: 17px; font-weight: 700; color: var(--primary); }
+.nav-contact.marketing-primary { font-size: 16px; font-weight: 600; padding: 14px 20px; white-space: nowrap; }
+.home-carousel-cta { left: 64px; transform: none; bottom: 32px; font-size: 20px; font-weight: 700; }
+.home-carousel-offer { position: absolute; right: 64px; bottom: 32px; font-size: 18px; font-weight: 600; max-width: 45%; }
+.contact-wide { width: 100%; justify-content: space-between; font-size: 18px; font-weight: 600; padding: 20px 24px; }
+.home-contact .actions { width: 100%; }
+.whatsapp,
+.lead-popup-reopen { background: #2563eb; color: #fff; font-size: 17px; font-weight: 700; padding: 15px 24px; min-height: 48px; }
+.lead-popup-brand { font-size: clamp(30px, 5vw, 44px); font-weight: 800; color: #2563eb; margin: 0 0 20px; }
+.lead-popup-quote-label { font-size: 13px; font-weight: 700; letter-spacing: .12em; color: #2563eb; margin: 16px 0 8px; }
+.lead-popup-quote-title { font-size: 28px; line-height: 1.2; margin: 0 0 16px; }
+.brand-intro { text-align: center; padding-block: 64px; background: var(--surface); }
+.brand-intro-tagline { display: inline-block; background: #eaf2ff; color: #2563eb; padding: 8px 20px; border-radius: 30px; font-size: 14px; font-weight: 600; }
+.brand-intro-name { font-size: clamp(38px, 7vw, 82px); font-weight: 800; line-height: 1.15; overflow-wrap: anywhere; margin: 16px 0; }
+.brand-intro-description { max-width: 850px; margin: 0 auto 40px; white-space: pre-wrap; font-size: 20px; color: var(--muted); }
+.brand-metrics { display: flex; flex-wrap: wrap; justify-content: center; gap: 32px 48px; margin: 0 0 40px; }
+.brand-metrics > div { display: flex; flex-direction: column-reverse; flex: 0 1 170px; overflow-wrap: anywhere; }
+.brand-metrics dd { margin: 0 0 12px; font-size: 36px; font-weight: 700; color: #2563eb; }
+.brand-metrics dt { font-size: 14px; color: var(--muted); }
+.brand-intro .marketing-actions { justify-content: center; }
+.announcement-bar { overflow: hidden; padding: 10px 0; font-size: 14px; }
+.announcement-track { display: flex; width: max-content; margin: auto; }
+.announcement-group { display: flex; align-items: center; flex: none; gap: 48px; padding: 0 24px; white-space: nowrap; }
+.announcement-bar.is-scrolling .announcement-track { animation: announcement-scroll var(--announcement-duration) linear infinite; will-change: transform; }
+.announcement-bar:hover .announcement-track,
+.announcement-bar:focus-within .announcement-track { animation-play-state: paused; }
+@keyframes announcement-scroll { to { transform: translateX(-50%); } }
+.product-card { display: flex; flex-direction: column; overflow: hidden; }
+.product-card-image { position: relative; display: block; background: var(--surface); }
+.product-card-image img { display: block; width: 100%; aspect-ratio: 1; object-fit: cover; }
+.product-saving { position: absolute; top: 12px; left: 12px; background: #eaf4ec; color: #285b35; padding: 6px 10px; border-radius: 5px; font-size: 13px; font-weight: 600; }
+.product-card .home-card-copy { flex: 1; display: flex; flex-direction: column; align-items: flex-start; }
+.product-card .home-card-copy h3 { font-size: 20px; overflow-wrap: anywhere; }
+.product-card .product-recommendation { color: #d99b19; font-size: 20px; margin: 0 0 6px; letter-spacing: 2px; }
+.product-card .empty-stars { color: #b4b7bc; }
+.product-card .product-purity { display: inline-block; padding: 3px 10px; background: #eef5ff; color: #2555a1; border-radius: 20px; margin: 0 0 12px; }
+.product-card .product-card-price { margin: auto 0 18px; display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px; }
+.product-card-price strong { font-size: 22px; color: #2563eb; font-weight: 750; }
+.product-card-price del { font-size: 14px; color: var(--muted); }
+.product-card-contact { width: 100%; justify-content: center; font-weight: 600; font-size: 16px; margin-bottom: 12px; }
+@media (max-width: 800px) {
+ .marketing-actions { width: 100%; }
+ .marketing-actions .button { flex: 1 1 210px; }
+ .home-carousel-cta { left: 48px; bottom: 20px; font-size: 16px; }
+ .home-carousel-offer { right: 48px; bottom: 20px; font-size: 14px; max-width: 48%; padding: 12px; }
+}
+@media (max-width: 640px) {
+ .nav-contact.marketing-primary { padding: 10px 12px; font-size: 14px; white-space: normal; text-align: center; }
+ .home-carousel-cta { left: 48px; right: 48px; bottom: 72px; width: auto; max-width: none; justify-content: center; font-size: 16px; padding: 10px; }
+ .home-carousel-offer { left: 48px; right: 48px; bottom: 16px; max-width: none; width: auto; min-height: 44px; justify-content: center; }
+ .brand-intro { padding-block: 36px; }
+ .brand-intro-description { font-size: 17px; }
+ .brand-metrics { gap: 24px; }
+ .brand-metrics > div { flex-basis: 125px; }
+ .brand-metrics dd { font-size: 28px; }
+ .whatsapp, .lead-popup-reopen { padding: 12px 16px; font-size: 15px; }
+}
+@media (prefers-reduced-motion: reduce) {
+ .announcement-bar .announcement-track { animation: none !important; transform: none; width: auto; }
+ .announcement-group { flex-wrap: wrap; white-space: normal; gap: 12px 24px; justify-content: center; flex: 1; }
+ .announcement-copy { display: none; }
 }

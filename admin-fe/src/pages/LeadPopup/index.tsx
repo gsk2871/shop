@@ -6,6 +6,7 @@ import { allows } from "../../services/auth";
 import type { LeadPopupConfig } from "../../services/contracts";
 
 const fields = [
+  ["brandText", "弹窗品牌文字", 200], ["quoteLabel", "报价小标题", 200], ["quoteTitle", "报价标题", 200],
   ["title", "主标题", 200], ["description", "说明文案", 2000],
   ["placeholder", "输入框提示", 200], ["submitText", "提交按钮文案", 200],
   ["dismissText", "拒绝按钮文案", 200], ["notice", "底部说明", 2000],
@@ -40,7 +41,7 @@ export default function LeadPopupPage() {
       finally { setBusy(false); }
     }}>
       <Form.Item name="enabled" label="弹窗开关" valuePropName="checked"><Switch /></Form.Item>
-      {fields.map(([key, label, max]) => <Form.Item key={key} name={key} label={label} rules={[{ required: true, whitespace: true, max }]}>
+      {fields.map(([key, label, max]) => <Form.Item key={key} name={key} label={label} rules={[{ required: !["description", "brandText", "quoteLabel", "quoteTitle"].includes(key), whitespace: true, max }]}>
         {max > 200 ? <Input.TextArea rows={3} maxLength={max} showCount /> : <Input maxLength={max} />}
       </Form.Item>)}
       {canEdit && <Space><Button type="primary" htmlType="submit" loading={busy}>保存配置</Button></Space>}

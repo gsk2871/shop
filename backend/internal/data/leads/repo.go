@@ -21,7 +21,16 @@ func Seed(tx *gorm.DB) error {
 	if err != nil {
 		return err
 	}
-	return tx.Exec("INSERT INTO lead_popup_config(id,payload,version) VALUES(1,?::jsonb,1) ON CONFLICT(id) DO NOTHING", string(payload)).Error
+	if err = tx.Exec("INSERT INTO lead_popup_config(id,payload,version) VALUES(1,?::jsonb,1) ON CONFLICT(id) DO NOTHING", string(payload)).Error; err != nil {
+		return err
+	}
+	// Fill new display text only; retain all existing offer and submission wording.
+	for _, field := range []struct{ Key, Value string }{{"brandText", "NOVAPEPT"}, {"quoteLabel", "PRODUCT LIST & QUOTATIONS"}, {"quoteTitle", "Request a Quote."}} {
+		if err = tx.Exec("UPDATE lead_popup_config SET payload=payload || jsonb_build_object(?::text,?::text),version=version+1 WHERE id=1 AND NOT jsonb_exists(payload,?::text)", field.Key, field.Value, field.Key).Error; err != nil {
+			return err
+		}
+	}
+	return nil
 }
 func config(tx *gorm.DB) (biz.Config, error) {
 	var row struct {

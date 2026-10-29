@@ -31,6 +31,7 @@ type Spec struct {
 	Values []Value `json:"values"`
 }
 type SKU struct {
+	OriginalPrice *string      `json:"originalPrice"`
 	ID            string       `json:"id,omitempty"`
 	Key           string       `json:"key"`
 	Enabled       bool         `json:"enabled"`
@@ -41,6 +42,8 @@ type SKU struct {
 	Price         *money.Price `json:"price,omitempty"`
 }
 type Product struct {
+	PurityLabel     string            `json:"purityLabel"`
+	Recommendation  *int              `json:"recommendation"`
 	ImageMediaIDs   []string          `json:"imageMediaIds"`
 	ReportMediaIDs  []string          `json:"reportMediaIds"`
 	Images          []string          `json:"images"`
@@ -81,6 +84,9 @@ func ParseID(raw string) (int64, error) {
 	return value, nil
 }
 func Validate(p *Product, defaultCurrency string) error {
+	if len(p.PurityLabel) > 100 || (p.Recommendation != nil && (*p.Recommendation < 1 || *p.Recommendation > 5)) {
+		return errdef.Invalid()
+	}
 	if p.HomeSort < 0 || p.HomeSort > 2147483647 {
 		return errdef.Invalid()
 	}
@@ -229,5 +235,5 @@ func Public(p Product) map[string]any {
 		}
 		specs = append(specs, PublicSpec{spec.ID, spec.Key, spec.Name, values})
 	}
-	return map[string]any{"images": p.Images, "reports": p.Reports, "image": p.Image, "report": p.Report, "id": p.ID, "name": p.Name, "slug": p.Slug, "category": p.Category, "categoryId": p.CategoryID, "summary": p.Summary, "detail": p.Detail, "specs": specs, "skus": skus, "fromPrice": p.FromPrice}
+	return map[string]any{"purityLabel": p.PurityLabel, "recommendation": p.Recommendation, "images": p.Images, "reports": p.Reports, "image": p.Image, "report": p.Report, "id": p.ID, "name": p.Name, "slug": p.Slug, "category": p.Category, "categoryId": p.CategoryID, "summary": p.Summary, "detail": p.Detail, "specs": specs, "skus": skus, "fromPrice": p.FromPrice}
 }

@@ -36,19 +36,24 @@ func (g GoogleAds) Validate() error {
 }
 
 type Settings struct {
-	GoogleAds      GoogleAds `json:"googleAds"`
-	BrandMark      string    `json:"brandMark"`
-	HomeTitle      string    `json:"homeTitle"`
-	HomeContent    string    `json:"homeContent"`
-	AboutTitle     string    `json:"aboutTitle"`
-	AboutContent   string    `json:"aboutContent"`
-	PrivacyTitle   string    `json:"privacyTitle"`
-	PrivacyContent string    `json:"privacyContent"`
-	ProductsTitle  string    `json:"productsTitle"`
-	ResearchTitle  string    `json:"researchTitle"`
-	NewsTitle      string    `json:"newsTitle"`
-	CookieTitle    string    `json:"cookieTitle"`
-	CookieContent  string    `json:"cookieContent"`
+	HeaderBackground  string        `json:"headerBackground"`
+	BackgroundMediaID string        `json:"backgroundMediaId"`
+	BackgroundImage   string        `json:"backgroundImage"`
+	Announcement      *Announcement `json:"announcement"`
+	BrandIntro        *BrandIntro   `json:"brandIntro"`
+	GoogleAds         GoogleAds     `json:"googleAds"`
+	BrandMark         string        `json:"brandMark"`
+	HomeTitle         string        `json:"homeTitle"`
+	HomeContent       string        `json:"homeContent"`
+	AboutTitle        string        `json:"aboutTitle"`
+	AboutContent      string        `json:"aboutContent"`
+	PrivacyTitle      string        `json:"privacyTitle"`
+	PrivacyContent    string        `json:"privacyContent"`
+	ProductsTitle     string        `json:"productsTitle"`
+	ResearchTitle     string        `json:"researchTitle"`
+	NewsTitle         string        `json:"newsTitle"`
+	CookieTitle       string        `json:"cookieTitle"`
+	CookieContent     string        `json:"cookieContent"`
 
 	Brand           string `json:"brand"`
 	LogoMediaID     string `json:"logoMediaId"`
@@ -70,6 +75,9 @@ var color = regexp.MustCompile(`^#[0-9a-fA-F]{6}$`)
 var phone = regexp.MustCompile(`^$|^[0-9]{7,15}$`)
 
 func (s Settings) Validate() error {
+	if err := s.validateMarketing(); err != nil {
+		return err
+	}
 	if err := s.GoogleAds.Validate(); err != nil {
 		return err
 	}

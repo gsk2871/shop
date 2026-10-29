@@ -6,6 +6,7 @@ import { defaultTheme } from "../../services/contracts";
 import { allows } from "../../services/auth";
 import MediaSelect from "../../components/MediaSelect";
 import SocialAccounts from "./SocialAccounts";
+import MarketingSettings from "./MarketingSettings";
 export default function SettingsPage() {
   const { initialState } = useModel("@@initialState");
   const editable = allows(initialState?.identity, "site.update");
@@ -136,6 +137,7 @@ export default function SettingsPage() {
             {max > 200 ? <Input.TextArea rows={6} maxLength={max} /> : <Input maxLength={max} />}
           </Form.Item>
         ))}
+        <MarketingSettings />
         <Card title="Google Ads 转化跟踪" style={{ marginBottom: 24 }}>
           <p>基础同意模式：访客接受广告效果统计后，点击 Open WhatsApp 才发送转化。拒绝不影响联系功能。保存后官网刷新生效。</p>
           <Form.Item name={["googleAds", "enabled"]} label="启用跟踪" valuePropName="checked">

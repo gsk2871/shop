@@ -1,8 +1,10 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 export default function Navigation() {
   const [open, setOpen] = useState(false);
+  const pathname = usePathname();
   return (
     <>
       <button
@@ -26,7 +28,7 @@ export default function Navigation() {
           ["/faq", "FAQ"],
           ["/about", "About"],
         ].map(([path, name]) => (
-          <Link href={path} key={path} onClick={() => setOpen(false)}>
+          <Link aria-current={pathname === path || (path !== "/" && pathname.startsWith(path + "/")) ? "page" : undefined} href={path} key={path} onClick={() => setOpen(false)}>
             {name}
           </Link>
         ))}

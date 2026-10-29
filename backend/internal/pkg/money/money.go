@@ -47,7 +47,35 @@ func Format(amount int64, minorUnit int) (string, error) {
 }
 
 type Price struct {
-	Currency     string `json:"currency"`
-	SalePrice    string `json:"salePrice"`
-	DisplayPrice string `json:"displayPrice"`
+	OriginalPrice        string `json:"originalPrice"`
+	DisplayOriginalPrice string `json:"displayOriginalPrice"`
+	Discount             string `json:"discount"`
+	DisplayDiscount      string `json:"displayDiscount"`
+	Currency             string `json:"currency"`
+	SalePrice            string `json:"salePrice"`
+	DisplayPrice         string `json:"displayPrice"`
+}
+
+// Quote formats both prices and their difference using integer minor units.
+func Quote(amount, original int64, minorUnit int, code string) (*Price, error) {
+	if original < amount {
+		return nil, errors.New("sale price exceeds original price")
+	}
+	sale, err := Format(amount, minorUnit)
+	if err != nil {
+		return nil, err
+	}
+	base, err := Format(original, minorUnit)
+	if err != nil {
+		return nil, err
+	}
+	discount, err := Format(original-amount, minorUnit)
+	if err != nil {
+		return nil, err
+	}
+	result := &Price{Currency: code, SalePrice: sale, DisplayPrice: code + " " + sale, OriginalPrice: base, DisplayOriginalPrice: code + " " + base, Discount: discount}
+	if original > amount {
+		result.DisplayDiscount = code + " " + discount
+	}
+	return result, nil
 }

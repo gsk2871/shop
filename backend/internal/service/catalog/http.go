@@ -160,9 +160,10 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	if strings.HasSuffix(path, "/price") {
 		var in struct {
-			SalePrice       string `json:"salePrice"`
-			Currency        string `json:"currency"`
-			ExpectedVersion int64  `json:"expectedVersion"`
+			SalePrice       string  `json:"salePrice"`
+			OriginalPrice   *string `json:"originalPrice"`
+			Currency        string  `json:"currency"`
+			ExpectedVersion int64   `json:"expectedVersion"`
 		}
 		if !decode(w, r, &in) {
 			return
@@ -172,7 +173,11 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			admin.Failure(w, r, err)
 			return
 		}
-		row, err := h.Repo.Price(r.Context(), id, skuID, in.ExpectedVersion, in.SalePrice, in.Currency)
+		originals := []string{}
+		if in.OriginalPrice != nil {
+			originals = append(originals, *in.OriginalPrice)
+		}
+		row, err := h.Repo.Price(r.Context(), id, skuID, in.ExpectedVersion, in.SalePrice, in.Currency, originals...)
 		if err != nil {
 			admin.Failure(w, r, err)
 			return

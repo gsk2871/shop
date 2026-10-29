@@ -1,4 +1,7 @@
 import CategoryCard from "../components/CategoryCard";
+import MarketingActions from "../components/MarketingActions";
+import ProductCard from "../components/ProductCard";
+import BrandIntro from "../components/BrandIntro";
 import Link from "next/link";
 import HomeCarousel from "../components/HomeCarousel";
 import ContactButton from "../components/ContactButton";
@@ -21,6 +24,7 @@ export default async function Home() {
   return (
     <>
       <HomeCarousel banners={slides} />
+      <BrandIntro config={s.brandIntro} />
       {!!categories?.items.length && (
         <section
           className="section home-section"
@@ -32,9 +36,7 @@ export default async function Home() {
               <span className="eyebrow">PRODUCT CATEGORIES</span>
               <h2 id="home-categories">Find your starting point.</h2>
             </div>
-            <Link className="home-text-link" href="/products">
-              All products ↗
-            </Link>
+            <MarketingActions />
           </div>
           <div className="home-category-grid">
             {categories.items.map((category, index) => (
@@ -58,38 +60,10 @@ export default async function Home() {
               <span className="eyebrow">SELECTED FROM OUR CATALOG</span>
               <h2 id="home-products">Featured products.</h2>
             </div>
-            <Link className="home-text-link" href="/products">
-              View all products ↗
-            </Link>
+            <MarketingActions />
           </div>
           <div className="home-card-grid">
-            {products.items.map((product) => (
-              <Link
-                className="home-product-card"
-                key={product.id}
-                href={`/products/${product.slug}`}
-              >
-                {product.image && (
-                  <img
-                    className="home-product-image"
-                    src={product.image}
-                    alt={product.name}
-                    loading="lazy"
-                  />
-                )}
-                <div className="home-card-copy">
-                  <span className="eyebrow">{product.category}</span>
-                  <h3>{product.name}</h3>
-                  <p>{product.summary}</p>
-                  {product.fromPrice && (
-                    <p className="home-price">
-                      From {product.fromPrice.displayPrice}
-                    </p>
-                  )}
-                  <span className="home-text-link">View specifications ↗</span>
-                </div>
-              </Link>
-            ))}
+            {products.items.map(product => <ProductCard key={product.id} product={product} />)}
           </div>
         </section>
       )}
@@ -102,6 +76,7 @@ export default async function Home() {
           <div>
             <span className="eyebrow">GET TO KNOW US</span>
             <h2 id="home-about">{s.homeTitle || "About us"}</h2>
+            <ContactButton className="button marketing-primary">Contact us</ContactButton>
           </div>
           <div>
             <div className="configured-copy">{s.homeContent}</div>
@@ -122,9 +97,7 @@ export default async function Home() {
               <span className="eyebrow">NEWS & UPDATES</span>
               <h2 id="home-news">From our journal.</h2>
             </div>
-            <Link className="home-text-link" href="/news">
-              All news ↗
-            </Link>
+            <MarketingActions />
           </div>
           <div className="home-card-grid">
             {news.items.map((article) => (
@@ -171,10 +144,7 @@ export default async function Home() {
           pricing and delivery arrangements.
         </p>
         <div className="actions">
-          <ContactButton>Contact our team ↗</ContactButton>
-          <Link className="home-text-link" href="/faq">
-            Visit FAQ ↗
-          </Link>
+          <ContactButton className="button marketing-primary contact-wide">📱 WhatsApp — Direct Message</ContactButton>
         </div>
       </section>
     </>

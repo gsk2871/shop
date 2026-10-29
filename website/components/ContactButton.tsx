@@ -22,9 +22,11 @@ function validImageURL(raw: string) {
 export default function ContactButton({
   children = "Contact on WhatsApp ↗",
   className = "button",
+  productName,
 }: {
   children?: ReactNode;
   className?: string;
+  productName?: string;
 }) {
   const { track } = useGoogleAds();
   const [open, setOpen] = useState(false);
@@ -90,6 +92,10 @@ export default function ContactButton({
         !validImageURL(value.qrCodeUrl)
       )
         throw new Error("Invalid contact");
+      if (productName) {
+        const greeting = url.searchParams.get("text") || "";
+        url.searchParams.set("text", [greeting, `Product inquiry: ${productName}`].filter(Boolean).join("\n"));
+      }
       if (pending.current === controller)
         setContact({ ...value, url: url.toString() });
     } catch {

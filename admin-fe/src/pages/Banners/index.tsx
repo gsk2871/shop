@@ -260,7 +260,7 @@ export default function BannersPage() {
           <Form.Item
             name="imageMediaId"
             label="桌面图片"
-            extra={isHome ? "建议 1920×720，图片底部居中预留按钮区域；所有桌面图保持相同比例。" : undefined}
+            extra={isHome ? "建议 1920×720，图片底部左右两侧预留按钮区域；所有桌面图保持相同比例。" : undefined}
             rules={[{ required: true }]}
           >
             <MediaSelect />
@@ -273,7 +273,7 @@ export default function BannersPage() {
             <MediaSelect />
           </Form.Item>
           {isHome && <>
-            <Form.Item name="productId" label="关联商品（选填）" extra="选择商品后显示按钮；未关联或商品不可访问时隐藏按钮。">
+            <Form.Item name="productId" label="关联商品（选填）" extra="选择商品后显示 Shop Now；未关联或商品不可访问时隐藏 Shop Now。所有轮播始终显示优惠联系按钮。">
               <Select showSearch allowClear filterOption={false} onSearch={setProductQuery} loading={searching} placeholder="输入商品名称搜索"
                 options={[
                   ...(editing?.productId && !products.some((p) => p.id === editing.productId) ? [{ value: editing.productId, label: editing.productName || `商品 #${editing.productId}（不可用）` }] : []),

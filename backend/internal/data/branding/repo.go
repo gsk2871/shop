@@ -65,10 +65,12 @@ func (r *Repo) Settings(ctx context.Context) (biz.Settings, error) {
 	if e = json.Unmarshal(rec.Payload, &s); e != nil {
 		return s, e
 	}
+	s.NormalizeMarketing()
 	s.Version = rec.Version
 	return s, nil
 }
 func (r *Repo) SaveSettings(ctx context.Context, s biz.Settings) (biz.Settings, error) {
+	s.NormalizeMarketing()
 	if e := s.Validate(); e != nil {
 		return s, e
 	}
@@ -77,6 +79,11 @@ func (r *Repo) SaveSettings(ctx context.Context, s biz.Settings) (biz.Settings, 
 		return s, e
 	}
 	s.Logo = url
+	backgroundID, backgroundURL, e := r.image(ctx, s.BackgroundMediaID)
+	if e != nil {
+		return s, e
+	}
+	s.BackgroundImage = backgroundURL
 	e = r.Data.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if e := tx.Exec("SELECT pg_advisory_xact_lock(784296317)").Error; e != nil {
 			return e
@@ -103,6 +110,9 @@ func (r *Repo) SaveSettings(ctx context.Context, s biz.Settings) (biz.Settings, 
 			return e
 		}
 		refs := map[string][]int64{}
+		if backgroundID != 0 {
+			refs["background"] = []int64{backgroundID}
+		}
 		if id != 0 {
 			refs["logo"] = []int64{id}
 		}

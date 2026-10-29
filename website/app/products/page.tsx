@@ -1,3 +1,4 @@
+import ProductCard from "../../components/ProductCard";
 import Link from "next/link";
 import Hero from "../../components/Hero";
 import { contentResult, banners, settings } from "../../lib/content";
@@ -123,32 +124,7 @@ export default async function Products({
         ) : (
           <>
             <div className="article-grid product-results">
-              {data.items.map((product) => (
-                <Link
-                  key={product.id}
-                  className="article-card"
-                  href={`/products/${product.slug}`}
-                >
-                  {product.image && (
-                    <img
-                      className="product-cover"
-                      src={product.image}
-                      alt={product.name}
-                      loading="lazy"
-                      decoding="async"
-                    />
-                  )}
-                  <span className="eyebrow">{product.category}</span>
-                  <h2>{product.name}</h2>
-                  <p>{product.summary}</p>
-                  <p>
-                    {product.fromPrice
-                      ? `From ${product.fromPrice.displayPrice}`
-                      : ""}
-                  </p>
-                  <span>View specifications →</span>
-                </Link>
-              ))}
+              {data.items.map(product => <ProductCard key={product.id} product={product} />)}
             </div>
             <nav className="pagination" aria-label="Product pages">
               {page > 1 && (

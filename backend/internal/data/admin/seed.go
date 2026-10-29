@@ -48,6 +48,9 @@ func Seed(ctx context.Context, d *data.Data, c SeedOptions) error {
 				return err
 			}
 		}
+		if err := SeedMarketing(tx); err != nil {
+			return err
+		}
 		if err := leads.Seed(tx); err != nil {
 			return err
 		}

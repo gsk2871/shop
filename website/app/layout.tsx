@@ -9,6 +9,7 @@ import GoogleAds from "../components/GoogleAds";
 import ContactButton from "../components/ContactButton";
 import SectionRuler from "../components/SectionRuler";
 import Navigation from "../components/Navigation";
+import AnnouncementBar from "../components/AnnouncementBar";
 import SocialLinks from "../components/SocialLinks";
 import CookieNotice, { CookieSettingsButton } from "../components/CookieNotice";
 import "./globals.css";
@@ -32,12 +33,14 @@ export default async function Layout({ children }: { children: ReactNode }) {
     "--accent": s.theme.accent,
     "--on-primary": s.theme.onPrimary,
     "--canvas": s.theme.background,
+    ...(s.backgroundImage ? { backgroundImage: `url(${JSON.stringify(s.backgroundImage)})`, backgroundSize: "cover", backgroundPosition: "center top", backgroundRepeat: "no-repeat" } : {}),
   } as CSSProperties;
   return (
     <html lang="en">
       <body style={style}>
         <GoogleAds config={s.googleAds} noticeVersion={JSON.stringify([s.cookieTitle, s.cookieContent])}>
-        <header className="header">
+        <AnnouncementBar config={s.announcement} />
+        <header className="header" style={s.headerBackground ? { backgroundColor: s.headerBackground } : undefined}>
           <Link className="brand" href="/" aria-label={s.brand || "Home"}>
             {s.logo ? (
               <img src={s.logo} alt={s.brand} />
@@ -47,7 +50,7 @@ export default async function Layout({ children }: { children: ReactNode }) {
             <span>{s.brand}</span>
           </Link>
           <Navigation />
-          <ContactButton className="nav-contact">Contact us ↗</ContactButton>
+          <ContactButton className="button marketing-primary nav-contact">Contact us ↗</ContactButton>
         </header>
         <main>{children}</main>
         <SectionRuler />

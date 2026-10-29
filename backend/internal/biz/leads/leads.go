@@ -9,6 +9,9 @@ import (
 )
 
 type Config struct {
+	BrandText          string `json:"brandText"`
+	QuoteLabel         string `json:"quoteLabel"`
+	QuoteTitle         string `json:"quoteTitle"`
 	Enabled            bool   `json:"enabled"`
 	Title              string `json:"title"`
 	Description        string `json:"description"`
@@ -23,15 +26,23 @@ type Config struct {
 }
 
 func Default() Config {
-	return Config{Enabled: true, Title: "Get 10% OFF your order", Description: "Sign up and unlock your discount.", Placeholder: "Email or WhatsApp (include country code)", SubmitText: "Claim discount", DismissText: "No, thanks", Notice: "By submitting your contact details, you agree to be contacted by email or WhatsApp about your inquiry and discount. You can ask us to stop contacting you at any time.", SuccessTitle: "Thank you!", SuccessDescription: "We've received your contact details. Our team will contact you by email or WhatsApp to help with your inquiry and confirm your 10% discount.", Version: 1}
+	return Config{BrandText: "NOVAPEPT", QuoteLabel: "PRODUCT LIST & QUOTATIONS", QuoteTitle: "Request a Quote.", Enabled: true, Title: "Want 10% off your first order?", Description: "", Placeholder: "Email or WhatsApp (include country code)", SubmitText: "Get your discount right now", DismissText: "No, thanks", Notice: "By submitting your contact details, you agree to be contacted by email or WhatsApp about your inquiry and discount. You can ask us to stop contacting you at any time.", SuccessTitle: "Thank you!", SuccessDescription: "We've received your contact details. Our team will contact you by email or WhatsApp to help with your inquiry and confirm your 10% discount.", Version: 1}
 }
 func (c Config) Validate() error {
+	if len(c.Description) > 2000 {
+		return errdef.Invalid()
+	}
+	for _, s := range []string{c.BrandText, c.QuoteLabel, c.QuoteTitle} {
+		if len(s) > 200 {
+			return errdef.Invalid()
+		}
+	}
 	for _, s := range []string{c.Title, c.Placeholder, c.SubmitText, c.DismissText, c.SuccessTitle} {
 		if strings.TrimSpace(s) == "" || len(s) > 200 {
 			return errdef.Invalid()
 		}
 	}
-	for _, s := range []string{c.Description, c.Notice, c.SuccessDescription} {
+	for _, s := range []string{c.Notice, c.SuccessDescription} {
 		if strings.TrimSpace(s) == "" || len(s) > 2000 {
 			return errdef.Invalid()
 		}
@@ -39,7 +50,7 @@ func (c Config) Validate() error {
 	return nil
 }
 func Public(c Config) map[string]any {
-	return map[string]any{"enabled": c.Enabled, "title": c.Title, "description": c.Description, "placeholder": c.Placeholder, "submitText": c.SubmitText, "dismissText": c.DismissText, "notice": c.Notice, "successTitle": c.SuccessTitle, "successDescription": c.SuccessDescription}
+	return map[string]any{"brandText": c.BrandText, "quoteLabel": c.QuoteLabel, "quoteTitle": c.QuoteTitle, "enabled": c.Enabled, "title": c.Title, "description": c.Description, "placeholder": c.Placeholder, "submitText": c.SubmitText, "dismissText": c.DismissText, "notice": c.Notice, "successTitle": c.SuccessTitle, "successDescription": c.SuccessDescription}
 }
 
 var phone = regexp.MustCompile(`^\+[1-9][0-9]{6,14}$`)

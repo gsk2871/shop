@@ -16,6 +16,10 @@ export interface Page<T> {
 
 /** The backend converts and formats prices. Clients do not multiply or divide. */
 export interface Price {
+  originalPrice: string;
+  displayOriginalPrice: string;
+  discount: string;
+  displayDiscount: string;
   currency: string;
   salePrice: string;
   displayPrice: string;
@@ -62,6 +66,7 @@ export interface ProductSKU {
   sort: number;
   specValueKeys: string[];
   currency: string;
+  originalPrice?: string | null;
   salePrice: string | null;
   price?: Price | null;
 }
@@ -83,6 +88,8 @@ export interface PublicSKU {
   price: Price;
 }
 export interface PublicProduct {
+  purityLabel?: string;
+  recommendation?: number | null;
   images?: string[];
   reports?: string[];
   image: string;
@@ -114,6 +121,8 @@ export interface Product extends Omit<PublicProduct, "specs" | "skus"> {
   updatedAt: string;
 }
 export interface ProductSummary {
+  purityLabel?: string;
+  recommendation?: number | null;
   homeFeatured?: boolean;
   homeSort?: number;
   image: string;
@@ -179,6 +188,11 @@ export interface GoogleAdsSettings {
   conversionLabel: string;
 }
 export interface Settings {
+  headerBackground?: string;
+  backgroundMediaId?: string;
+  backgroundImage?: string;
+  announcement?: Announcement | null;
+  brandIntro?: BrandIntro | null;
   googleAds: GoogleAdsSettings;
   brandMark: string;
   homeTitle: string;
@@ -313,6 +327,9 @@ export interface FAQ extends PublicFAQ {
 }
 
 export interface LeadPopupConfig {
+ brandText?: string;
+ quoteLabel?: string;
+ quoteTitle?: string;
  enabled: boolean;
  title: string;
  description: string;
@@ -336,4 +353,18 @@ export interface ContactLead {
  status: "pending" | "completed" | "invalid";
  note: string;
  version: number;
+}
+
+export interface Announcement {
+ enabled: boolean;
+ background: string;
+ textColor: string;
+ speed: "slow" | "standard" | "fast";
+ items: { text: string; enabled: boolean }[];
+}
+export interface BrandIntro {
+ tagline: string;
+ parts: { text: string; color: string }[];
+ description: string;
+ metrics: { value: string; description: string }[];
 }

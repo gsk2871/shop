@@ -29,6 +29,7 @@ import useContentList from "../../hooks/useContentList";
 import { ProductView } from "@shop/content";
 import { api } from "../../services/cms";
 import { allows } from "../../services/auth";
+import { validatePrices } from "../../services/prices";
 import type {
   PublicCategory,
   Product,
@@ -205,6 +206,8 @@ export default function Products() {
               status: "draft",
               homeFeatured: false,
               homeSort: 0,
+              purityLabel: "",
+              recommendation: null,
               detail: { html: "", mediaIds: [] },
               specs: [],
               skus: [
@@ -214,6 +217,7 @@ export default function Products() {
                   sort: 0,
                   specValueKeys: [],
                   currency: currencies.defaultCurrency,
+                  originalPrice: null,
                   salePrice: null,
                 },
               ],
@@ -283,6 +287,9 @@ export default function Products() {
   }
   function input() {
     const values = form.getFieldsValue(true);
+    for (const sku of values.skus || []) {
+      validatePrices(sku.originalPrice?.trim(), sku.salePrice?.trim(), currencies.items.find(c => c.code === sku.currency)?.minorUnit ?? 2);
+    }
     return {
       ...values,
       id: editing?.id || "",
@@ -290,6 +297,7 @@ export default function Products() {
       specs: values.specs || [],
       skus: (values.skus || []).map((sku: ProductSKU) => ({
         ...sku,
+        originalPrice: sku.originalPrice?.trim() || null,
         salePrice: sku.salePrice?.trim() || null,
         price: undefined,
       })),
@@ -648,10 +656,12 @@ export default function Products() {
                 }))}
               />
             </Form.Item>
+            <Form.Item name="purityLabel" label="纯度标签（英文）" rules={[{ max: 100 }]}><Input maxLength={100} placeholder="例如 99% purity" /></Form.Item>
+            <Form.Item name="recommendation" label="推荐指数（星级）" rules={[{ type: "integer", min: 1, max: 5 }]}><InputNumber min={1} max={5} precision={0} placeholder="留空不展示" /></Form.Item>
             <Form.Item
               className="full-width"
               name="summary"
-              label="简介（英文）"
+              label="简介（英文，列表不展示）"
             >
               <Input.TextArea rows={3} />
             </Form.Item>
@@ -701,7 +711,8 @@ export default function Products() {
                       (spec: ProductSpec) => spec.values[0]?.key || "",
                     ),
                     currency: currencies.defaultCurrency,
-                    salePrice: null,
+                    originalPrice: null,
+                  salePrice: null,
                   },
                 ])
               }
@@ -769,7 +780,11 @@ export default function Products() {
                 ),
               },
               {
-                title: "售价",
+                title: "原价",
+                render: (_, sku) => <Input disabled={!can("product.price.update")} value={sku.originalPrice || ""} placeholder="草稿可不定价" onChange={e => updateSKU(sku.key, { originalPrice: e.target.value || null })} />,
+              },
+              {
+                title: "优惠价",
                 render: (_, sku, index) => (
                   <Input
                     disabled={!can("product.price.update")}
@@ -914,15 +929,17 @@ export default function Products() {
       >
         <Form
           layout="vertical"
-          initialValues={{ salePrice: priceEdit?.sku.salePrice }}
+          initialValues={{ originalPrice: priceEdit?.sku.originalPrice, salePrice: priceEdit?.sku.salePrice }}
           onFinish={async (values) => {
             if (!priceEdit) return;
             try {
+              validatePrices(values.originalPrice?.trim(), values.salePrice?.trim(), currencies.items.find(c => c.code === priceEdit.sku.currency)?.minorUnit ?? 2);
               await api<Product>(
                 `products/${priceEdit.product.id}/skus/${priceEdit.sku.id}/price`,
                 "PATCH",
                 {
-                  salePrice: values.salePrice,
+                  originalPrice: values.originalPrice.trim(),
+                  salePrice: values.salePrice.trim(),
                   currency: priceEdit.sku.currency,
                   expectedVersion: priceEdit.product.version,
                 },
@@ -938,9 +955,10 @@ export default function Products() {
             }
           }}
         >
+          <Form.Item name="originalPrice" label={`原价（${priceEdit?.sku.currency || "USD"}）`} rules={[{ required: true, pattern: /^\d+(?:\.\d+)?$/ }]}><Input /></Form.Item>
           <Form.Item
             name="salePrice"
-            label={`价格（${priceEdit?.sku.currency || "USD"}）`}
+            label={`优惠价（${priceEdit?.sku.currency || "USD"}）`}
             rules={[{ required: true, pattern: /^\d+(?:\.\d+)?$/ }]}
           >
             <Input />

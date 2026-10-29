@@ -17,7 +17,7 @@ func TestLeadLifecycleAndConfigSeed(t *testing.T) {
 	r := repo.NewRepo(d)
 	ctx := auth.WithIdentity(context.Background(), &auth.Identity{User: auth.User{ID: 1}})
 	c, err := r.Config(ctx)
-	if err != nil || !c.Enabled || c.Title != "Get 10% OFF your order" {
+	if err != nil || !c.Enabled || c.Title != "Want 10% off your first order?" {
 		t.Fatal(c, err)
 	}
 	c.Title = "A configured offer"

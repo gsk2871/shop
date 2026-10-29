@@ -181,6 +181,7 @@ func TestPriceRowsOnlyChangeWhenPriceChanges(t *testing.T) {
 	}
 	value = "15.00"
 	p.SKUs[0].SalePrice = &value
+	p.SKUs[0].OriginalPrice = &value
 	save()
 	changed := read()
 	if changed.ID != original.ID || changed.Amount != 1500 || changed.CreatedAt != original.CreatedAt {
@@ -193,9 +194,11 @@ func TestPriceRowsOnlyChangeWhenPriceChanges(t *testing.T) {
 		t.Fatal("same dedicated price changed metadata", err)
 	}
 	p.SKUs[0].SalePrice = nil
+	p.SKUs[0].OriginalPrice = nil
 	save()
 	counts(1, 0)
 	p.SKUs[0].SalePrice = &value
+	p.SKUs[0].OriginalPrice = &value
 	save()
 	counts(2, 1)
 	if err := d.DB.Exec("INSERT INTO currency(code,minor_unit,symbol) VALUES('EUR',2,'€')").Error; err != nil {

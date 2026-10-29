@@ -85,8 +85,11 @@ export default function LeadPopup({ config }: { config: PublicLeadPopup | null }
         if (dismiss) setOpen(false);
       }}>
       <button type="button" className="lead-popup-close" aria-label="Close" onClick={() => setOpen(false)}>×</button>
+      {!success && config.brandText && <p className="lead-popup-brand">{config.brandText}</p>}
       <div aria-live="polite">
         <h2 id="lead-popup-title" tabIndex={-1}>{success ? config.successTitle : config.title}</h2>
+        {!success && config.quoteLabel && <p className="lead-popup-quote-label">{config.quoteLabel}</p>}
+        {!success && config.quoteTitle && <p className="lead-popup-quote-title">{config.quoteTitle}</p>}
         <p id="lead-popup-description" className="lead-popup-description">{success ? config.successDescription : config.description}</p>
       </div>
       {!success && <form onSubmit={submit}>

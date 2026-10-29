@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import ContactButton from "./ContactButton";
 import type { PublicBanner } from "../lib/contracts";
 
 export default function HomeCarousel({ banners }: { banners: PublicBanner[] }) {
@@ -47,7 +48,8 @@ export default function HomeCarousel({ banners }: { banners: PublicBanner[] }) {
             {banner.mobileImage && <source media="(max-width: 640px)" srcSet={banner.mobileImage} />}
             <img src={banner.image} alt="" fetchPriority="high" />
           </picture>
-          {banner.link && <Link className="button home-carousel-cta" href={banner.link}>Shop Now</Link>}
+          {banner.link && <Link className="button marketing-primary home-carousel-cta" href={banner.link}>Shop Now</Link>}
+          <ContactButton className="button marketing-primary home-carousel-offer">Get 10% OFF your order</ContactButton>
         </div>
         {count > 1 && <>
           <button type="button" className="carousel-arrow previous" aria-label="Previous banner" onClick={() => move(-1)}>‹</button>
