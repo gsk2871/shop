@@ -16,7 +16,7 @@ export default function ProductCard({ product }: { product: ProductSummary }) {
       <h3><Link href={href}>{product.name}</Link></h3>
       {!!recommendation && recommendation >= 1 && recommendation <= 5 && <p className="product-recommendation" aria-label={`Recommendation: ${recommendation} out of 5`}><span aria-hidden="true">{"★".repeat(recommendation)}<span className="empty-stars">{"☆".repeat(5 - recommendation)}</span></span></p>}
       {product.purityLabel && <p className="product-purity">{product.purityLabel}</p>}
-      {price && <p className="product-card-price"><strong>From {price.displayPrice}</strong>{price.displayDiscount && <del>{price.displayOriginalPrice}</del>}</p>}
+      {price && <p className="product-card-price"><strong>From {price.currency} <span className="product-card-amount">{price.salePrice}</span></strong>{price.displayDiscount && <del>{price.displayOriginalPrice}</del>}</p>}
       <ContactButton className="button marketing-primary product-card-contact" productName={product.name}>Contact us</ContactButton>
       <Link className="home-text-link" href={href}>View specifications ↗</Link>
     </div>
