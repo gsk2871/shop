@@ -2,6 +2,7 @@
 import { useState, useMemo, type ReactNode } from "react";
 import type { PublicProduct } from "@shop/contracts";
 import { RichTextRenderer } from "./Renderer";
+import { formatDisplayPrice } from "./price";
 /** Both website details and unsaved admin preview render this same component. */
 export function ProductView({
   product,
@@ -105,9 +106,9 @@ export function ProductView({
             </fieldset>
           ))}
           <p className="shop-price">
-            {price?.displayPrice ||
+            {(price?.displayPrice && formatDisplayPrice(price.displayPrice)) ||
               (product.specs.length && product.fromPrice
-                ? `From ${product.fromPrice.displayPrice} · Select specifications`
+                ? `From ${formatDisplayPrice(product.fromPrice.displayPrice)} · Select specifications`
                 : "Price not available")}
           </p>
           <div className="shop-product-contact">
